@@ -1,7 +1,16 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"os"
+)
 
 func main() {
-	fmt.Printf("hello, world\n")
+	var input string
+	if len(os.Args) < 2 {
+		input = ""
+	} else {
+		input = os.Args[1]
+	}
+	fmt.Printf("input: %#v\n", input)
 }
