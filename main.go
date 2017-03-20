@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/zerowidth/alfred-gh-shorthand/alfred"
 	"os"
+	"strings"
 )
 
 func main() {
@@ -12,7 +13,7 @@ func main() {
 	if len(os.Args) < 2 {
 		input = ""
 	} else {
-		input = os.Args[1]
+		input = strings.Join(os.Args[1:], " ")
 	}
 	fmt.Fprintf(os.Stderr, "input: %#v\n", input)
 	item := alfred.Item{
