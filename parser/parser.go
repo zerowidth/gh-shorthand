@@ -3,6 +3,7 @@ package parser
 
 import (
 	"regexp"
+	"sort"
 	"strings"
 )
 
@@ -22,7 +23,13 @@ func extractRepo(repoMap map[string]string, input string) (repo string, query st
 	for k := range repoMap {
 		keys = append(keys, k)
 	}
-	// sort.Ints(keys)
+
+	// reverse the sorted keys, so longest is matched first
+	sort.Strings(keys)
+	for i, j := 0, len(keys)-1; i < j; i, j = i+1, j-1 {
+		keys[i], keys[j] = keys[j], keys[i]
+	}
+
 	for _, k := range keys {
 		if strings.HasPrefix(input, k) {
 			return repoMap[k], input[len(k):]

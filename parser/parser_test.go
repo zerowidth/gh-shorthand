@@ -8,6 +8,7 @@ import (
 
 var repoMap = map[string]string{
 	"df":  "zerowidth/dotfiles",
+	"df2": "zerowidth/dotfiles2", // prefix collision
 	"lg2": "libgit2/libgit2",
 }
 
@@ -36,8 +37,10 @@ func TestParse(t *testing.T) {
 	testExpandRepoIssue(t, "df#123", "zerowidth/dotfiles", "123")
 	testExpandRepoIssue(t, "df #123", "zerowidth/dotfiles", "123") // space and hash
 	testExpandRepoIssue(t, "df123", "zerowidth/dotfiles", "123")   // prefix match
+	testExpandRepoIssue(t, "df2 34", "zerowidth/dotfiles2", "34")
+	testExpandRepoIssue(t, "df234", "zerowidth/dotfiles2", "34") // prefix match
 	testExpandRepoIssue(t, "lg2 123", "libgit2/libgit2", "123")
-	testExpandRepoIssue(t, "lg2123", "libgit2/libgit2", "123") // prefix match
-	testExpandRepoIssue(t, "foo/bar 123", "foo/bar", "123")    // fully qualified
+	testExpandRepoIssue(t, "lg2123", "libgit2/libgit2", "123")  // prefix match
+	testExpandRepoIssue(t, "foo/bar 123", "foo/bar", "123")     // fully qualified
 	testExpandRepoIssue(t, "df 0123", "zerowidth/dotfiles", "") // invalid issue
 }
