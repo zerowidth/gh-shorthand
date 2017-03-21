@@ -16,4 +16,7 @@ func testExpandRepo(t *testing.T, input string, repo string) {
 
 func TestParseWithRepoMapping(t *testing.T) {
 	testExpandRepo(t, "", "")
+	testExpandRepo(t, "df", "zerowidth/dotfiles") // match shorthand
+	testExpandRepo(t, " df", "")                  // no match, leading space
+	testExpandRepo(t, "foo/bar", "foo/bar")       // fully qualified
 }
