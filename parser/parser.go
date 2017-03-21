@@ -3,20 +3,45 @@ package parser
 
 import (
 	"regexp"
+	"strings"
 )
 
 type Result struct {
-	Repo string
+	Repo  string
+	Issue string
 }
 
-func Parse(repoMap map[string]string, input string) Result {
-	repo, exists := repoMap[input]
-	if exists {
-		return Result{repo}
+func Parse(repoMap map[string]string, input string) *Result {
+	repo, query := extractRepo(repoMap, input)
+	issue := extractIssue(query)
+	return &Result{repo, issue}
+}
+
+func extractRepo(repoMap map[string]string, input string) (repo string, query string) {
+	var keys []string
+	for k := range repoMap {
+		keys = append(keys, k)
 	}
-	re, _ := regexp.Compile(`^[A-Za-z0-9][-A-Za-z0-9]*/[\w\.\-]+$`) // user/repo
-	if re.MatchString(input) {
-		return Result{input}
+	// sort.Ints(keys)
+	for _, k := range keys {
+		if strings.HasPrefix(input, k) {
+			return repoMap[k], input[len(k):]
+		}
 	}
-	return Result{}
+	re := regexp.MustCompile(`^[A-Za-z0-9][-A-Za-z0-9]*/[\w\.\-]+\b`) // user/repo
+	match := re.FindStringSubmatch(input)
+	if len(match) > 0 {
+		repo = match[0]
+		return repo, input[len(repo):]
+	}
+	return "", input
+}
+
+func extractIssue(query string) (issue string) {
+	re := regexp.MustCompile(`^[\s#]*([1-9]\d+)$`)
+	match := re.FindStringSubmatch(query)
+	if len(match) > 0 {
+		issue = match[1]
+	}
+	return
 }
