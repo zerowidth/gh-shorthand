@@ -3,7 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/zerowidth/alfred-gh-shorthand/alfred"
+	"github.com/zerowidth/gh-shorthand/alfred"
 	"os"
 	"strings"
 )
