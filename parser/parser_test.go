@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"fmt"
 	"testing"
 )
 
@@ -39,20 +40,24 @@ func TestParse(t *testing.T) {
 	}
 
 	for _, tc := range repoTests {
-		result := Parse(repoMap, tc.input)
-		if result.Repo != tc.repo {
-			t.Errorf("Parse(%#v): %s: expected repo %#v, got %#v", tc.input, tc.example, tc.repo, result.Repo)
-		}
+		t.Run(fmt.Sprintf("Parse(%#v): %s", tc.input, tc.example), func(t *testing.T) {
+			result := Parse(repoMap, tc.input)
+			if result.Repo != tc.repo {
+				t.Errorf("expected repo %#v, got %#v", tc.repo, result.Repo)
+			}
+		})
 	}
 
 	for _, tc := range repoIssueTests {
-		result := Parse(repoMap, tc.input)
-		if result.Repo != tc.repo {
-			t.Errorf("Parse(%#v): %s: expected repo %#v, got %#v", tc.input, tc.example, tc.repo, result.Repo)
-		}
-		if result.Issue != tc.issue {
-			t.Errorf("Parse(%#v): %s: expected issue %#v, got %#v", tc.input, tc.example, tc.issue, result.Issue)
-		}
+		t.Run(fmt.Sprintf("Parse(%#v): %s", tc.input, tc.example), func(t *testing.T) {
+			result := Parse(repoMap, tc.input)
+			if result.Repo != tc.repo {
+				t.Errorf("expected repo %#v, got %#v", tc.repo, result.Repo)
+			}
+			if result.Issue != tc.issue {
+				t.Errorf("expected issue %#v, got %#v", tc.issue, result.Issue)
+			}
+		})
 	}
 
 }
