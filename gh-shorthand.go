@@ -24,11 +24,8 @@ func main() {
 	}
 
 	items := alfred.Items{Items: []alfred.Item{item}}
-	encoded, err := json.Marshal(items)
-	if err != nil {
+	if err := json.NewEncoder(os.Stdout).Encode(items); err != nil {
 		panic(err.Error())
 	}
 
-	os.Stdout.Write(encoded)
-	os.Stdout.WriteString("\n")
 }
