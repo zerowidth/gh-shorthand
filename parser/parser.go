@@ -18,25 +18,24 @@ func Parse(repoMap map[string]string, input string) *Result {
 	return &Result{repo, issue}
 }
 
+var userRepoRegexp = regexp.MustCompile(`^[A-Za-z0-9][-A-Za-z0-9]*/[\w\.\-]+\b`) // user/repo
+
 func extractRepo(repoMap map[string]string, input string) (repo string, query string) {
 	var keys []string
 	for k := range repoMap {
 		keys = append(keys, k)
 	}
 
-	// reverse the sorted keys, so longest is matched first
-	sort.Strings(keys)
-	for i, j := 0, len(keys)-1; i < j; i, j = i+1, j-1 {
-		keys[i], keys[j] = keys[j], keys[i]
-	}
+	// sort the keys in reverse so the longest is matched first
+	sort.Sort(sort.Reverse(sort.StringSlice(keys)))
 
 	for _, k := range keys {
 		if strings.HasPrefix(input, k) {
 			return repoMap[k], input[len(k):]
 		}
 	}
-	re := regexp.MustCompile(`^[A-Za-z0-9][-A-Za-z0-9]*/[\w\.\-]+\b`) // user/repo
-	match := re.FindStringSubmatch(input)
+
+	match := userRepoRegexp.FindStringSubmatch(input)
 	if len(match) > 0 {
 		repo = match[0]
 		return repo, input[len(repo):]

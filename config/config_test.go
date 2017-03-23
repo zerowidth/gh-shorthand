@@ -1,8 +1,7 @@
 package config
 
 import (
-	"github.com/stretchr/testify/assert"
-	"regexp"
+	"reflect"
 	"testing"
 )
 
@@ -18,17 +17,22 @@ var repoMap = map[string]string{
 
 func TestLoad(t *testing.T) {
 	config, _ := Load(configYaml)
-	assert.Equal(t, repoMap, config.RepoMap)
+	if !reflect.DeepEqual(config.RepoMap, repoMap) {
+		t.Errorf("expected repo map to be %#v, got %#v", repoMap, config.RepoMap)
+	}
 
-	_, err := Load(invalidYaml)
-	assert.NotNil(t, err)
-	assert.Regexp(t, regexp.MustCompile("cannot unmarshal"), err.Error())
+	if _, err := Load(invalidYaml); err == nil {
+		t.Error("expected invalid YML to error, but no error occurred")
+	}
 }
 
 func TestLoadFromFile(t *testing.T) {
 	config, _ := LoadFromFile("../fixtures/config.yml")
-	assert.Equal(t, repoMap, config.RepoMap)
+	if !reflect.DeepEqual(config.RepoMap, repoMap) {
+		t.Errorf("expected repo map to be %#v, got %#v", repoMap, config.RepoMap)
+	}
 
-	_, err := LoadFromFile("../fixtures/nonexistent.yml")
-	assert.Regexp(t, regexp.MustCompile("no such file"), err.Error())
+	if _, err := LoadFromFile("../fixtures/nonexistent.yml"); err == nil {
+		t.Error("expected missing yaml file to error, but no error occurred")
+	}
 }

@@ -2,45 +2,62 @@ package parser
 
 import (
 	"fmt"
-	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
 var repoMap = map[string]string{
 	"df":  "zerowidth/dotfiles",
 	"df2": "zerowidth/dotfiles2", // prefix collision
-	"lg2": "libgit2/libgit2",
-}
-
-func testExpandRepo(t *testing.T, input string, repo string) {
-	result := Parse(repoMap, input)
-	msg := fmt.Sprintf("input %#v expected repo %#v to be %#v", input, result.Repo, repo)
-	assert.Equal(t, repo, result.Repo, msg)
-}
-
-func testExpandRepoIssue(t *testing.T, input string, repo string, issue string) {
-	result := Parse(repoMap, input)
-	msg := fmt.Sprintf("input %#v expected repo %#v to be %#v", input, result.Repo, repo)
-	assert.Equal(t, repo, result.Repo, msg)
-	msg = fmt.Sprintf("input %#v expected issue %#v to be %#v", input, result.Issue, issue)
-	assert.Equal(t, issue, result.Issue, msg)
 }
 
 func TestParse(t *testing.T) {
-	testExpandRepo(t, "", "")
-	testExpandRepo(t, "df", "zerowidth/dotfiles") // match shorthand
-	testExpandRepo(t, " df", "")                  // no match, leading space
-	testExpandRepo(t, "foo/bar", "foo/bar")       // fully qualified
+	repoTests := []struct {
+		input   string // the input
+		repo    string // the expected repo match or expansion
+		example string // what the case is an example of
+	}{
+		{"", "", "no input, no repo match"},
+		{"df", "zerowidth/dotfiles", "match shorthand"},
+		{" df", "", "no match, leading space"},
+		{"foo/bar", "foo/bar", "fully qualified repo name"},
+	}
 
-	testExpandRepoIssue(t, "", "", "") // no issue nor repo
-	testExpandRepoIssue(t, "df 123", "zerowidth/dotfiles", "123")
-	testExpandRepoIssue(t, "df#123", "zerowidth/dotfiles", "123")
-	testExpandRepoIssue(t, "df #123", "zerowidth/dotfiles", "123") // space and hash
-	testExpandRepoIssue(t, "df123", "zerowidth/dotfiles", "123")   // prefix match
-	testExpandRepoIssue(t, "df2 34", "zerowidth/dotfiles2", "34")
-	testExpandRepoIssue(t, "df234", "zerowidth/dotfiles2", "34") // prefix match
-	testExpandRepoIssue(t, "lg2 123", "libgit2/libgit2", "123")
-	testExpandRepoIssue(t, "lg2123", "libgit2/libgit2", "123")  // prefix match
-	testExpandRepoIssue(t, "foo/bar 123", "foo/bar", "123")     // fully qualified
-	testExpandRepoIssue(t, "df 0123", "zerowidth/dotfiles", "") // invalid issue
+	repoIssueTests := []struct {
+		input   string // the input
+		repo    string // the expected repo match or expansion
+		issue   string // the expected issue match
+		example string // what the case is an example of
+	}{
+		{"", "", "", "no issue no repo"},
+		{"df 123", "zerowidth/dotfiles", "123", "normal expansion"},
+		{"df#123", "zerowidth/dotfiles", "123", "expansion with #"},
+		{"df #123", "zerowidth/dotfiles", "123", "space and # both"},
+		{"df123", "zerowidth/dotfiles", "123", "prefix match"},
+		{"df2 34", "zerowidth/dotfiles2", "34", "numeric suffix on shorthand"},
+		{"df234", "zerowidth/dotfiles2", "34", "numerix suffix with no space"},
+		{"foo/bar 123", "foo/bar", "123", "fully qualified repo"},
+		{"df 0123", "zerowidth/dotfiles", "", "invalid issue"},
+	}
+
+	for _, tc := range repoTests {
+		t.Run(fmt.Sprintf("Parse(%#v): %s", tc.input, tc.example), func(t *testing.T) {
+			result := Parse(repoMap, tc.input)
+			if result.Repo != tc.repo {
+				t.Errorf("expected repo %#v, got %#v", tc.repo, result.Repo)
+			}
+		})
+	}
+
+	for _, tc := range repoIssueTests {
+		t.Run(fmt.Sprintf("Parse(%#v): %s", tc.input, tc.example), func(t *testing.T) {
+			result := Parse(repoMap, tc.input)
+			if result.Repo != tc.repo {
+				t.Errorf("expected repo %#v, got %#v", tc.repo, result.Repo)
+			}
+			if result.Issue != tc.issue {
+				t.Errorf("expected issue %#v, got %#v", tc.issue, result.Issue)
+			}
+		})
+	}
+
 }
