@@ -26,11 +26,8 @@ func extractRepo(repoMap map[string]string, input string) (repo string, query st
 		keys = append(keys, k)
 	}
 
-	// reverse the sorted keys, so longest is matched first
-	sort.Strings(keys)
-	for i, j := 0, len(keys)-1; i < j; i, j = i+1, j-1 {
-		keys[i], keys[j] = keys[j], keys[i]
-	}
+	// sort the keys in reverse so the longest is matched first
+	sort.Sort(sort.Reverse(sort.StringSlice(keys)))
 
 	for _, k := range keys {
 		if strings.HasPrefix(input, k) {
