@@ -18,6 +18,8 @@ func Parse(repoMap map[string]string, input string) *Result {
 	return &Result{repo, issue}
 }
 
+var userRepoRegexp = regexp.MustCompile(`^[A-Za-z0-9][-A-Za-z0-9]*/[\w\.\-]+\b`) // user/repo
+
 func extractRepo(repoMap map[string]string, input string) (repo string, query string) {
 	var keys []string
 	for k := range repoMap {
@@ -35,8 +37,8 @@ func extractRepo(repoMap map[string]string, input string) (repo string, query st
 			return repoMap[k], input[len(k):]
 		}
 	}
-	re := regexp.MustCompile(`^[A-Za-z0-9][-A-Za-z0-9]*/[\w\.\-]+\b`) // user/repo
-	match := re.FindStringSubmatch(input)
+
+	match := userRepoRegexp.FindStringSubmatch(input)
 	if len(match) > 0 {
 		repo = match[0]
 		return repo, input[len(repo):]
