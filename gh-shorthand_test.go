@@ -25,6 +25,7 @@ type testCase struct {
 	uid   string // the results must contain an entry with this uid
 	valid bool   // and with the valid flag set to this
 	title string // the expected title
+	arg   string // expected argument
 	desc  string // test case description
 }
 
@@ -38,14 +39,32 @@ func TestItems(t *testing.T) {
 			uid:   "gh:zerowidth/dotfiles",
 			valid: true,
 			title: "Open zerowidth/dotfiles (df) on GitHub",
+			arg:   "open https://github.com/zerowidth/dotfiles",
 			desc:  "open a shorthand repo",
+		},
+		{
+			input: "df 123",
+			uid:   "gh:zerowidth/dotfiles#123",
+			valid: true,
+			title: "Open zerowidth/dotfiles#123 (df) on GitHub",
+			arg:   "open https://github.com/zerowidth/dotfiles/issues/123",
+			desc:  "open a shorthand repo and issue",
 		},
 		{
 			input: "foo/bar",
 			uid:   "gh:foo/bar",
 			valid: true,
 			title: "Open foo/bar on GitHub",
+			arg:   "open https://github.com/foo/bar",
 			desc:  "open a fully qualified repo",
+		},
+		{
+			input: "foo/bar 123",
+			uid:   "gh:foo/bar#123",
+			valid: true,
+			title: "Open foo/bar#123 on GitHub",
+			arg:   "open https://github.com/foo/bar/issues/123",
+			desc:  "open a fully qualified repo and issue",
 		},
 	}
 
@@ -58,15 +77,19 @@ func TestItems(t *testing.T) {
 			item := findMatchingItem(tc, items)
 			if item != nil {
 				if tc.uid != "" && item.UID != tc.uid {
-					t.Errorf("expected %+v uid to be %q", item, tc.uid)
+					t.Errorf("%+v\nexpected UID %q to be %q", item, item.UID, tc.uid)
 				}
 
 				if tc.title != "" && item.Title != tc.title {
-					t.Errorf("expected %+v title to be %q", item, tc.title)
+					t.Errorf("%+v\nexpected Title %q to be %q", item, item.Title, tc.title)
 				}
 
 				if item.Valid != tc.valid {
-					t.Errorf("expected %+v valid to be %t", item, tc.valid)
+					t.Errorf("%+v\nexpected Valid %t to be %t", item, item.Valid, tc.valid)
+				}
+
+				if item.Arg != "" && item.Arg != tc.arg {
+					t.Errorf("%+v\nexpected Arg %q to be %q", item, item.Arg, tc.arg)
 				}
 			} else {
 				t.Errorf("expected item with uid %q and/or title %q in %+v", tc.uid, tc.title, items)
