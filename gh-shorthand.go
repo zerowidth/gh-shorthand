@@ -61,7 +61,12 @@ func generateItems(cfg *config.Config, input string) []alfred.Item {
 		}
 
 		if result.Match != "" {
-			title += " (" + result.Match + ")"
+			title += " (" + result.Match
+			if result.Issue != "" {
+				title += "#" + result.Issue
+			}
+			title += ")"
+
 		}
 
 		items = append(items, alfred.Item{

@@ -47,7 +47,7 @@ func TestItems(t *testing.T) {
 			input: " df 123",
 			uid:   "gh:zerowidth/dotfiles#123",
 			valid: true,
-			title: "Open zerowidth/dotfiles#123 (df) on GitHub",
+			title: "Open zerowidth/dotfiles#123 (df#123) on GitHub",
 			arg:   "open https://github.com/zerowidth/dotfiles/issues/123",
 		},
 		{
