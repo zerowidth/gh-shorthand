@@ -63,6 +63,13 @@ func TestParse(t *testing.T) {
 			desc:  "prefix match",
 		},
 		{
+			input: "df 1",
+			repo:  "zerowidth/dotfiles",
+			issue: "1",
+			match: "df",
+			desc:  "single digit issue",
+		},
+		{
 			input: "df2 34",
 			repo:  "zerowidth/dotfiles2",
 			issue: "34",

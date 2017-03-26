@@ -45,7 +45,7 @@ func extractRepo(repoMap map[string]string, input string) (repo, match, query st
 }
 
 func extractIssue(query string) (issue string) {
-	re := regexp.MustCompile(`^[\s#]*([1-9]\d+)$`)
+	re := regexp.MustCompile(`^[\s#]*([1-9]\d*)$`)
 	match := re.FindStringSubmatch(query)
 	if len(match) > 0 {
 		issue = match[1]
