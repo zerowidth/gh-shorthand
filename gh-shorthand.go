@@ -34,9 +34,15 @@ func main() {
 func generateItems(cfg *config.Config, input string) (items []alfred.Item) {
 	result := parser.Parse(cfg.RepoMap, input)
 	if result.Repo != "" {
+		var title string
+		if result.Match != "" {
+			title = fmt.Sprintf("Open %s (%s) on GitHub", result.Repo, result.Match)
+		} else {
+			title = fmt.Sprintf("Open %s on GitHub", result.Repo)
+		}
 		items = append(items, alfred.Item{
 			UID:   fmt.Sprintf("gh:%s", result.Repo),
-			Title: fmt.Sprintf("Open %s on GitHub", result.Repo),
+			Title: title,
 			Arg:   fmt.Sprintf("open https://github.com/%s", result.Repo),
 			Valid: true,
 		})
