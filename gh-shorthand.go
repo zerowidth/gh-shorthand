@@ -13,25 +13,23 @@ import (
 
 func main() {
 	var input string
+	var items []alfred.Item
+
 	if len(os.Args) < 2 {
 		input = ""
 	} else {
 		input = strings.Join(os.Args[1:], " ")
 	}
 
-	fmt.Fprintf(os.Stderr, "input: %#v\n", input)
-
 	path, _ := homedir.Expand("~/.gh-shorthand.yml")
 	cfg, err := config.LoadFromFile(path)
 	if err != nil {
-		panic(err.Error())
+		items = []alfred.Item{errorItem("when loading ~/.gh-shorthand.yml", err.Error())}
+	} else {
+		items = generateItems(cfg, input)
 	}
 
-	items := generateItems(cfg, input)
-	doc := alfred.Items{Items: items}
-	if err := json.NewEncoder(os.Stdout).Encode(doc); err != nil {
-		panic(err.Error())
-	}
+	printItems(items)
 }
 
 func generateItems(cfg *config.Config, input string) []alfred.Item {
@@ -60,4 +58,19 @@ func generateItems(cfg *config.Config, input string) []alfred.Item {
 		})
 	}
 	return items
+}
+
+func errorItem(context, msg string) alfred.Item {
+	return alfred.Item{
+		Title:    fmt.Sprintf("Error %s"),
+		Subtitle: msg,
+		Valid:    false,
+	}
+}
+
+func printItems(items []alfred.Item) {
+	doc := alfred.Items{Items: items}
+	if err := json.NewEncoder(os.Stdout).Encode(doc); err != nil {
+		panic(err.Error())
+	}
 }
