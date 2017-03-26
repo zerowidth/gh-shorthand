@@ -13,7 +13,7 @@ import (
 
 func main() {
 	var input string
-	var items []alfred.Item
+	var items = []alfred.Item{}
 
 	if len(os.Args) < 2 {
 		input = ""
@@ -25,15 +25,29 @@ func main() {
 	cfg, err := config.LoadFromFile(path)
 	if err != nil {
 		items = []alfred.Item{errorItem("when loading ~/.gh-shorthand.yml", err.Error())}
-	} else {
-		items = generateItems(cfg, input)
+		printItems(items)
+		return
 	}
 
-	printItems(items)
+	printItems(generateItems(cfg, input))
 }
 
 func generateItems(cfg *config.Config, input string) []alfred.Item {
 	items := []alfred.Item{}
+
+	if input == "" {
+		return items
+	}
+
+	// input includes leading space or leading mode char followed by a space
+	if len(input) > 0 {
+		if input[0:1] != " " {
+			return items
+		} else {
+			input = input[1:]
+		}
+	}
+
 	result := parser.Parse(cfg.RepoMap, input)
 	if result.Repo != "" {
 		uid := "gh:" + result.Repo

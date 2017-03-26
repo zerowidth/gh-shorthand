@@ -35,36 +35,36 @@ func TestItems(t *testing.T) {
 	// uniqueness by UID.
 	testCases := []testCase{
 		{
-			input: "df",
+			desc:  "open a shorthand repo",
+			input: " df",
 			uid:   "gh:zerowidth/dotfiles",
 			valid: true,
 			title: "Open zerowidth/dotfiles (df) on GitHub",
 			arg:   "open https://github.com/zerowidth/dotfiles",
-			desc:  "open a shorthand repo",
 		},
 		{
-			input: "df 123",
+			desc:  "open a shorthand repo and issue",
+			input: " df 123",
 			uid:   "gh:zerowidth/dotfiles#123",
 			valid: true,
 			title: "Open zerowidth/dotfiles#123 (df) on GitHub",
 			arg:   "open https://github.com/zerowidth/dotfiles/issues/123",
-			desc:  "open a shorthand repo and issue",
 		},
 		{
-			input: "foo/bar",
+			desc:  "open a fully qualified repo",
+			input: " foo/bar",
 			uid:   "gh:foo/bar",
 			valid: true,
 			title: "Open foo/bar on GitHub",
 			arg:   "open https://github.com/foo/bar",
-			desc:  "open a fully qualified repo",
 		},
 		{
-			input: "foo/bar 123",
+			desc:  "open a fully qualified repo and issue",
+			input: " foo/bar 123",
 			uid:   "gh:foo/bar#123",
 			valid: true,
 			title: "Open foo/bar#123 on GitHub",
 			arg:   "open https://github.com/foo/bar/issues/123",
-			desc:  "open a fully qualified repo and issue",
 		},
 	}
 
@@ -88,7 +88,7 @@ func TestItems(t *testing.T) {
 					t.Errorf("%+v\nexpected Valid %t to be %t", item, item.Valid, tc.valid)
 				}
 
-				if item.Arg != "" && item.Arg != tc.arg {
+				if tc.arg != "" && item.Arg != tc.arg {
 					t.Errorf("%+v\nexpected Arg %q to be %q", item, item.Arg, tc.arg)
 				}
 			} else {
@@ -128,7 +128,7 @@ func validateItems(t *testing.T, tc testCase, items []alfred.Item) {
 // Try to find item by uid or title
 func findMatchingItem(tc testCase, items []alfred.Item) *alfred.Item {
 	for _, item := range items {
-		if item.Title == tc.title || item.UID == tc.uid {
+		if item.Title == tc.title || (item.UID != "" && item.UID == tc.uid) {
 			return &item
 		}
 	}
