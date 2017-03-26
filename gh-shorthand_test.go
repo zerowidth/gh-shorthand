@@ -9,7 +9,8 @@ import (
 
 var cfg = &config.Config{
 	RepoMap: map[string]string{
-		"df": "zerowidth/dotfiles",
+		"df":  "zerowidth/dotfiles",
+		"df2": "zerowidth/df2",
 	},
 }
 
@@ -21,12 +22,13 @@ func TestDefaults(t *testing.T) {
 }
 
 type testCase struct {
-	input string
+	desc  string // test case description
+	input string // input string
 	uid   string // the results must contain an entry with this uid
 	valid bool   // and with the valid flag set to this
 	title string // the expected title
 	arg   string // expected argument
-	desc  string // test case description
+	auto  string // expected autocomplete arg
 }
 
 func TestItems(t *testing.T) {
@@ -66,6 +68,31 @@ func TestItems(t *testing.T) {
 			title: "Open foo/bar#123 on GitHub",
 			arg:   "open https://github.com/foo/bar/issues/123",
 		},
+
+		{
+			desc:  "autocomplete 'd', first match",
+			input: " d",
+			uid:   "gh:zerowidth/dotfiles",
+			valid: true,
+			title: "Open zerowidth/dotfiles (df) on GitHub",
+			arg:   "open https://github.com/zerowidth/dotfiles",
+			auto:  " df",
+		},
+		{
+			desc:  "autocomplete 'd', second match",
+			input: " d",
+			uid:   "gh:zerowidth/df2",
+			valid: true,
+			title: "Open zerowidth/df2 (df2) on GitHub",
+			arg:   "open https://github.com/zerowidth/df2",
+			auto:  " df2",
+		},
+		{
+			desc:  "autocomplete 'd', open-ended",
+			input: " d",
+			title: "Open d... on GitHub",
+			valid: false,
+		},
 	}
 
 	for _, tc := range testCases {
@@ -90,6 +117,10 @@ func TestItems(t *testing.T) {
 
 				if tc.arg != "" && item.Arg != tc.arg {
 					t.Errorf("%+v\nexpected Arg %q to be %q", item, item.Arg, tc.arg)
+				}
+
+				if tc.auto != "" && item.Autocomplete != tc.auto {
+					t.Errorf("%+v\nexpected Autocomplete %q to be %q", item, item.Autocomplete, tc.auto)
 				}
 			} else {
 				t.Errorf("expected item with uid %q and/or title %q in %+v", tc.uid, tc.title, items)

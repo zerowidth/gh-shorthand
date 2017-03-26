@@ -76,6 +76,28 @@ func generateItems(cfg *config.Config, input string) []alfred.Item {
 			Valid: true,
 		})
 	}
+
+	if !strings.ContainsAny(input, " /") {
+		for key, repo := range cfg.RepoMap {
+			if strings.HasPrefix(key, input) && key != result.Match {
+				items = append(items, alfred.Item{
+					UID:          "gh:" + repo,
+					Title:        fmt.Sprintf("Open %s (%s) on GitHub", repo, key),
+					Arg:          "open https://github.com/" + repo,
+					Valid:        true,
+					Autocomplete: " " + key,
+				})
+			}
+		}
+
+		if input != "" {
+			items = append(items, alfred.Item{
+				Title:        fmt.Sprintf("Open %s... on GitHub", input),
+				Autocomplete: " " + input,
+				Valid:        false,
+			})
+		}
+	}
 	return items
 }
 
