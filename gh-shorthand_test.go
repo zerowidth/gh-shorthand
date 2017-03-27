@@ -149,9 +149,14 @@ func TestItems(t *testing.T) {
 			valid: false,
 		},
 		{
-			desc:  "does not autocomplete with fully-qualified repo",
-			input: " foo/bar",
+			desc:    "does not autocomplete with fully-qualified repo",
+			input:   " foo/bar",
 			exclude: "Open foo/bar... on GitHub",
+		},
+		{
+			desc: "no autocomplete when input has space",
+			input: " foo bar",
+			exclude: "Open foo bar... on GitHub",
 		},
 	}
 
