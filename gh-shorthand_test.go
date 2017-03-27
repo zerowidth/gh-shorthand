@@ -40,7 +40,7 @@ type testCase struct {
 	arg     string         // expected argument
 	auto    string         // expected autocomplete arg
 	cfg     *config.Config // config to use instead of the default cfg
-	exclude string         // exclude any item with this UID
+	exclude string         // exclude any item with this UID or title
 }
 
 func TestItems(t *testing.T) {
@@ -138,6 +138,11 @@ func TestItems(t *testing.T) {
 			title: "Open foo/... on GitHub",
 			valid: false,
 		},
+		{
+			desc:  "does not autocomplete with fully-qualified repo",
+			input: " foo/bar",
+			exclude: "Open foo/bar... on GitHub",
+		},
 	}
 
 	for _, tc := range testCases {
@@ -150,9 +155,9 @@ func TestItems(t *testing.T) {
 			validateItems(t, tc, items)
 
 			if tc.exclude != "" {
-				item := findMatchingItem(tc.exclude, "", items)
+				item := findMatchingItem(tc.exclude, tc.exclude, items)
 				if item != nil {
-					t.Errorf("%+v\nexpected no item with UID %q", items, tc.exclude)
+					t.Errorf("%+v\nexpected no item with UID or Title %q", items, tc.exclude)
 				}
 				return
 			}

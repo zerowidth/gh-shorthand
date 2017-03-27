@@ -106,7 +106,7 @@ func generateItems(cfg *config.Config, input string) []alfred.Item {
 			}
 		}
 
-		if input != "" {
+		if input != "" && result.Repo != input {
 			items = append(items, alfred.Item{
 				Title:        fmt.Sprintf("Open %s... on GitHub", input),
 				Autocomplete: " " + input,
