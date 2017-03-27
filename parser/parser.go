@@ -1,4 +1,3 @@
-// shorthand parser
 package parser
 
 import (
@@ -7,12 +6,15 @@ import (
 	"strings"
 )
 
+// Result is a Parse result, returning the matched repo, issue, etc. as applicable
 type Result struct {
 	Repo  string // the matched/expanded repo, if applicable
 	Issue string // the matched issue number, if applicable
 	Match string // the matched  value, if applicable
 }
 
+// Parse takes a repo mapping and input string and attempts to extract a repo,
+// issue, etc. from the input using the repo map for shorthand expansion.
 func Parse(repoMap map[string]string, input string) *Result {
 	repo, match, query := extractRepo(repoMap, input)
 	issue := extractIssue(query)
