@@ -43,9 +43,8 @@ func generateItems(cfg *config.Config, input string) []alfred.Item {
 	if len(input) > 0 {
 		if input[0:1] != " " {
 			return items
-		} else {
-			input = input[1:]
 		}
+		input = input[1:]
 	}
 
 	result := parser.Parse(cfg.RepoMap, input)
@@ -103,7 +102,7 @@ func generateItems(cfg *config.Config, input string) []alfred.Item {
 
 func errorItem(context, msg string) alfred.Item {
 	return alfred.Item{
-		Title:    fmt.Sprintf("Error %s"),
+		Title:    fmt.Sprintf("Error %s", context),
 		Subtitle: msg,
 		Valid:    false,
 	}
