@@ -32,6 +32,9 @@ func main() {
 	printItems(generateItems(cfg, input))
 }
 
+var repoIcon = octicon("repo")
+var issueIcon = octicon("git-pull-request")
+
 func generateItems(cfg *config.Config, input string) []alfred.Item {
 	items := []alfred.Item{}
 
@@ -48,6 +51,7 @@ func generateItems(cfg *config.Config, input string) []alfred.Item {
 	}
 
 	result := parser.Parse(cfg.RepoMap, input)
+	icon := repoIcon
 	if result.Repo != "" {
 		uid := "gh:" + result.Repo
 		title := "Open " + result.Repo
@@ -57,6 +61,7 @@ func generateItems(cfg *config.Config, input string) []alfred.Item {
 			uid += "#" + result.Issue
 			title += "#" + result.Issue
 			arg += "/issues/" + result.Issue
+			icon = issueIcon
 		}
 
 		if result.Match != "" {
@@ -73,6 +78,7 @@ func generateItems(cfg *config.Config, input string) []alfred.Item {
 			Title: title + " on GitHub",
 			Arg:   arg,
 			Valid: true,
+			Icon:  &icon,
 		})
 	}
 
@@ -85,6 +91,7 @@ func generateItems(cfg *config.Config, input string) []alfred.Item {
 					Arg:          "open https://github.com/" + repo,
 					Valid:        true,
 					Autocomplete: " " + key,
+					Icon:         &repoIcon,
 				})
 			}
 		}
@@ -112,5 +119,13 @@ func printItems(items []alfred.Item) {
 	doc := alfred.Items{Items: items}
 	if err := json.NewEncoder(os.Stdout).Encode(doc); err != nil {
 		panic(err.Error())
+	}
+}
+
+// octicon is relative to the alfred workflow, so this tells alfred to retrieve
+// icons from there rather than relative to this go binary.
+func octicon(name string) alfred.Icon {
+	return alfred.Icon{
+		Path: fmt.Sprintf("octicons-%s.png", name),
 	}
 }
