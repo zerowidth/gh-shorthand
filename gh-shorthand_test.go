@@ -132,6 +132,12 @@ func TestItems(t *testing.T) {
 			title: "Open d... on GitHub",
 			valid: false,
 		},
+		{
+			desc:  "autocomplete unmatched user prefix",
+			input: " foo/",
+			title: "Open foo/... on GitHub",
+			valid: false,
+		},
 	}
 
 	for _, tc := range testCases {

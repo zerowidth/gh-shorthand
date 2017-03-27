@@ -92,7 +92,7 @@ func generateItems(cfg *config.Config, input string) []alfred.Item {
 		})
 	}
 
-	if !strings.ContainsAny(input, " /") {
+	if !strings.Contains(input, " ") {
 		for key, repo := range cfg.RepoMap {
 			if strings.HasPrefix(key, input) && key != result.Match && repo != result.Repo {
 				items = append(items, alfred.Item{
