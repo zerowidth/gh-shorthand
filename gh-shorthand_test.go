@@ -81,6 +81,16 @@ func TestItems(t *testing.T) {
 			title: "Open foo/bar#123 on GitHub",
 			arg:   "open https://github.com/foo/bar/issues/123",
 		},
+		{
+			desc:    "no match if any unparsed query remains after shorthand",
+			input:   " df foo",
+			exclude: "gh:zerowidth/dotfiles",
+		},
+		{
+			desc:    "no match if any unparsed query remains after repo",
+			input:   " foo/bar baz",
+			exclude: "gh:foo/bar",
+		},
 
 		// default repo
 		{

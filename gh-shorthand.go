@@ -59,7 +59,7 @@ func generateItems(cfg *config.Config, input string) []alfred.Item {
 		usedDefault = true
 	}
 
-	if result.Repo != "" {
+	if result.Repo != "" && result.Query == "" {
 		uid := "gh:" + result.Repo
 		title := "Open " + result.Repo
 		arg := "open https://github.com/" + result.Repo
