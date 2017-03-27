@@ -96,6 +96,7 @@ func TestParse(t *testing.T) {
 			repo:  "zerowidth/dotfiles",
 			issue: "",
 			match: "df",
+			query: "0123",
 			desc:  "invalid issue",
 		},
 		{
@@ -124,6 +125,19 @@ func TestParse(t *testing.T) {
 			query: "foo bar",
 			desc:  "retrieve query",
 		},
+		{
+			input: "df ",
+			repo: "zerowidth/dotfiles",
+			match: "df",
+			query: "",
+			desc: "ignores whitespace after shorthand",
+		},
+		{
+			input: "foo/bar ",
+			repo: "foo/bar",
+			query: "",
+			desc: "ignores whitespace after repo",
+		},
 	}
 
 	for _, tc := range repoTests {
@@ -150,6 +164,10 @@ func TestParse(t *testing.T) {
 			if result.Match != tc.match {
 				t.Errorf("expected match %#v, got %#v", tc.match, result.Match)
 			}
+			if result.Query != tc.query {
+				t.Errorf("expected query %#v, got %#v", tc.query, result.Query)
+			}
+
 		})
 	}
 

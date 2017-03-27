@@ -35,14 +35,14 @@ func extractRepo(repoMap map[string]string, input string) (repo, match, query st
 
 	for _, k := range keys {
 		if strings.HasPrefix(input, k) {
-			return repoMap[k], k, input[len(k):]
+			return repoMap[k], k, strings.TrimLeft(input[len(k):], " ")
 		}
 	}
 
 	result := userRepoRegexp.FindStringSubmatch(input)
 	if len(result) > 0 {
 		repo = result[0]
-		return repo, "", input[len(repo):]
+		return repo, "", strings.TrimLeft(input[len(repo):], " ")
 	}
 	return "", "", input
 }

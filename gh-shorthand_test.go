@@ -91,6 +91,18 @@ func TestItems(t *testing.T) {
 			input:   " foo/bar baz",
 			exclude: "gh:foo/bar",
 		},
+		{
+			desc:  "ignores trailing whitespace for shorthand",
+			input: " df ",
+			uid:   "gh:zerowidth/dotfiles",
+			valid: true,
+		},
+		{
+			desc:  "ignores trailing whitespace for repo",
+			input: " foo/bar ",
+			uid:   "gh:foo/bar",
+			valid: true,
+		},
 
 		// default repo
 		{
@@ -154,8 +166,8 @@ func TestItems(t *testing.T) {
 			exclude: "Open foo/bar... on GitHub",
 		},
 		{
-			desc: "no autocomplete when input has space",
-			input: " foo bar",
+			desc:    "no autocomplete when input has space",
+			input:   " foo bar",
 			exclude: "Open foo bar... on GitHub",
 		},
 	}
