@@ -14,18 +14,6 @@ func TestParse(t *testing.T) {
 	repoTests := []struct {
 		input string // the input
 		repo  string // the expected repo match or expansion
-		match string // the matched repo shorthand
-		desc  string // description of the test case
-	}{
-		{"", "", "", "no input, no repo match"},
-		{"df", "zerowidth/dotfiles", "df", "match match"},
-		{" df", "", "", "no match, leading space"},
-		{"foo/bar", "foo/bar", "", "fully qualified repo name"},
-	}
-
-	repoIssueTests := []struct {
-		input string // the input
-		repo  string // the expected repo match or expansion
 		issue string // the expected issue match
 		match string // the matched repo shorthand
 		query string // the remaining query text after parsing/expansion
@@ -34,6 +22,25 @@ func TestParse(t *testing.T) {
 		{
 			input: "",
 			desc:  "no issue, no repo",
+		},
+		{
+			input: "df",
+			repo:  "zerowidth/dotfiles",
+			match: "df",
+			desc:  "shorthand match",
+		},
+		{
+			input: " df",
+			repo:  "",
+			match: "",
+			query: " df",
+			desc:  "no match, leading space",
+		},
+		{
+			input: "foo/bar",
+			repo:  "foo/bar",
+			match: "",
+			desc:  "fully qualified repo name",
 		},
 		{
 			input: "df 123",
@@ -127,32 +134,20 @@ func TestParse(t *testing.T) {
 		},
 		{
 			input: "df ",
-			repo: "zerowidth/dotfiles",
+			repo:  "zerowidth/dotfiles",
 			match: "df",
 			query: "",
-			desc: "ignores whitespace after shorthand",
+			desc:  "ignores whitespace after shorthand",
 		},
 		{
 			input: "foo/bar ",
-			repo: "foo/bar",
+			repo:  "foo/bar",
 			query: "",
-			desc: "ignores whitespace after repo",
+			desc:  "ignores whitespace after repo",
 		},
 	}
 
 	for _, tc := range repoTests {
-		t.Run(fmt.Sprintf("Parse(%#v): %s", tc.input, tc.desc), func(t *testing.T) {
-			result := Parse(repoMap, tc.input)
-			if result.Repo != tc.repo {
-				t.Errorf("expected repo %#v, got %#v", tc.repo, result.Repo)
-			}
-			if result.Match != tc.match {
-				t.Errorf("expected match %#v, got %#v", tc.match, result.Match)
-			}
-		})
-	}
-
-	for _, tc := range repoIssueTests {
 		t.Run(fmt.Sprintf("Parse(%#v): %s", tc.input, tc.desc), func(t *testing.T) {
 			result := Parse(repoMap, tc.input)
 			if result.Repo != tc.repo {
