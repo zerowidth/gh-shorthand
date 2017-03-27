@@ -7,7 +7,8 @@ import (
 
 // Config is a shorthand configuration, read from a yaml file
 type Config struct {
-	RepoMap map[string]string `yaml:"repos"`
+	RepoMap     map[string]string `yaml:"repos"`
+	DefaultRepo string            `yaml:"default_repo"`
 }
 
 // Load a Config from a yaml string.
