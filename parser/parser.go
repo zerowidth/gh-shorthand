@@ -11,14 +11,15 @@ type Result struct {
 	Repo  string // the matched/expanded repo, if applicable
 	Issue string // the matched issue number, if applicable
 	Match string // the matched  value, if applicable
+	Query string // the remainder of the input, if not otherwise parsed
 }
 
 // Parse takes a repo mapping and input string and attempts to extract a repo,
 // issue, etc. from the input using the repo map for shorthand expansion.
 func Parse(repoMap map[string]string, input string) *Result {
 	repo, match, query := extractRepo(repoMap, input)
-	issue := extractIssue(query)
-	return &Result{repo, issue, match}
+	issue, query := extractIssue(query)
+	return &Result{repo, issue, match, query}
 }
 
 var userRepoRegexp = regexp.MustCompile(`^[A-Za-z0-9][-A-Za-z0-9]*/[\w\.\-]+\b`) // user/repo
@@ -46,11 +47,15 @@ func extractRepo(repoMap map[string]string, input string) (repo, match, query st
 	return "", "", input
 }
 
-func extractIssue(query string) (issue string) {
+func extractIssue(query string) (issue, remainder string) {
 	re := regexp.MustCompile(`^[\s#]*([1-9]\d*)$`)
 	match := re.FindStringSubmatch(query)
 	if len(match) > 0 {
 		issue = match[1]
+		remainder = ""
+	} else {
+		issue = ""
+		remainder = query
 	}
 	return
 }

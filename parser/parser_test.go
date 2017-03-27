@@ -28,6 +28,7 @@ func TestParse(t *testing.T) {
 		repo  string // the expected repo match or expansion
 		issue string // the expected issue match
 		match string // the matched repo shorthand
+		query string // the remaining query text after parsing/expansion
 		desc  string // description of the test case
 	}{
 		{
@@ -96,6 +97,32 @@ func TestParse(t *testing.T) {
 			issue: "",
 			match: "df",
 			desc:  "invalid issue",
+		},
+		{
+			input: "df foo",
+			repo:  "zerowidth/dotfiles",
+			match: "df",
+			query: "foo",
+			desc:  "retrieve query after expansion",
+		},
+		{
+			input: "df 123 foo",
+			repo:  "zerowidth/dotfiles",
+			issue: "",
+			match: "df",
+			query: "123 foo",
+			desc:  "treats unparsed issue as query",
+		},
+		{
+			input: "123 foo",
+			issue: "",
+			query: "123 foo",
+			desc:  "treats issue with any other text as a query",
+		},
+		{
+			input: "foo bar",
+			query: "foo bar",
+			desc:  "retrieve query",
 		},
 	}
 
