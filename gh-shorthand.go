@@ -52,6 +52,13 @@ func generateItems(cfg *config.Config, input string) []alfred.Item {
 
 	result := parser.Parse(cfg.RepoMap, input)
 	icon := repoIcon
+	usedDefault := false
+
+	if result.Repo == "" && cfg.DefaultRepo != "" {
+		result.Repo = cfg.DefaultRepo
+		usedDefault = true
+	}
+
 	if result.Repo != "" {
 		uid := "gh:" + result.Repo
 		title := "Open " + result.Repo
@@ -70,7 +77,10 @@ func generateItems(cfg *config.Config, input string) []alfred.Item {
 				title += "#" + result.Issue
 			}
 			title += ")"
+		}
 
+		if usedDefault {
+			title += " (default repo)"
 		}
 
 		items = append(items, alfred.Item{
@@ -84,7 +94,7 @@ func generateItems(cfg *config.Config, input string) []alfred.Item {
 
 	if !strings.ContainsAny(input, " /") {
 		for key, repo := range cfg.RepoMap {
-			if strings.HasPrefix(key, input) && key != result.Match {
+			if strings.HasPrefix(key, input) && key != result.Match && repo != result.Repo {
 				items = append(items, alfred.Item{
 					UID:          "gh:" + repo,
 					Title:        fmt.Sprintf("Open %s (%s) on GitHub", repo, key),

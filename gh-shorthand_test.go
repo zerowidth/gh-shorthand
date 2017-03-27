@@ -8,9 +8,17 @@ import (
 )
 
 var cfg = &config.Config{
+	DefaultRepo: "zerowidth/default",
 	RepoMap: map[string]string{
 		"df":  "zerowidth/dotfiles",
 		"df2": "zerowidth/df2",
+	},
+}
+
+var defaultInMap = &config.Config{
+	DefaultRepo: "zerowidth/dotfiles",
+	RepoMap: map[string]string{
+		"df": "zerowidth/dotfiles",
 	},
 }
 
@@ -22,13 +30,14 @@ func TestDefaults(t *testing.T) {
 }
 
 type testCase struct {
-	desc  string // test case description
-	input string // input string
-	uid   string // the results must contain an entry with this uid
-	valid bool   // and with the valid flag set to this
-	title string // the expected title
-	arg   string // expected argument
-	auto  string // expected autocomplete arg
+	desc  string         // test case description
+	input string         // input string
+	uid   string         // the results must contain an entry with this uid
+	valid bool           // and with the valid flag set to this
+	title string         // the expected title
+	arg   string         // expected argument
+	auto  string         // expected autocomplete arg
+	cfg   *config.Config // config to use instead of the default cfg
 }
 
 func TestItems(t *testing.T) {
@@ -36,6 +45,7 @@ func TestItems(t *testing.T) {
 	// the given UID or title. All items are also validated for correctness and
 	// uniqueness by UID.
 	testCases := []testCase{
+		// basic parsing tests
 		{
 			desc:  "open a shorthand repo",
 			input: " df",
@@ -69,6 +79,27 @@ func TestItems(t *testing.T) {
 			arg:   "open https://github.com/foo/bar/issues/123",
 		},
 
+		// default repo
+		{
+			desc:  "open an issue with the default repo",
+			input: " 123",
+			uid:   "gh:zerowidth/default#123",
+			valid: true,
+			title: "Open zerowidth/default#123 (default repo) on GitHub",
+			arg:   "open https://github.com/zerowidth/default/issues/123",
+		},
+		{
+			// validate uniqueness of UIDs when colliding with autocomplete
+			desc:  "open the default repo when default is also in map",
+			cfg:   defaultInMap,
+			input: " ",
+			uid:   "gh:zerowidth/dotfiles",
+			valid: true,
+			title: "Open zerowidth/dotfiles (default repo) on GitHub",
+			arg:   "open https://github.com/zerowidth/dotfiles",
+		},
+
+		// repo autocomplete
 		{
 			desc:  "autocomplete 'd', first match",
 			input: " d",
@@ -97,7 +128,10 @@ func TestItems(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("generateItems(%#v): %s", tc.input, tc.desc), func(t *testing.T) {
-			items := generateItems(cfg, tc.input)
+			if tc.cfg == nil {
+				tc.cfg = cfg
+			}
+			items := generateItems(tc.cfg, tc.input)
 
 			validateItems(t, tc, items)
 
