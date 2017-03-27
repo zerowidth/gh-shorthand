@@ -54,7 +54,7 @@ func generateItems(cfg *config.Config, input string) []alfred.Item {
 	icon := repoIcon
 	usedDefault := false
 
-	if result.Repo == "" && cfg.DefaultRepo != "" {
+	if result.Repo == "" && cfg.DefaultRepo != "" && result.Query == "" {
 		result.Repo = cfg.DefaultRepo
 		usedDefault = true
 	}

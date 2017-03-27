@@ -22,6 +22,8 @@ var defaultInMap = &config.Config{
 	},
 }
 
+var emptyConfig = &config.Config{}
+
 func TestDefaults(t *testing.T) {
 	items := generateItems(cfg, "")
 	if len(items) > 0 {
@@ -30,14 +32,15 @@ func TestDefaults(t *testing.T) {
 }
 
 type testCase struct {
-	desc  string         // test case description
-	input string         // input string
-	uid   string         // the results must contain an entry with this uid
-	valid bool           // and with the valid flag set to this
-	title string         // the expected title
-	arg   string         // expected argument
-	auto  string         // expected autocomplete arg
-	cfg   *config.Config // config to use instead of the default cfg
+	desc    string         // test case description
+	input   string         // input string
+	uid     string         // the results must contain an entry with this uid
+	valid   bool           // and with the valid flag set to this
+	title   string         // the expected title
+	arg     string         // expected argument
+	auto    string         // expected autocomplete arg
+	cfg     *config.Config // config to use instead of the default cfg
+	exclude string         // exclude any item with this UID
 }
 
 func TestItems(t *testing.T) {
@@ -98,6 +101,11 @@ func TestItems(t *testing.T) {
 			title: "Open zerowidth/dotfiles (default repo) on GitHub",
 			arg:   "open https://github.com/zerowidth/dotfiles",
 		},
+		{
+			desc:    "includes no default if remaining input isn't otherwise valid",
+			input:   " foo",
+			exclude: "gh:zerowidth/default",
+		},
 
 		// repo autocomplete
 		{
@@ -135,7 +143,15 @@ func TestItems(t *testing.T) {
 
 			validateItems(t, tc, items)
 
-			item := findMatchingItem(tc, items)
+			if tc.exclude != "" {
+				item := findMatchingItem(tc.exclude, "", items)
+				if item != nil {
+					t.Errorf("%+v\nexpected no item with UID %q", items, tc.exclude)
+				}
+				return
+			}
+
+			item := findMatchingItem(tc.uid, tc.title, items)
 			if item != nil {
 				if tc.uid != "" && item.UID != tc.uid {
 					t.Errorf("%+v\nexpected UID %q to be %q", item, item.UID, tc.uid)
@@ -191,9 +207,9 @@ func validateItems(t *testing.T, tc testCase, items []alfred.Item) {
 }
 
 // Try to find item by uid or title
-func findMatchingItem(tc testCase, items []alfred.Item) *alfred.Item {
+func findMatchingItem(uid, title string, items []alfred.Item) *alfred.Item {
 	for _, item := range items {
-		if item.Title == tc.title || (item.UID != "" && item.UID == tc.uid) {
+		if item.Title == title || (item.UID != "" && item.UID == uid) {
 			return &item
 		}
 	}
