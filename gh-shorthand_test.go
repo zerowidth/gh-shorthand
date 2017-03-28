@@ -103,6 +103,22 @@ func TestItems(t *testing.T) {
 			uid:   "gh:foo/bar",
 			valid: true,
 		},
+		{
+			desc:  "open path on matched shorthand repo",
+			input: " df /foo",
+			uid:   "gh:zerowidth/dotfiles/foo",
+			valid: true,
+			title: "Open zerowidth/dotfiles/foo (df) on GitHub",
+			arg:   "open https://github.com/zerowidth/dotfiles/foo",
+		},
+		{
+			desc:  "open direct path when not prefixed with repo",
+			input: " /foo",
+			uid:   "gh:/foo",
+			valid: true,
+			title: "Open /foo on GitHub",
+			arg:   "open https://github.com/foo",
+		},
 
 		// default repo
 		{
@@ -127,6 +143,11 @@ func TestItems(t *testing.T) {
 			desc:    "includes no default if remaining input isn't otherwise valid",
 			input:   " foo",
 			exclude: "gh:zerowidth/default",
+		},
+		{
+			desc:    "does not use default repo with path alone",
+			input:   " /foo",
+			exclude: "gh:zerowidth/default/foo",
 		},
 
 		// repo autocomplete
