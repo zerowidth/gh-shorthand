@@ -1,11 +1,12 @@
 package alfred
 
-// A list of items to return to Alfred
+// Items is a list of items to return to Alfred
 type Items struct {
-	Items []Item `json:"items"`
+	Items []Item  `json:"items"`
+	Rerun float32 `json:"rerun,omitempty"`
 }
 
-// An Alfred result item
+// Item is an Alfred result item
 type Item struct {
 	UID          string `json:"uid,omitempty"`          // optional unique identifier for alfred to learn from
 	Title        string `json:"title"`                  // title displayed in the result row
@@ -20,7 +21,7 @@ type Item struct {
 	// Quicklook string // optional url for quicklook
 }
 
-// A custom icon for an item
+// Icon is a custom icon for an item
 type Icon struct {
 	Path string `json:"path"`           // the path to a file
 	Type string `json:"type,omitempty"` // optional, "fileicon" for a path, "filetype" for a specific file
