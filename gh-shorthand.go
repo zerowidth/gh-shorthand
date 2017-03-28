@@ -88,7 +88,7 @@ func generateItems(cfg *config.Config, input string) []alfred.Item {
 			Title: title + " on GitHub",
 			Arg:   arg,
 			Valid: true,
-			Icon:  &icon,
+			Icon:  icon,
 		})
 	}
 
@@ -101,7 +101,7 @@ func generateItems(cfg *config.Config, input string) []alfred.Item {
 					Arg:          "open https://github.com/" + repo,
 					Valid:        true,
 					Autocomplete: " " + key,
-					Icon:         &repoIcon,
+					Icon:         repoIcon,
 				})
 			}
 		}
@@ -121,6 +121,7 @@ func errorItem(context, msg string) alfred.Item {
 	return alfred.Item{
 		Title:    fmt.Sprintf("Error %s", context),
 		Subtitle: msg,
+		Icon:     octicon("alert"),
 		Valid:    false,
 	}
 }
@@ -134,8 +135,8 @@ func printItems(items []alfred.Item) {
 
 // octicon is relative to the alfred workflow, so this tells alfred to retrieve
 // icons from there rather than relative to this go binary.
-func octicon(name string) alfred.Icon {
-	return alfred.Icon{
+func octicon(name string) *alfred.Icon {
+	return &alfred.Icon{
 		Path: fmt.Sprintf("octicons-%s.png", name),
 	}
 }
