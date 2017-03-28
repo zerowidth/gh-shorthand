@@ -17,6 +17,7 @@ func TestParse(t *testing.T) {
 		repo  string // the expected repo match or expansion
 		match string // the matched repo shorthand
 		issue string // the expected issue match
+		path  string // the expected path match
 		query string // the remaining query text after parsing/expansion
 	}{
 		{
@@ -145,6 +146,29 @@ func TestParse(t *testing.T) {
 			repo:  "foo/bar",
 			query: "",
 		},
+		{
+			desc:  "extracts path component after shorthand",
+			input: "df /foo",
+			repo:  "zerowidth/dotfiles",
+			match: "df",
+			path:  "/foo",
+		},
+		{
+			desc:  "extracts path component after repo",
+			input: "foo/bar /baz",
+			repo:  "foo/bar",
+			path:  "/baz",
+		},
+		{
+			desc:  "ignores path after issue number",
+			input: "123 /foo",
+			query: "123 /foo",
+		},
+		{
+			desc:  "parses repo, not path",
+			input: "foo/bar",
+			repo:  "foo/bar",
+		},
 	}
 
 	for _, tc := range repoTests {
@@ -158,6 +182,9 @@ func TestParse(t *testing.T) {
 			}
 			if result.Issue != tc.issue {
 				t.Errorf("expected Issue %#v, got %#v", tc.issue, result.Issue)
+			}
+			if result.Path != tc.path {
+				t.Errorf("expected Path %#v, got %#v", tc.path, result.Path)
 			}
 			if result.Query != tc.query {
 				t.Errorf("expected Query %#v, got %#v", tc.query, result.Query)

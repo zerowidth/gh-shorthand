@@ -34,6 +34,7 @@ func main() {
 
 var repoIcon = octicon("repo")
 var issueIcon = octicon("git-pull-request")
+var pathIcon = octicon("browser")
 
 func generateItems(cfg *config.Config, input string) []alfred.Item {
 	items := []alfred.Item{}
@@ -54,7 +55,7 @@ func generateItems(cfg *config.Config, input string) []alfred.Item {
 	icon := repoIcon
 	usedDefault := false
 
-	if result.Repo == "" && cfg.DefaultRepo != "" && result.Query == "" {
+	if result.Repo == "" && cfg.DefaultRepo != "" && result.Query == "" && result.Path == "" {
 		result.Repo = cfg.DefaultRepo
 		usedDefault = true
 	}
@@ -69,6 +70,13 @@ func generateItems(cfg *config.Config, input string) []alfred.Item {
 			title += "#" + result.Issue
 			arg += "/issues/" + result.Issue
 			icon = issueIcon
+		}
+
+		if result.Path != "" {
+			uid += result.Path
+			title += result.Path
+			arg += result.Path
+			icon = pathIcon
 		}
 
 		if result.Match != "" {
@@ -89,6 +97,16 @@ func generateItems(cfg *config.Config, input string) []alfred.Item {
 			Arg:   arg,
 			Valid: true,
 			Icon:  icon,
+		})
+	}
+
+	if result.Repo == "" && result.Path != "" {
+		items = append(items, alfred.Item{
+			UID:   "gh:" + result.Path,
+			Title: fmt.Sprintf("Open %s on GitHub", result.Path),
+			Arg:   "open https://github.com" + result.Path,
+			Valid: true,
+			Icon:  pathIcon,
 		})
 	}
 
