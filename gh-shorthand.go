@@ -35,6 +35,7 @@ func main() {
 
 var repoIcon = octicon("repo")
 var issueIcon = octicon("git-pull-request")
+var issueListIcon = octicon("list-ordered")
 var pathIcon = octicon("browser")
 
 func generateItems(cfg *config.Config, input string) []alfred.Item {
@@ -45,10 +46,12 @@ func generateItems(cfg *config.Config, input string) []alfred.Item {
 	}
 
 	// input includes leading space or leading mode char followed by a space
-	if len(input) > 0 {
-		if input[0:1] != " " {
-			return items
-		}
+	var mode string
+	if len(input) > 1 && input[0:1] != " " {
+		mode = input[0:1]
+		input = input[2:]
+	} else if len(input) > 0 && input[0:1] == " " {
+		mode = " "
 		input = input[1:]
 	}
 
@@ -56,83 +59,112 @@ func generateItems(cfg *config.Config, input string) []alfred.Item {
 	icon := repoIcon
 	usedDefault := false
 
-	if result.Repo == "" && cfg.DefaultRepo != "" && result.Query == "" && result.Path == "" {
+	// fixme assign default if query given for issue mode
+	if cfg.DefaultRepo != "" && result.Repo == "" && result.Query == "" && result.Path == "" {
 		result.Repo = cfg.DefaultRepo
 		usedDefault = true
 	}
 
-	if result.Repo != "" && result.Query == "" {
-		uid := "gh:" + result.Repo
-		title := "Open " + result.Repo
-		arg := "open https://github.com/" + result.Repo
+	switch mode {
+	case " ": // open repo, issue, and/or path
+		// repo required, no query allowed
+		if result.Repo != "" && result.Query == "" {
+			uid := "gh:" + result.Repo
+			title := "Open " + result.Repo
+			arg := "open https://github.com/" + result.Repo
 
-		if result.Issue != "" {
-			uid += "#" + result.Issue
-			title += "#" + result.Issue
-			arg += "/issues/" + result.Issue
-			icon = issueIcon
-		}
-
-		if result.Path != "" {
-			uid += result.Path
-			title += result.Path
-			arg += result.Path
-			icon = pathIcon
-		}
-
-		if result.Match != "" {
-			title += " (" + result.Match
 			if result.Issue != "" {
+				uid += "#" + result.Issue
 				title += "#" + result.Issue
+				arg += "/issues/" + result.Issue
+				icon = issueIcon
 			}
-			title += ")"
+
+			if result.Path != "" {
+				uid += result.Path
+				title += result.Path
+				arg += result.Path
+				icon = pathIcon
+			}
+
+			if result.Match != "" {
+				title += " (" + result.Match
+				if result.Issue != "" {
+					title += "#" + result.Issue
+				}
+				title += ")"
+			}
+
+			if usedDefault {
+				title += " (default repo)"
+			}
+
+			items = append(items, alfred.Item{
+				UID:   uid,
+				Title: title + " on GitHub",
+				Arg:   arg,
+				Valid: true,
+				Icon:  icon,
+			})
 		}
 
-		if usedDefault {
-			title += " (default repo)"
+		if result.Repo == "" && result.Path != "" {
+			items = append(items, alfred.Item{
+				UID:   "gh:" + result.Path,
+				Title: fmt.Sprintf("Open %s on GitHub", result.Path),
+				Arg:   "open https://github.com" + result.Path,
+				Valid: true,
+				Icon:  pathIcon,
+			})
 		}
 
-		items = append(items, alfred.Item{
-			UID:   uid,
-			Title: title + " on GitHub",
-			Arg:   arg,
-			Valid: true,
-			Icon:  icon,
-		})
-	}
+		if !strings.Contains(input, " ") {
+			for key, repo := range cfg.RepoMap {
+				if strings.HasPrefix(key, input) && key != result.Match && repo != result.Repo {
+					items = append(items, alfred.Item{
+						UID:          "gh:" + repo,
+						Title:        fmt.Sprintf("Open %s (%s) on GitHub", repo, key),
+						Arg:          "open https://github.com/" + repo,
+						Valid:        true,
+						Autocomplete: " " + key,
+						Icon:         repoIcon,
+					})
+				}
+			}
 
-	if result.Repo == "" && result.Path != "" {
-		items = append(items, alfred.Item{
-			UID:   "gh:" + result.Path,
-			Title: fmt.Sprintf("Open %s on GitHub", result.Path),
-			Arg:   "open https://github.com" + result.Path,
-			Valid: true,
-			Icon:  pathIcon,
-		})
-	}
-
-	if !strings.Contains(input, " ") {
-		for key, repo := range cfg.RepoMap {
-			if strings.HasPrefix(key, input) && key != result.Match && repo != result.Repo {
+			if input != "" && result.Repo != input {
 				items = append(items, alfred.Item{
-					UID:          "gh:" + repo,
-					Title:        fmt.Sprintf("Open %s (%s) on GitHub", repo, key),
-					Arg:          "open https://github.com/" + repo,
-					Valid:        true,
-					Autocomplete: " " + key,
-					Icon:         repoIcon,
+					Title:        fmt.Sprintf("Open %s... on GitHub", input),
+					Autocomplete: " " + input,
+					Valid:        false,
 				})
 			}
 		}
+	case "i":
+		// repo required, no issue or path, query allowed
+		if result.Repo != "" && result.Issue == "" && result.Path == "" {
+			uid := "ghi:" + result.Repo
+			title := "Display issues in " + result.Repo
+			arg := "open https://github.com/" + result.Repo + "/issues"
 
-		if input != "" && result.Repo != input {
+			if result.Match != "" {
+				title += " (" + result.Match + ")"
+			}
+
+			if usedDefault {
+				title += " (default repo)"
+			}
+
 			items = append(items, alfred.Item{
-				Title:        fmt.Sprintf("Open %s... on GitHub", input),
-				Autocomplete: " " + input,
-				Valid:        false,
+				UID:   uid,
+				Title: title,
+				Arg:   arg,
+				Valid: true,
+				Icon:  icon,
 			})
 		}
 	}
+
 	return items
 }
 

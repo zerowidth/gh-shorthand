@@ -120,6 +120,24 @@ func TestItems(t *testing.T) {
 			arg:   "open https://github.com/foo",
 		},
 
+		// issue index/search
+		{
+			desc:  "open issues index on a shorthand repo",
+			input: "i df",
+			uid:   "ghi:zerowidth/dotfiles",
+			valid: true,
+			title: "Display issues in zerowidth/dotfiles (df)",
+			arg:   "open https://github.com/zerowidth/dotfiles/issues",
+		},
+		{
+			desc:  "open issues index on a repo",
+			input: "i foo/bar",
+			uid:   "ghi:foo/bar",
+			valid: true,
+			title: "Display issues in foo/bar",
+			arg:   "open https://github.com/foo/bar/issues",
+		},
+
 		// default repo
 		{
 			desc:  "open an issue with the default repo",
