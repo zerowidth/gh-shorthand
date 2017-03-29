@@ -47,7 +47,7 @@ func generateItems(cfg *config.Config, input string) []*alfred.Item {
 	items := []*alfred.Item{}
 	fullInput := input
 
-	if input == "" {
+	if len(input) == 0 {
 		return items
 	}
 
@@ -66,7 +66,7 @@ func generateItems(cfg *config.Config, input string) []*alfred.Item {
 	usedDefault := false
 
 	// fixme assign default if query given for issue mode
-	if cfg.DefaultRepo != "" && result.Repo == "" && result.Query == "" && result.Path == "" {
+	if len(cfg.DefaultRepo) > 0 && len(result.Repo) == 0 && len(result.Query) == 0 && len(result.Path) == 0 {
 		result.Repo = cfg.DefaultRepo
 		usedDefault = true
 	}
@@ -74,28 +74,28 @@ func generateItems(cfg *config.Config, input string) []*alfred.Item {
 	switch mode {
 	case " ": // open repo, issue, and/or path
 		// repo required, no query allowed
-		if result.Repo != "" && result.Query == "" {
+		if len(result.Repo) > 0 && len(result.Query) == 0 {
 			uid := "gh:" + result.Repo
 			title := "Open " + result.Repo
 			arg := "open https://github.com/" + result.Repo
 
-			if result.Issue != "" {
+			if len(result.Issue) > 0 {
 				uid += "#" + result.Issue
 				title += "#" + result.Issue
 				arg += "/issues/" + result.Issue
 				icon = issueIcon
 			}
 
-			if result.Path != "" {
+			if len(result.Path) > 0 {
 				uid += result.Path
 				title += result.Path
 				arg += result.Path
 				icon = pathIcon
 			}
 
-			if result.Match != "" {
+			if len(result.Match) > 0 {
 				title += " (" + result.Match
-				if result.Issue != "" {
+				if len(result.Issue) > 0 {
 					title += "#" + result.Issue
 				}
 				title += ")"
@@ -112,7 +112,7 @@ func generateItems(cfg *config.Config, input string) []*alfred.Item {
 			})
 		}
 
-		if result.Repo == "" && result.Path != "" {
+		if len(result.Repo) == 0 && len(result.Path) > 0 {
 			items = append(items, &alfred.Item{
 				UID:   "gh:" + result.Path,
 				Title: fmt.Sprintf("Open %s on GitHub", result.Path),
@@ -136,7 +136,7 @@ func generateItems(cfg *config.Config, input string) []*alfred.Item {
 				}
 			}
 
-			if input != "" && result.Repo != input {
+			if len(input) > 0 && result.Repo != input {
 				items = append(items, &alfred.Item{
 					Title:        fmt.Sprintf("Open %s... on GitHub", input),
 					Autocomplete: " " + input,
@@ -146,16 +146,15 @@ func generateItems(cfg *config.Config, input string) []*alfred.Item {
 		}
 	case "i":
 		// repo required, no issue or path, query allowed
-		// change string comparisons to len checks
-		if result.Repo != "" && result.Issue == "" && result.Path == "" {
+		if len(result.Repo) > 0 && len(result.Issue) == 0 && len(result.Path) == 0 {
 			extra := ""
-			if result.Match != "" {
+			if len(result.Match) > 0 {
 				extra += " (" + result.Match + ")"
 			} else if usedDefault {
 				extra += " (default repo)"
 			}
 
-			if result.Query == "" {
+			if len(result.Query) == 0 {
 				items = append(items, &alfred.Item{
 					UID:   "ghi:" + result.Repo,
 					Title: "Open issues for " + result.Repo + extra,
@@ -196,7 +195,7 @@ func generateItems(cfg *config.Config, input string) []*alfred.Item {
 				}
 			}
 
-			if input != "" && result.Repo != input {
+			if len(input) > 0 && result.Repo != input {
 				items = append(items, &alfred.Item{
 					Title:        fmt.Sprintf("Open issues for %s...", input),
 					Autocomplete: "i " + input,
