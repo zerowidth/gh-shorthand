@@ -126,7 +126,7 @@ func TestItems(t *testing.T) {
 			input: "i df",
 			uid:   "ghi:zerowidth/dotfiles",
 			valid: true,
-			title: "Display issues in zerowidth/dotfiles (df)",
+			title: "Open issues for zerowidth/dotfiles (df)",
 			arg:   "open https://github.com/zerowidth/dotfiles/issues",
 		},
 		{
@@ -134,7 +134,7 @@ func TestItems(t *testing.T) {
 			input: "i foo/bar",
 			uid:   "ghi:foo/bar",
 			valid: true,
-			title: "Display issues in foo/bar",
+			title: "Open issues for foo/bar",
 			arg:   "open https://github.com/foo/bar/issues",
 		},
 
@@ -208,6 +208,24 @@ func TestItems(t *testing.T) {
 			desc:    "no autocomplete when input has space",
 			input:   " foo bar",
 			exclude: "Open foo bar... on GitHub",
+		},
+
+		// issue index autocomplete
+		{
+			desc:  "autocompletes for issue index",
+			input: "i d",
+			uid:   "ghi:zerowidth/dotfiles",
+			valid: true,
+			title: "Open issues for zerowidth/dotfiles (df)",
+			arg:   "open https://github.com/zerowidth/dotfiles/issues",
+			auto:  "i df",
+		},
+		{
+			desc:  "autocompletes with input so far",
+			input: "i foo",
+			valid: false,
+			title: "Open issues for foo...",
+			auto:  "i foo",
 		},
 	}
 

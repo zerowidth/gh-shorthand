@@ -144,7 +144,7 @@ func generateItems(cfg *config.Config, input string) []alfred.Item {
 		// repo required, no issue or path, query allowed
 		if result.Repo != "" && result.Issue == "" && result.Path == "" {
 			uid := "ghi:" + result.Repo
-			title := "Display issues in " + result.Repo
+			title := "Open issues for " + result.Repo
 			arg := "open https://github.com/" + result.Repo + "/issues"
 
 			if result.Match != "" {
@@ -160,8 +160,32 @@ func generateItems(cfg *config.Config, input string) []alfred.Item {
 				Title: title,
 				Arg:   arg,
 				Valid: true,
-				Icon:  icon,
+				Icon:  issueListIcon,
 			})
+		}
+
+		if !strings.Contains(input, " ") {
+			for key, repo := range cfg.RepoMap {
+				if strings.HasPrefix(key, input) && key != result.Match && repo != result.Repo {
+					items = append(items, alfred.Item{
+						UID:          "ghi:" + repo,
+						Title:        fmt.Sprintf("Open issues for %s (%s)", repo, key),
+						Arg:          "open https://github.com/" + repo + "/issues",
+						Valid:        true,
+						Autocomplete: "i " + key,
+						Icon:         issueListIcon,
+					})
+				}
+			}
+
+			if input != "" && result.Repo != input {
+				items = append(items, alfred.Item{
+					Title:        fmt.Sprintf("Open issues for %s...", input),
+					Autocomplete: "i " + input,
+					Valid:        false,
+					Icon:         issueListIcon,
+				})
+			}
 		}
 	}
 
