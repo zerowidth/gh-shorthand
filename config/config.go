@@ -15,8 +15,8 @@ type Config struct {
 // Load a Config from a yaml string.
 func Load(yml string) (*Config, error) {
 	var config Config
-	err := yaml.Unmarshal([]byte(yml), &config)
-	if err != nil {
+
+	if err := yaml.Unmarshal([]byte(yml), &config); err != nil {
 		return nil, err
 	}
 	return &config, nil
