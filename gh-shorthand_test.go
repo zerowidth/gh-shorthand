@@ -33,7 +33,6 @@ func TestDefaults(t *testing.T) {
 }
 
 type testCase struct {
-	desc    string         // test case description
 	input   string         // input string
 	uid     string         // the results must contain an entry with this uid
 	valid   bool           // and with the valid flag set to this
@@ -44,76 +43,109 @@ type testCase struct {
 	exclude string         // exclude any item with this UID or title
 }
 
+func (tc *testCase) testItem(t *testing.T) {
+	if tc.cfg == nil {
+		tc.cfg = cfg
+	}
+	items := generateItems(tc.cfg, tc.input)
+
+	validateItems(t, tc, items)
+
+	if tc.exclude != "" {
+		item := findMatchingItem(tc.exclude, tc.exclude, items)
+		if item != nil {
+			t.Errorf("%+v\nexpected no item with UID or Title %q", items, tc.exclude)
+		}
+		return
+	}
+
+	item := findMatchingItem(tc.uid, tc.title, items)
+	if item != nil {
+		if tc.uid != "" && item.UID != tc.uid {
+			t.Errorf("%+v\nexpected UID %q to be %q", item, item.UID, tc.uid)
+		}
+
+		if tc.title != "" && item.Title != tc.title {
+			t.Errorf("%+v\nexpected Title %q to be %q", item, item.Title, tc.title)
+		}
+
+		if item.Valid != tc.valid {
+			t.Errorf("%+v\nexpected Valid %t to be %t", item, item.Valid, tc.valid)
+		}
+
+		if tc.arg != "" && item.Arg != tc.arg {
+			t.Errorf("%+v\nexpected Arg %q to be %q", item, item.Arg, tc.arg)
+		}
+
+		if tc.auto != "" && item.Autocomplete != tc.auto {
+			t.Errorf("%+v\nexpected Autocomplete %q to be %q", item, item.Autocomplete, tc.auto)
+		}
+	} else {
+		t.Errorf("expected item with uid %q and/or title %q in %+v", tc.uid, tc.title, items)
+	}
+}
+
 func TestItems(t *testing.T) {
 	// Based on input, the resulting items must include one that matches either
 	// the given UID or title. All items are also validated for correctness and
 	// uniqueness by UID.
-	testCases := []testCase{
+	// rm thixs var
+	for desc, tc := range map[string]testCase{
 		// basic parsing tests
-		{
-			desc:  "open a shorthand repo",
+		"open a shorthand repo": {
 			input: " df",
 			uid:   "gh:zerowidth/dotfiles",
 			valid: true,
 			title: "Open zerowidth/dotfiles (df) on GitHub",
 			arg:   "open https://github.com/zerowidth/dotfiles",
 		},
-		{
-			desc:  "open a shorthand repo and issue",
+		"open a shorthand repo and issue": {
 			input: " df 123",
 			uid:   "gh:zerowidth/dotfiles#123",
 			valid: true,
 			title: "Open zerowidth/dotfiles#123 (df#123) on GitHub",
 			arg:   "open https://github.com/zerowidth/dotfiles/issues/123",
 		},
-		{
-			desc:  "open a fully qualified repo",
+		"open a fully qualified repo": {
 			input: " foo/bar",
 			uid:   "gh:foo/bar",
 			valid: true,
 			title: "Open foo/bar on GitHub",
 			arg:   "open https://github.com/foo/bar",
 		},
-		{
-			desc:  "open a fully qualified repo and issue",
+		"open a fully qualified repo and issue": {
 			input: " foo/bar 123",
 			uid:   "gh:foo/bar#123",
 			valid: true,
 			title: "Open foo/bar#123 on GitHub",
 			arg:   "open https://github.com/foo/bar/issues/123",
 		},
-		{
-			desc:    "no match if any unparsed query remains after shorthand",
+		"no match if any unparsed query remains after shorthand": {
 			input:   " df foo",
 			exclude: "gh:zerowidth/dotfiles",
 		},
-		{
-			desc:    "no match if any unparsed query remains after repo",
+		"no match if any unparsed query remains after repo": {
 			input:   " foo/bar baz",
 			exclude: "gh:foo/bar",
 		},
-		{
-			desc:  "ignores trailing whitespace for shorthand",
+		"ignores trailing whitespace for shorthand": {
 			input: " df ",
 			uid:   "gh:zerowidth/dotfiles",
 			valid: true,
 		},
-		{
-			desc:  "ignores trailing whitespace for repo",
+		"ignores trailing whitespace for repo": {
 			input: " foo/bar ",
 			uid:   "gh:foo/bar",
 			valid: true,
 		},
-		{
-			desc:  "open path on matched shorthand repo",
+		"open path on matched shorthand repo": {
 			input: " df /foo",
 			uid:   "gh:zerowidth/dotfiles/foo",
 			valid: true,
 			title: "Open zerowidth/dotfiles/foo (df) on GitHub",
 			arg:   "open https://github.com/zerowidth/dotfiles/foo",
 		},
-		{
-			desc:  "open direct path when not prefixed with repo",
+		"open direct path when not prefixed with repo": {
 			input: " /foo",
 			uid:   "gh:/foo",
 			valid: true,
@@ -122,32 +154,28 @@ func TestItems(t *testing.T) {
 		},
 
 		// issue index/search
-		{
-			desc:  "open issues index on a shorthand repo",
+		"open issues index on a shorthand repo": {
 			input: "i df",
 			uid:   "ghi:zerowidth/dotfiles",
 			valid: true,
 			title: "Open issues for zerowidth/dotfiles (df)",
 			arg:   "open https://github.com/zerowidth/dotfiles/issues",
 		},
-		{
-			desc:  "open issues index on a repo",
+		"open issues index on a repo": {
 			input: "i foo/bar",
 			uid:   "ghi:foo/bar",
 			valid: true,
 			title: "Open issues for foo/bar",
 			arg:   "open https://github.com/foo/bar/issues",
 		},
-		{
-			desc:  "search issues on a repo",
+		"search issues on a repo": {
 			input: "i a/b foo bar",
 			uid:   "ghis:a/b",
 			valid: true,
 			title: "Search issues in a/b for foo bar",
 			arg:   "open https://github.com/a/b/search?utf8=✓&type=Issues&q=foo%20bar",
 		},
-		{
-			desc:  "search issues on a shorhthand repo",
+		"search issues on a shorhthand repo": {
 			input: "i df foo bar",
 			uid:   "ghis:zerowidth/dotfiles",
 			valid: true,
@@ -156,16 +184,14 @@ func TestItems(t *testing.T) {
 		},
 
 		// default repo
-		{
-			desc:  "open an issue with the default repo",
+		"open an issue with the default repo": {
 			input: " 123",
 			uid:   "gh:zerowidth/default#123",
 			valid: true,
 			title: "Open zerowidth/default#123 (default repo) on GitHub",
 			arg:   "open https://github.com/zerowidth/default/issues/123",
 		},
-		{
-			desc:  "open the default repo when default is also in map",
+		"open the default repo when default is also in map": {
 			cfg:   defaultInMap,
 			input: " ",
 			uid:   "gh:zerowidth/dotfiles",
@@ -173,25 +199,21 @@ func TestItems(t *testing.T) {
 			title: "Open zerowidth/dotfiles (default repo) on GitHub",
 			arg:   "open https://github.com/zerowidth/dotfiles",
 		},
-		{
-			desc:    "includes no default if remaining input isn't otherwise valid",
+		"includes no default if remaining input isn't otherwise valid": {
 			input:   " foo",
 			exclude: "gh:zerowidth/default",
 		},
-		{
-			desc:    "does not use default repo with path alone",
+		"does not use default repo with path alone": {
 			input:   " /foo",
 			exclude: "gh:zerowidth/default/foo",
 		},
 
 		// repo autocomplete
-		{
-			desc:    "no autocomplete for empty input",
+		"no autocomplete for empty input": {
 			input:   " ",
 			exclude: "gh:zerowidth/dotfiles",
 		},
-		{
-			desc:  "autocomplete 'd', first match",
+		"autocomplete 'd', first match": {
 			input: " d",
 			uid:   "gh:zerowidth/dotfiles",
 			valid: true,
@@ -199,8 +221,7 @@ func TestItems(t *testing.T) {
 			arg:   "open https://github.com/zerowidth/dotfiles",
 			auto:  " df",
 		},
-		{
-			desc:  "autocomplete 'd', second match",
+		"autocomplete 'd', second match": {
 			input: " d",
 			uid:   "gh:zerowidth/df2",
 			valid: true,
@@ -208,32 +229,27 @@ func TestItems(t *testing.T) {
 			arg:   "open https://github.com/zerowidth/df2",
 			auto:  " df2",
 		},
-		{
-			desc:  "autocomplete 'd', open-ended",
+		"autocomplete 'd', open-ended": {
 			input: " d",
 			title: "Open d... on GitHub",
 			valid: false,
 		},
-		{
-			desc:  "autocomplete unmatched user prefix",
+		"autocomplete unmatched user prefix": {
 			input: " foo/",
 			title: "Open foo/... on GitHub",
 			valid: false,
 		},
-		{
-			desc:    "does not autocomplete with fully-qualified repo",
+		"does not autocomplete with fully-qualified repo": {
 			input:   " foo/bar",
 			exclude: "Open foo/bar... on GitHub",
 		},
-		{
-			desc:    "no autocomplete when input has space",
+		"no autocomplete when input has space": {
 			input:   " foo bar",
 			exclude: "Open foo bar... on GitHub",
 		},
 
 		// issue index autocomplete
-		{
-			desc:  "autocompletes for issue index",
+		"autocompletes for issue index": {
 			input: "i d",
 			uid:   "ghi:zerowidth/dotfiles",
 			valid: true,
@@ -241,62 +257,18 @@ func TestItems(t *testing.T) {
 			arg:   "open https://github.com/zerowidth/dotfiles/issues",
 			auto:  "i df",
 		},
-		{
-			desc:  "autocompletes with input so far",
+		"autocompletes with input so far": {
 			input: "i foo",
 			valid: false,
 			title: "Open issues for foo...",
 			auto:  "i foo",
 		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(fmt.Sprintf("generateItems(%#v): %s", tc.input, tc.desc), func(t *testing.T) {
-			if tc.cfg == nil {
-				tc.cfg = cfg
-			}
-			items := generateItems(tc.cfg, tc.input)
-
-			validateItems(t, tc, items)
-
-			if tc.exclude != "" {
-				item := findMatchingItem(tc.exclude, tc.exclude, items)
-				if item != nil {
-					t.Errorf("%+v\nexpected no item with UID or Title %q", items, tc.exclude)
-				}
-				return
-			}
-
-			item := findMatchingItem(tc.uid, tc.title, items)
-			if item != nil {
-				if tc.uid != "" && item.UID != tc.uid {
-					t.Errorf("%+v\nexpected UID %q to be %q", item, item.UID, tc.uid)
-				}
-
-				if tc.title != "" && item.Title != tc.title {
-					t.Errorf("%+v\nexpected Title %q to be %q", item, item.Title, tc.title)
-				}
-
-				if item.Valid != tc.valid {
-					t.Errorf("%+v\nexpected Valid %t to be %t", item, item.Valid, tc.valid)
-				}
-
-				if tc.arg != "" && item.Arg != tc.arg {
-					t.Errorf("%+v\nexpected Arg %q to be %q", item, item.Arg, tc.arg)
-				}
-
-				if tc.auto != "" && item.Autocomplete != tc.auto {
-					t.Errorf("%+v\nexpected Autocomplete %q to be %q", item, item.Autocomplete, tc.auto)
-				}
-			} else {
-				t.Errorf("expected item with uid %q and/or title %q in %+v", tc.uid, tc.title, items)
-			}
-
-		})
+	} {
+		t.Run(fmt.Sprintf("generateItems(%#v): %s", tc.input, desc), tc.testItem)
 	}
 }
 
-func validateItems(t *testing.T, tc testCase, items []*alfred.Item) {
+func validateItems(t *testing.T, tc *testCase, items []*alfred.Item) {
 	uids := map[string]bool{}
 	for _, item := range items {
 		if item.Title == "" {

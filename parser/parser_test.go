@@ -39,7 +39,7 @@ func (tc *testCase) assert(t *testing.T) {
 }
 
 func TestParse(t *testing.T) {
-	repoTests := map[string]*testCase{
+	for desc, tc := range map[string]*testCase{
 		"no issue, no repo": {
 			input: "",
 		},
@@ -166,9 +166,7 @@ func TestParse(t *testing.T) {
 			input: "foo/bar",
 			repo:  "foo/bar",
 		},
-	}
-
-	for desc, tc := range repoTests {
+	} {
 		t.Run(fmt.Sprintf("Parse(%#v): %s", tc.input, desc), tc.assert)
 	}
 
