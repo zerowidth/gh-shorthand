@@ -14,6 +14,14 @@ import (
 	"github.com/zerowidth/gh-shorthand/parser"
 )
 
+var (
+	repoIcon        = octicon("repo")
+	issueIcon       = octicon("git-pull-request")
+	issueListIcon   = octicon("list-ordered")
+	pathIcon        = octicon("browser")
+	issueSearchIcon = octicon("issue-opened")
+)
+
 func main() {
 	var input string
 	var items = []*alfred.Item{}
@@ -34,12 +42,6 @@ func main() {
 
 	printItems(generateItems(cfg, input))
 }
-
-var repoIcon = octicon("repo")
-var issueIcon = octicon("git-pull-request")
-var issueListIcon = octicon("list-ordered")
-var pathIcon = octicon("browser")
-var issueSearchIcon = octicon("issue-opened")
 
 func generateItems(cfg *config.Config, input string) []*alfred.Item {
 	items := []*alfred.Item{}
