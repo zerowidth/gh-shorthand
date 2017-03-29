@@ -207,6 +207,12 @@ func TestItems(t *testing.T) {
 			input:   " /foo",
 			exclude: "gh:zerowidth/default/foo",
 		},
+		"show issues for a default repo": {
+			input: "i ",
+			uid:   "ghi:zerowidth/default",
+			valid: true,
+			title: "Open issues for zerowidth/default (default repo)",
+		},
 
 		// repo autocomplete
 		"no autocomplete for empty input": {

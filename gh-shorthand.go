@@ -152,7 +152,6 @@ func generateItems(cfg *config.Config, input string) []*alfred.Item {
 			if result.Match != "" {
 				extra += " (" + result.Match + ")"
 			} else if usedDefault {
-				// FIXME cover this with a test case
 				extra += " (default repo)"
 			}
 
