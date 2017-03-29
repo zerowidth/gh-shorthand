@@ -36,11 +36,11 @@ func main() {
 	cfg, err := config.LoadFromFile(path)
 	if err != nil {
 		items = []*alfred.Item{errorItem("when loading ~/.gh-shorthand.yml", err.Error())}
-		printItems(items)
-		return
+	} else {
+		items = generateItems(cfg, input)
 	}
 
-	printItems(generateItems(cfg, input))
+	printItems(items)
 }
 
 func generateItems(cfg *config.Config, input string) []*alfred.Item {
