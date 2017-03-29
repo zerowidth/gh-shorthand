@@ -2,12 +2,12 @@ package alfred
 
 // Items is a list of items to return to Alfred
 type Items struct {
-	Items []Item  `json:"items"`
+	Items []*Item `json:"items"`
 	Rerun float32 `json:"rerun,omitempty"`
 }
 
 // ByTitle provides a sorting interface for stable output
-type ByTitle []Item
+type ByTitle []*Item
 
 func (a ByTitle) Len() int           { return len(a) }
 func (a ByTitle) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }

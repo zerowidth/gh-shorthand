@@ -296,7 +296,7 @@ func TestItems(t *testing.T) {
 	}
 }
 
-func validateItems(t *testing.T, tc testCase, items []alfred.Item) {
+func validateItems(t *testing.T, tc testCase, items []*alfred.Item) {
 	uids := map[string]bool{}
 	for _, item := range items {
 		if item.Title == "" {
@@ -323,10 +323,10 @@ func validateItems(t *testing.T, tc testCase, items []alfred.Item) {
 }
 
 // Try to find item by uid or title
-func findMatchingItem(uid, title string, items []alfred.Item) *alfred.Item {
+func findMatchingItem(uid, title string, items []*alfred.Item) *alfred.Item {
 	for _, item := range items {
 		if item.Title == title || (item.UID != "" && item.UID == uid) {
-			return &item
+			return item
 		}
 	}
 	return nil
