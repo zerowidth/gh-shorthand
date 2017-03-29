@@ -3,19 +3,28 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/mitchellh/go-homedir"
-	"github.com/zerowidth/gh-shorthand/alfred"
-	"github.com/zerowidth/gh-shorthand/config"
-	"github.com/zerowidth/gh-shorthand/parser"
 	"net/url"
 	"os"
 	"sort"
 	"strings"
+
+	"github.com/mitchellh/go-homedir"
+	"github.com/zerowidth/gh-shorthand/alfred"
+	"github.com/zerowidth/gh-shorthand/config"
+	"github.com/zerowidth/gh-shorthand/parser"
+)
+
+var (
+	repoIcon        = octicon("repo")
+	issueIcon       = octicon("git-pull-request")
+	issueListIcon   = octicon("list-ordered")
+	pathIcon        = octicon("browser")
+	issueSearchIcon = octicon("issue-opened")
 )
 
 func main() {
 	var input string
-	var items = []alfred.Item{}
+	var items = []*alfred.Item{}
 
 	if len(os.Args) < 2 {
 		input = ""
@@ -26,22 +35,16 @@ func main() {
 	path, _ := homedir.Expand("~/.gh-shorthand.yml")
 	cfg, err := config.LoadFromFile(path)
 	if err != nil {
-		items = []alfred.Item{errorItem("when loading ~/.gh-shorthand.yml", err.Error())}
-		printItems(items)
-		return
+		items = []*alfred.Item{errorItem("when loading ~/.gh-shorthand.yml", err.Error())}
+	} else {
+		items = generateItems(cfg, input)
 	}
 
-	printItems(generateItems(cfg, input))
+	printItems(items)
 }
 
-var repoIcon = octicon("repo")
-var issueIcon = octicon("git-pull-request")
-var issueListIcon = octicon("list-ordered")
-var pathIcon = octicon("browser")
-var issueSearchIcon = octicon("issue-opened")
-
-func generateItems(cfg *config.Config, input string) []alfred.Item {
-	items := []alfred.Item{}
+func generateItems(cfg *config.Config, input string) []*alfred.Item {
+	items := []*alfred.Item{}
 	fullInput := input
 
 	if input == "" {
@@ -100,7 +103,7 @@ func generateItems(cfg *config.Config, input string) []alfred.Item {
 				title += " (default repo)"
 			}
 
-			items = append(items, alfred.Item{
+			items = append(items, &alfred.Item{
 				UID:   uid,
 				Title: title + " on GitHub",
 				Arg:   arg,
@@ -110,7 +113,7 @@ func generateItems(cfg *config.Config, input string) []alfred.Item {
 		}
 
 		if result.Repo == "" && result.Path != "" {
-			items = append(items, alfred.Item{
+			items = append(items, &alfred.Item{
 				UID:   "gh:" + result.Path,
 				Title: fmt.Sprintf("Open %s on GitHub", result.Path),
 				Arg:   "open https://github.com" + result.Path,
@@ -122,7 +125,7 @@ func generateItems(cfg *config.Config, input string) []alfred.Item {
 		if len(input) > 0 && !strings.Contains(input, " ") {
 			for key, repo := range cfg.RepoMap {
 				if strings.HasPrefix(key, input) && key != result.Match && repo != result.Repo {
-					items = append(items, alfred.Item{
+					items = append(items, &alfred.Item{
 						UID:          "gh:" + repo,
 						Title:        fmt.Sprintf("Open %s (%s) on GitHub", repo, key),
 						Arg:          "open https://github.com/" + repo,
@@ -134,7 +137,7 @@ func generateItems(cfg *config.Config, input string) []alfred.Item {
 			}
 
 			if input != "" && result.Repo != input {
-				items = append(items, alfred.Item{
+				items = append(items, &alfred.Item{
 					Title:        fmt.Sprintf("Open %s... on GitHub", input),
 					Autocomplete: " " + input,
 					Valid:        false,
@@ -143,23 +146,25 @@ func generateItems(cfg *config.Config, input string) []alfred.Item {
 		}
 	case "i":
 		// repo required, no issue or path, query allowed
+		// change string comparisons to len checks
 		if result.Repo != "" && result.Issue == "" && result.Path == "" {
 			extra := ""
 			if result.Match != "" {
 				extra += " (" + result.Match + ")"
 			} else if usedDefault {
+				// FIXME cover this with a test case
 				extra += " (default repo)"
 			}
 
 			if result.Query == "" {
-				items = append(items, alfred.Item{
+				items = append(items, &alfred.Item{
 					UID:   "ghi:" + result.Repo,
 					Title: "Open issues for " + result.Repo + extra,
 					Arg:   "open https://github.com/" + result.Repo + "/issues",
 					Valid: true,
 					Icon:  issueListIcon,
 				})
-				items = append(items, alfred.Item{
+				items = append(items, &alfred.Item{
 					Title:        "Search issues in " + result.Repo + extra + " for...",
 					Valid:        false,
 					Icon:         issueSearchIcon,
@@ -168,7 +173,7 @@ func generateItems(cfg *config.Config, input string) []alfred.Item {
 			} else {
 				escaped := url.PathEscape(result.Query)
 				arg := "open https://github.com/" + result.Repo + "/search?utf8=✓&type=Issues&q=" + escaped
-				items = append(items, alfred.Item{
+				items = append(items, &alfred.Item{
 					UID:   "ghis:" + result.Repo,
 					Title: "Search issues in " + result.Repo + extra + " for " + result.Query,
 					Arg:   arg,
@@ -181,7 +186,7 @@ func generateItems(cfg *config.Config, input string) []alfred.Item {
 		if len(input) > 0 && !strings.Contains(input, " ") {
 			for key, repo := range cfg.RepoMap {
 				if strings.HasPrefix(key, input) && key != result.Match && repo != result.Repo {
-					items = append(items, alfred.Item{
+					items = append(items, &alfred.Item{
 						UID:          "ghi:" + repo,
 						Title:        fmt.Sprintf("Open issues for %s (%s)", repo, key),
 						Arg:          "open https://github.com/" + repo + "/issues",
@@ -193,7 +198,7 @@ func generateItems(cfg *config.Config, input string) []alfred.Item {
 			}
 
 			if input != "" && result.Repo != input {
-				items = append(items, alfred.Item{
+				items = append(items, &alfred.Item{
 					Title:        fmt.Sprintf("Open issues for %s...", input),
 					Autocomplete: "i " + input,
 					Valid:        false,
@@ -206,8 +211,8 @@ func generateItems(cfg *config.Config, input string) []alfred.Item {
 	return items
 }
 
-func errorItem(context, msg string) alfred.Item {
-	return alfred.Item{
+func errorItem(context, msg string) *alfred.Item {
+	return &alfred.Item{
 		Title:    fmt.Sprintf("Error %s", context),
 		Subtitle: msg,
 		Icon:     octicon("alert"),
@@ -215,7 +220,7 @@ func errorItem(context, msg string) alfred.Item {
 	}
 }
 
-func printItems(items []alfred.Item) {
+func printItems(items []*alfred.Item) {
 	sort.Sort(alfred.ByTitle(items))
 	doc := alfred.Items{Items: items}
 	if err := json.NewEncoder(os.Stdout).Encode(doc); err != nil {

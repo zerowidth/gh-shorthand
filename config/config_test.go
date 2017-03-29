@@ -5,16 +5,18 @@ import (
 	"testing"
 )
 
-var configYaml = `---
+var (
+	configYaml = `---
 repos:
   df: zerowidth/dotfiles
 default_repo: zerowidth/default
 `
-var invalidYaml = "---\nrepos: []"
+	invalidYaml = "---\nrepos: []"
 
-var repoMap = map[string]string{
-	"df": "zerowidth/dotfiles",
-}
+	repoMap = map[string]string{
+		"df": "zerowidth/dotfiles",
+	}
+)
 
 func TestLoad(t *testing.T) {
 	config, _ := Load(configYaml)
