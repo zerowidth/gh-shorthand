@@ -3,14 +3,15 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/mitchellh/go-homedir"
-	"github.com/zerowidth/gh-shorthand/alfred"
-	"github.com/zerowidth/gh-shorthand/config"
-	"github.com/zerowidth/gh-shorthand/parser"
 	"net/url"
 	"os"
 	"sort"
 	"strings"
+
+	"github.com/mitchellh/go-homedir"
+	"github.com/zerowidth/gh-shorthand/alfred"
+	"github.com/zerowidth/gh-shorthand/config"
+	"github.com/zerowidth/gh-shorthand/parser"
 )
 
 func main() {
