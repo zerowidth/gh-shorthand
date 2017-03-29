@@ -148,7 +148,6 @@ func TestItems(t *testing.T) {
 			arg:   "open https://github.com/zerowidth/default/issues/123",
 		},
 		{
-			// validate uniqueness of UIDs when colliding with autocomplete
 			desc:  "open the default repo when default is also in map",
 			cfg:   defaultInMap,
 			input: " ",
@@ -169,6 +168,11 @@ func TestItems(t *testing.T) {
 		},
 
 		// repo autocomplete
+		{
+			desc:    "no autocomplete for empty input",
+			input:   " ",
+			exclude: "gh:zerowidth/dotfiles",
+		},
 		{
 			desc:  "autocomplete 'd', first match",
 			input: " d",
