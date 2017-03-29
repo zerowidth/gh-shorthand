@@ -120,6 +120,40 @@ func TestItems(t *testing.T) {
 			arg:   "open https://github.com/foo",
 		},
 
+		// issue index/search
+		{
+			desc:  "open issues index on a shorthand repo",
+			input: "i df",
+			uid:   "ghi:zerowidth/dotfiles",
+			valid: true,
+			title: "Open issues for zerowidth/dotfiles (df)",
+			arg:   "open https://github.com/zerowidth/dotfiles/issues",
+		},
+		{
+			desc:  "open issues index on a repo",
+			input: "i foo/bar",
+			uid:   "ghi:foo/bar",
+			valid: true,
+			title: "Open issues for foo/bar",
+			arg:   "open https://github.com/foo/bar/issues",
+		},
+		{
+			desc:  "search issues on a repo",
+			input: "i a/b foo bar",
+			uid:   "ghis:a/b",
+			valid: true,
+			title: "Search issues in a/b for foo bar",
+			arg:   "open https://github.com/a/b/search?utf8=✓&type=Issues&q=foo%20bar",
+		},
+		{
+			desc:  "search issues on a shorhthand repo",
+			input: "i df foo bar",
+			uid:   "ghis:zerowidth/dotfiles",
+			valid: true,
+			title: "Search issues in zerowidth/dotfiles (df) for foo bar",
+			arg:   "open https://github.com/zerowidth/dotfiles/search?utf8=✓&type=Issues&q=foo%20bar",
+		},
+
 		// default repo
 		{
 			desc:  "open an issue with the default repo",
@@ -130,7 +164,6 @@ func TestItems(t *testing.T) {
 			arg:   "open https://github.com/zerowidth/default/issues/123",
 		},
 		{
-			// validate uniqueness of UIDs when colliding with autocomplete
 			desc:  "open the default repo when default is also in map",
 			cfg:   defaultInMap,
 			input: " ",
@@ -151,6 +184,11 @@ func TestItems(t *testing.T) {
 		},
 
 		// repo autocomplete
+		{
+			desc:    "no autocomplete for empty input",
+			input:   " ",
+			exclude: "gh:zerowidth/dotfiles",
+		},
 		{
 			desc:  "autocomplete 'd', first match",
 			input: " d",
@@ -190,6 +228,24 @@ func TestItems(t *testing.T) {
 			desc:    "no autocomplete when input has space",
 			input:   " foo bar",
 			exclude: "Open foo bar... on GitHub",
+		},
+
+		// issue index autocomplete
+		{
+			desc:  "autocompletes for issue index",
+			input: "i d",
+			uid:   "ghi:zerowidth/dotfiles",
+			valid: true,
+			title: "Open issues for zerowidth/dotfiles (df)",
+			arg:   "open https://github.com/zerowidth/dotfiles/issues",
+			auto:  "i df",
+		},
+		{
+			desc:  "autocompletes with input so far",
+			input: "i foo",
+			valid: false,
+			title: "Open issues for foo...",
+			auto:  "i foo",
 		},
 	}
 

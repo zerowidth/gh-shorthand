@@ -7,6 +7,7 @@ import (
 	"github.com/zerowidth/gh-shorthand/alfred"
 	"github.com/zerowidth/gh-shorthand/config"
 	"github.com/zerowidth/gh-shorthand/parser"
+	"net/url"
 	"os"
 	"sort"
 	"strings"
@@ -35,20 +36,25 @@ func main() {
 
 var repoIcon = octicon("repo")
 var issueIcon = octicon("git-pull-request")
+var issueListIcon = octicon("list-ordered")
 var pathIcon = octicon("browser")
+var issueSearchIcon = octicon("issue-opened")
 
 func generateItems(cfg *config.Config, input string) []alfred.Item {
 	items := []alfred.Item{}
+	fullInput := input
 
 	if input == "" {
 		return items
 	}
 
 	// input includes leading space or leading mode char followed by a space
-	if len(input) > 0 {
-		if input[0:1] != " " {
-			return items
-		}
+	var mode string
+	if len(input) > 1 && input[0:1] != " " {
+		mode = input[0:1]
+		input = input[2:]
+	} else if len(input) > 0 && input[0:1] == " " {
+		mode = " "
 		input = input[1:]
 	}
 
@@ -56,83 +62,147 @@ func generateItems(cfg *config.Config, input string) []alfred.Item {
 	icon := repoIcon
 	usedDefault := false
 
-	if result.Repo == "" && cfg.DefaultRepo != "" && result.Query == "" && result.Path == "" {
+	// fixme assign default if query given for issue mode
+	if cfg.DefaultRepo != "" && result.Repo == "" && result.Query == "" && result.Path == "" {
 		result.Repo = cfg.DefaultRepo
 		usedDefault = true
 	}
 
-	if result.Repo != "" && result.Query == "" {
-		uid := "gh:" + result.Repo
-		title := "Open " + result.Repo
-		arg := "open https://github.com/" + result.Repo
+	switch mode {
+	case " ": // open repo, issue, and/or path
+		// repo required, no query allowed
+		if result.Repo != "" && result.Query == "" {
+			uid := "gh:" + result.Repo
+			title := "Open " + result.Repo
+			arg := "open https://github.com/" + result.Repo
 
-		if result.Issue != "" {
-			uid += "#" + result.Issue
-			title += "#" + result.Issue
-			arg += "/issues/" + result.Issue
-			icon = issueIcon
-		}
-
-		if result.Path != "" {
-			uid += result.Path
-			title += result.Path
-			arg += result.Path
-			icon = pathIcon
-		}
-
-		if result.Match != "" {
-			title += " (" + result.Match
 			if result.Issue != "" {
+				uid += "#" + result.Issue
 				title += "#" + result.Issue
+				arg += "/issues/" + result.Issue
+				icon = issueIcon
 			}
-			title += ")"
+
+			if result.Path != "" {
+				uid += result.Path
+				title += result.Path
+				arg += result.Path
+				icon = pathIcon
+			}
+
+			if result.Match != "" {
+				title += " (" + result.Match
+				if result.Issue != "" {
+					title += "#" + result.Issue
+				}
+				title += ")"
+			} else if usedDefault {
+				title += " (default repo)"
+			}
+
+			items = append(items, alfred.Item{
+				UID:   uid,
+				Title: title + " on GitHub",
+				Arg:   arg,
+				Valid: true,
+				Icon:  icon,
+			})
 		}
 
-		if usedDefault {
-			title += " (default repo)"
+		if result.Repo == "" && result.Path != "" {
+			items = append(items, alfred.Item{
+				UID:   "gh:" + result.Path,
+				Title: fmt.Sprintf("Open %s on GitHub", result.Path),
+				Arg:   "open https://github.com" + result.Path,
+				Valid: true,
+				Icon:  pathIcon,
+			})
 		}
 
-		items = append(items, alfred.Item{
-			UID:   uid,
-			Title: title + " on GitHub",
-			Arg:   arg,
-			Valid: true,
-			Icon:  icon,
-		})
-	}
+		if len(input) > 0 && !strings.Contains(input, " ") {
+			for key, repo := range cfg.RepoMap {
+				if strings.HasPrefix(key, input) && key != result.Match && repo != result.Repo {
+					items = append(items, alfred.Item{
+						UID:          "gh:" + repo,
+						Title:        fmt.Sprintf("Open %s (%s) on GitHub", repo, key),
+						Arg:          "open https://github.com/" + repo,
+						Valid:        true,
+						Autocomplete: " " + key,
+						Icon:         repoIcon,
+					})
+				}
+			}
 
-	if result.Repo == "" && result.Path != "" {
-		items = append(items, alfred.Item{
-			UID:   "gh:" + result.Path,
-			Title: fmt.Sprintf("Open %s on GitHub", result.Path),
-			Arg:   "open https://github.com" + result.Path,
-			Valid: true,
-			Icon:  pathIcon,
-		})
-	}
-
-	if !strings.Contains(input, " ") {
-		for key, repo := range cfg.RepoMap {
-			if strings.HasPrefix(key, input) && key != result.Match && repo != result.Repo {
+			if input != "" && result.Repo != input {
 				items = append(items, alfred.Item{
-					UID:          "gh:" + repo,
-					Title:        fmt.Sprintf("Open %s (%s) on GitHub", repo, key),
-					Arg:          "open https://github.com/" + repo,
-					Valid:        true,
-					Autocomplete: " " + key,
-					Icon:         repoIcon,
+					Title:        fmt.Sprintf("Open %s... on GitHub", input),
+					Autocomplete: " " + input,
+					Valid:        false,
+				})
+			}
+		}
+	case "i":
+		// repo required, no issue or path, query allowed
+		if result.Repo != "" && result.Issue == "" && result.Path == "" {
+			extra := ""
+			if result.Match != "" {
+				extra += " (" + result.Match + ")"
+			} else if usedDefault {
+				extra += " (default repo)"
+			}
+
+			if result.Query == "" {
+				items = append(items, alfred.Item{
+					UID:   "ghi:" + result.Repo,
+					Title: "Open issues for " + result.Repo + extra,
+					Arg:   "open https://github.com/" + result.Repo + "/issues",
+					Valid: true,
+					Icon:  issueListIcon,
+				})
+				items = append(items, alfred.Item{
+					Title:        "Search issues in " + result.Repo + extra + " for...",
+					Valid:        false,
+					Icon:         issueSearchIcon,
+					Autocomplete: fullInput + " ",
+				})
+			} else {
+				escaped := url.PathEscape(result.Query)
+				arg := "open https://github.com/" + result.Repo + "/search?utf8=✓&type=Issues&q=" + escaped
+				items = append(items, alfred.Item{
+					UID:   "ghis:" + result.Repo,
+					Title: "Search issues in " + result.Repo + extra + " for " + result.Query,
+					Arg:   arg,
+					Valid: true,
+					Icon:  issueSearchIcon,
 				})
 			}
 		}
 
-		if input != "" && result.Repo != input {
-			items = append(items, alfred.Item{
-				Title:        fmt.Sprintf("Open %s... on GitHub", input),
-				Autocomplete: " " + input,
-				Valid:        false,
-			})
+		if len(input) > 0 && !strings.Contains(input, " ") {
+			for key, repo := range cfg.RepoMap {
+				if strings.HasPrefix(key, input) && key != result.Match && repo != result.Repo {
+					items = append(items, alfred.Item{
+						UID:          "ghi:" + repo,
+						Title:        fmt.Sprintf("Open issues for %s (%s)", repo, key),
+						Arg:          "open https://github.com/" + repo + "/issues",
+						Valid:        true,
+						Autocomplete: "i " + key,
+						Icon:         issueListIcon,
+					})
+				}
+			}
+
+			if input != "" && result.Repo != input {
+				items = append(items, alfred.Item{
+					Title:        fmt.Sprintf("Open issues for %s...", input),
+					Autocomplete: "i " + input,
+					Valid:        false,
+					Icon:         issueListIcon,
+				})
+			}
 		}
 	}
+
 	return items
 }
 
