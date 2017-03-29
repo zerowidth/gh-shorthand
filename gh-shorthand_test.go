@@ -137,6 +137,22 @@ func TestItems(t *testing.T) {
 			title: "Open issues for foo/bar",
 			arg:   "open https://github.com/foo/bar/issues",
 		},
+		{
+			desc:  "search issues on a repo",
+			input: "i a/b foo bar",
+			uid:   "ghis:a/b",
+			valid: true,
+			title: "Search issues in a/b for foo bar",
+			arg:   "open https://github.com/a/b/search?utf8=✓&type=Issues&q=foo%20bar",
+		},
+		{
+			desc:  "search issues on a shorhthand repo",
+			input: "i df foo bar",
+			uid:   "ghis:zerowidth/dotfiles",
+			valid: true,
+			title: "Search issues in zerowidth/dotfiles (df) for foo bar",
+			arg:   "open https://github.com/zerowidth/dotfiles/search?utf8=✓&type=Issues&q=foo%20bar",
+		},
 
 		// default repo
 		{

@@ -7,6 +7,7 @@ import (
 	"github.com/zerowidth/gh-shorthand/alfred"
 	"github.com/zerowidth/gh-shorthand/config"
 	"github.com/zerowidth/gh-shorthand/parser"
+	"net/url"
 	"os"
 	"sort"
 	"strings"
@@ -37,9 +38,11 @@ var repoIcon = octicon("repo")
 var issueIcon = octicon("git-pull-request")
 var issueListIcon = octicon("list-ordered")
 var pathIcon = octicon("browser")
+var issueSearchIcon = octicon("issue-opened")
 
 func generateItems(cfg *config.Config, input string) []alfred.Item {
 	items := []alfred.Item{}
+	fullInput := input
 
 	if input == "" {
 		return items
@@ -93,9 +96,7 @@ func generateItems(cfg *config.Config, input string) []alfred.Item {
 					title += "#" + result.Issue
 				}
 				title += ")"
-			}
-
-			if usedDefault {
+			} else if usedDefault {
 				title += " (default repo)"
 			}
 
@@ -143,25 +144,38 @@ func generateItems(cfg *config.Config, input string) []alfred.Item {
 	case "i":
 		// repo required, no issue or path, query allowed
 		if result.Repo != "" && result.Issue == "" && result.Path == "" {
-			uid := "ghi:" + result.Repo
-			title := "Open issues for " + result.Repo
-			arg := "open https://github.com/" + result.Repo + "/issues"
-
+			extra := ""
 			if result.Match != "" {
-				title += " (" + result.Match + ")"
+				extra += " (" + result.Match + ")"
+			} else if usedDefault {
+				extra += " (default repo)"
 			}
 
-			if usedDefault {
-				title += " (default repo)"
+			if result.Query == "" {
+				items = append(items, alfred.Item{
+					UID:   "ghi:" + result.Repo,
+					Title: "Open issues for " + result.Repo + extra,
+					Arg:   "open https://github.com/" + result.Repo + "/issues",
+					Valid: true,
+					Icon:  issueListIcon,
+				})
+				items = append(items, alfred.Item{
+					Title:        "Search issues in " + result.Repo + extra + " for...",
+					Valid:        false,
+					Icon:         issueSearchIcon,
+					Autocomplete: fullInput + " ",
+				})
+			} else {
+				escaped := url.PathEscape(result.Query)
+				arg := "open https://github.com/" + result.Repo + "/search?utf8=✓&type=Issues&q=" + escaped
+				items = append(items, alfred.Item{
+					UID:   "ghis:" + result.Repo,
+					Title: "Search issues in " + result.Repo + extra + " for " + result.Query,
+					Arg:   arg,
+					Valid: true,
+					Icon:  issueSearchIcon,
+				})
 			}
-
-			items = append(items, alfred.Item{
-				UID:   uid,
-				Title: title,
-				Arg:   arg,
-				Valid: true,
-				Icon:  issueListIcon,
-			})
 		}
 
 		if len(input) > 0 && !strings.Contains(input, " ") {
