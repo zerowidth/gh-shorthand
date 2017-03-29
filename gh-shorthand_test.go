@@ -311,8 +311,7 @@ func validateItems(t *testing.T, tc testCase, items []*alfred.Item) {
 			}
 		}
 		if item.UID != "" {
-			_, exists := uids[item.UID]
-			if exists {
+			if _, ok := uids[item.UID]; ok {
 				t.Errorf("non-unique UID %#v in %+v", item.UID, items)
 			} else {
 				uids[item.UID] = true
