@@ -255,7 +255,7 @@ func generateItems(cfg *config.Config, input string) []*alfred.Item {
 					Title:        fmt.Sprintf("New issue in %s...", input),
 					Autocomplete: "n " + input,
 					Valid:        false,
-					Icon:         issueListIcon,
+					Icon:         newIssueIcon,
 				})
 			}
 		}
