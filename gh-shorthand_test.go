@@ -183,6 +183,29 @@ func TestItems(t *testing.T) {
 			arg:   "open https://github.com/zerowidth/dotfiles/search?utf8=✓&type=Issues&q=foo%20bar",
 		},
 
+		// new issue
+		"open a new issue in a shorthand repo": {
+			input: "n df",
+			uid:   "ghn:zerowidth/dotfiles",
+			valid: true,
+			title: "New issue in zerowidth/dotfiles (df)",
+			arg:   "open https://github.com/zerowidth/dotfiles/issues/new",
+		},
+		"open a new issue in a repo": {
+			input: "n a/b",
+			uid:   "ghn:a/b",
+			valid: true,
+			title: "New issue in a/b",
+			arg:   "open https://github.com/a/b/issues/new",
+		},
+		"open a new issue with a query": {
+			input: "n df foo bar",
+			uid:   "ghn:zerowidth/dotfiles",
+			valid: true,
+			title: "New issue in zerowidth/dotfiles (df): foo bar",
+			arg:   "open https://github.com/zerowidth/dotfiles/issues/new?title=foo%20bar",
+		},
+
 		// default repo
 		"open an issue with the default repo": {
 			input: " 123",
@@ -212,6 +235,12 @@ func TestItems(t *testing.T) {
 			uid:   "ghi:zerowidth/default",
 			valid: true,
 			title: "Open issues for zerowidth/default (default repo)",
+		},
+		"new issue in the default repo": {
+			input: "n ",
+			uid:   "ghn:zerowidth/default",
+			valid: true,
+			title: "New issue in zerowidth/default (default repo)",
 		},
 
 		// repo autocomplete
@@ -263,11 +292,27 @@ func TestItems(t *testing.T) {
 			arg:   "open https://github.com/zerowidth/dotfiles/issues",
 			auto:  "i df",
 		},
-		"autocompletes with input so far": {
+		"autocompletes issue index with input so far": {
 			input: "i foo",
 			valid: false,
 			title: "Open issues for foo...",
 			auto:  "i foo",
+		},
+
+		// new issue autocomplete
+		"autocompletes for new issue": {
+			input: "n d",
+			uid:   "ghn:zerowidth/dotfiles",
+			valid: true,
+			title: "New issue in zerowidth/dotfiles (df)",
+			arg:   "open https://github.com/zerowidth/dotfiles/issues/new",
+			auto:  "n df",
+		},
+		"autocompletes new issue with input so far": {
+			input: "n foo",
+			valid: false,
+			title: "New issue in foo...",
+			auto:  "n foo",
 		},
 	} {
 		t.Run(fmt.Sprintf("generateItems(%#v): %s", tc.input, desc), tc.testItem)

@@ -20,6 +20,7 @@ var (
 	issueListIcon   = octicon("list-ordered")
 	pathIcon        = octicon("browser")
 	issueSearchIcon = octicon("issue-opened")
+	newIssueIcon    = octicon("bug")
 )
 
 func main() {
@@ -199,6 +200,60 @@ func generateItems(cfg *config.Config, input string) []*alfred.Item {
 				items = append(items, &alfred.Item{
 					Title:        fmt.Sprintf("Open issues for %s...", input),
 					Autocomplete: "i " + input,
+					Valid:        false,
+					Icon:         issueListIcon,
+				})
+			}
+		}
+	case "n":
+		// repo required, no issue or path, query allowed
+		if len(result.Repo) > 0 && len(result.Issue) == 0 && len(result.Path) == 0 {
+			title := "New issue in " + result.Repo
+			if len(result.Match) > 0 {
+				title += " (" + result.Match + ")"
+			} else if usedDefault {
+				title += " (default repo)"
+			}
+
+			if len(result.Query) == 0 {
+				items = append(items, &alfred.Item{
+					UID:   "ghn:" + result.Repo,
+					Title: title,
+					Arg:   "open https://github.com/" + result.Repo + "/issues/new",
+					Valid: true,
+					Icon:  newIssueIcon,
+				})
+			} else {
+				escaped := url.PathEscape(result.Query)
+				arg := "open https://github.com/" + result.Repo + "/issues/new?title=" + escaped
+				items = append(items, &alfred.Item{
+					UID:   "ghn:" + result.Repo,
+					Title: title + ": " + result.Query,
+					Arg:   arg,
+					Valid: true,
+					Icon:  newIssueIcon,
+				})
+			}
+		}
+
+		if len(input) > 0 && !strings.Contains(input, " ") {
+			for key, repo := range cfg.RepoMap {
+				if strings.HasPrefix(key, input) && key != result.Match && repo != result.Repo {
+					items = append(items, &alfred.Item{
+						UID:          "ghn:" + repo,
+						Title:        fmt.Sprintf("New issue in %s (%s)", repo, key),
+						Arg:          "open https://github.com/" + repo + "/issues/new",
+						Valid:        true,
+						Autocomplete: "n " + key,
+						Icon:         newIssueIcon,
+					})
+				}
+			}
+
+			if len(input) > 0 && result.Repo != input {
+				items = append(items, &alfred.Item{
+					Title:        fmt.Sprintf("New issue in %s...", input),
+					Autocomplete: "n " + input,
 					Valid:        false,
 					Icon:         issueListIcon,
 				})
