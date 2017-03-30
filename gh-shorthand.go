@@ -66,8 +66,8 @@ func generateItems(cfg *config.Config, input string) []*alfred.Item {
 	icon := repoIcon
 	usedDefault := false
 
-	// fixme assign default if query given for issue mode
-	if len(cfg.DefaultRepo) > 0 && len(result.Repo) == 0 && len(result.Query) == 0 && len(result.Path) == 0 {
+	if len(cfg.DefaultRepo) > 0 && len(result.Repo) == 0 && len(result.Path) == 0 &&
+		((mode == "i" || mode == "n") || len(result.Query) == 0) {
 		result.Repo = cfg.DefaultRepo
 		usedDefault = true
 	}

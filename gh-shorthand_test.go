@@ -236,11 +236,23 @@ func TestItems(t *testing.T) {
 			valid: true,
 			title: "Open issues for zerowidth/default (default repo)",
 		},
+		"search issues with a query in the default repo": {
+			input: "i foo",
+			uid:   "ghis:zerowidth/default",
+			valid: true,
+			title: "Search issues in zerowidth/default (default repo) for foo",
+		},
 		"new issue in the default repo": {
 			input: "n ",
 			uid:   "ghn:zerowidth/default",
 			valid: true,
 			title: "New issue in zerowidth/default (default repo)",
+		},
+		"new issue with a title in the default repo": {
+			input: "n foo",
+			uid:   "ghn:zerowidth/default",
+			valid: true,
+			title: "New issue in zerowidth/default (default repo): foo",
 		},
 
 		// repo autocomplete
