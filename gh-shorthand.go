@@ -220,26 +220,74 @@ func newIssueItems(result *parser.Result, usedDefault bool) (items []*alfred.Ite
 	return
 }
 
+func autocompleteOpenItem(key, repo string) *alfred.Item {
+	return &alfred.Item{
+		UID:          "gh:" + repo,
+		Title:        fmt.Sprintf("Open %s (%s) on GitHub", repo, key),
+		Arg:          "open https://github.com/" + repo,
+		Valid:        true,
+		Autocomplete: " " + key,
+		Icon:         repoIcon,
+	}
+}
+
+func autocompleteIssueItem(key, repo string) *alfred.Item {
+	return &alfred.Item{
+		UID:          "ghi:" + repo,
+		Title:        fmt.Sprintf("Open issues for %s (%s)", repo, key),
+		Arg:          "open https://github.com/" + repo + "/issues",
+		Valid:        true,
+		Autocomplete: "i " + key,
+		Icon:         issueListIcon,
+	}
+}
+
+func autocompleteNewIssueItem(key, repo string) *alfred.Item {
+	return &alfred.Item{
+		UID:          "ghn:" + repo,
+		Title:        fmt.Sprintf("New issue in %s (%s)", repo, key),
+		Arg:          "open https://github.com/" + repo + "/issues/new",
+		Valid:        true,
+		Autocomplete: "n " + key,
+		Icon:         newIssueIcon,
+	}
+}
+
+func openEndedOpenItem(input string) *alfred.Item {
+	return &alfred.Item{
+		Title:        fmt.Sprintf("Open %s... on GitHub", input),
+		Autocomplete: " " + input,
+		Valid:        false,
+	}
+}
+
+func openEndedIssueItem(input string) *alfred.Item {
+	return &alfred.Item{
+		Title:        fmt.Sprintf("Open issues for %s...", input),
+		Autocomplete: "i " + input,
+		Valid:        false,
+		Icon:         issueListIcon,
+	}
+}
+
+func openEndedNewIssueItem(input string) *alfred.Item {
+	return &alfred.Item{
+		Title:        fmt.Sprintf("New issue in %s...", input),
+		Autocomplete: "n " + input,
+		Valid:        false,
+		Icon:         newIssueIcon,
+	}
+}
+
 func openItemsAutocomplete(cfg *config.Config, input string, result *parser.Result) (items []*alfred.Item) {
 	for key, repo := range cfg.RepoMap {
 		if strings.HasPrefix(key, input) && key != result.Match && repo != result.Repo {
-			items = append(items, &alfred.Item{
-				UID:          "gh:" + repo,
-				Title:        fmt.Sprintf("Open %s (%s) on GitHub", repo, key),
-				Arg:          "open https://github.com/" + repo,
-				Valid:        true,
-				Autocomplete: " " + key,
-				Icon:         repoIcon,
-			})
+			items = append(items, autocompleteOpenItem(key, repo))
 		}
 	}
 
 	if len(input) > 0 && result.Repo != input {
-		items = append(items, &alfred.Item{
-			Title:        fmt.Sprintf("Open %s... on GitHub", input),
-			Autocomplete: " " + input,
-			Valid:        false,
-		})
+		items = append(items, openEndedOpenItem(input))
 	}
 	return
 }
@@ -247,24 +295,12 @@ func openItemsAutocomplete(cfg *config.Config, input string, result *parser.Resu
 func issueItemsAutocomplete(cfg *config.Config, input string, result *parser.Result) (items []*alfred.Item) {
 	for key, repo := range cfg.RepoMap {
 		if strings.HasPrefix(key, input) && key != result.Match && repo != result.Repo {
-			items = append(items, &alfred.Item{
-				UID:          "ghi:" + repo,
-				Title:        fmt.Sprintf("Open issues for %s (%s)", repo, key),
-				Arg:          "open https://github.com/" + repo + "/issues",
-				Valid:        true,
-				Autocomplete: "i " + key,
-				Icon:         issueListIcon,
-			})
+			items = append(items, autocompleteIssueItem(key, repo))
 		}
 	}
 
 	if len(input) > 0 && result.Repo != input {
-		items = append(items, &alfred.Item{
-			Title:        fmt.Sprintf("Open issues for %s...", input),
-			Autocomplete: "i " + input,
-			Valid:        false,
-			Icon:         issueListIcon,
-		})
+		items = append(items, openEndedIssueItem(input))
 	}
 
 	return
@@ -273,24 +309,12 @@ func issueItemsAutocomplete(cfg *config.Config, input string, result *parser.Res
 func newIssueAutocomplete(cfg *config.Config, input string, result *parser.Result) (items []*alfred.Item) {
 	for key, repo := range cfg.RepoMap {
 		if strings.HasPrefix(key, input) && key != result.Match && repo != result.Repo {
-			items = append(items, &alfred.Item{
-				UID:          "ghn:" + repo,
-				Title:        fmt.Sprintf("New issue in %s (%s)", repo, key),
-				Arg:          "open https://github.com/" + repo + "/issues/new",
-				Valid:        true,
-				Autocomplete: "n " + key,
-				Icon:         newIssueIcon,
-			})
+			items = append(items, autocompleteNewIssueItem(key, repo))
 		}
 	}
 
 	if len(input) > 0 && result.Repo != input {
-		items = append(items, &alfred.Item{
-			Title:        fmt.Sprintf("New issue in %s...", input),
-			Autocomplete: "n " + input,
-			Valid:        false,
-			Icon:         newIssueIcon,
-		})
+		items = append(items, openEndedNewIssueItem(input))
 	}
 	return
 }
