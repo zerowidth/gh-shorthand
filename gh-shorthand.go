@@ -89,7 +89,9 @@ func generateItems(cfg *config.Config, input string) []*alfred.Item {
 		}
 
 		if len(input) > 0 && !strings.Contains(input, " ") {
-			items = append(items, openItemsAutocomplete(cfg, input, result)...)
+			items = append(items,
+				autocompleteItems(cfg, input, result,
+					autocompleteOpenItem, openEndedOpenItem)...)
 		}
 	case "i":
 		// repo required, no issue or path, query allowed
@@ -98,7 +100,9 @@ func generateItems(cfg *config.Config, input string) []*alfred.Item {
 		}
 
 		if len(input) > 0 && !strings.Contains(input, " ") {
-			items = append(items, issueItemsAutocomplete(cfg, input, result)...)
+			items = append(items,
+				autocompleteItems(cfg, input, result,
+					autocompleteIssueItem, openEndedIssueItem)...)
 		}
 	case "n":
 		// repo required, no issue or path, query allowed
@@ -107,7 +111,9 @@ func generateItems(cfg *config.Config, input string) []*alfred.Item {
 		}
 
 		if len(input) > 0 && !strings.Contains(input, " ") {
-			items = append(items, newIssueAutocomplete(cfg, input, result)...)
+			items = append(items,
+				autocompleteItems(cfg, input, result,
+					autocompleteNewIssueItem, openEndedNewIssueItem)...)
 		}
 	}
 
@@ -279,42 +285,17 @@ func openEndedNewIssueItem(input string) *alfred.Item {
 	}
 }
 
-func openItemsAutocomplete(cfg *config.Config, input string, result *parser.Result) (items []*alfred.Item) {
+func autocompleteItems(cfg *config.Config, input string, result *parser.Result,
+	autocompleteItem func(string, string) *alfred.Item,
+	openEndedItem func(string) *alfred.Item) (items []*alfred.Item) {
 	for key, repo := range cfg.RepoMap {
 		if strings.HasPrefix(key, input) && key != result.Match && repo != result.Repo {
-			items = append(items, autocompleteOpenItem(key, repo))
+			items = append(items, autocompleteItem(key, repo))
 		}
 	}
 
 	if len(input) > 0 && result.Repo != input {
-		items = append(items, openEndedOpenItem(input))
-	}
-	return
-}
-
-func issueItemsAutocomplete(cfg *config.Config, input string, result *parser.Result) (items []*alfred.Item) {
-	for key, repo := range cfg.RepoMap {
-		if strings.HasPrefix(key, input) && key != result.Match && repo != result.Repo {
-			items = append(items, autocompleteIssueItem(key, repo))
-		}
-	}
-
-	if len(input) > 0 && result.Repo != input {
-		items = append(items, openEndedIssueItem(input))
-	}
-
-	return
-}
-
-func newIssueAutocomplete(cfg *config.Config, input string, result *parser.Result) (items []*alfred.Item) {
-	for key, repo := range cfg.RepoMap {
-		if strings.HasPrefix(key, input) && key != result.Match && repo != result.Repo {
-			items = append(items, autocompleteNewIssueItem(key, repo))
-		}
-	}
-
-	if len(input) > 0 && result.Repo != input {
-		items = append(items, openEndedNewIssueItem(input))
+		items = append(items, openEndedItem(input))
 	}
 	return
 }
