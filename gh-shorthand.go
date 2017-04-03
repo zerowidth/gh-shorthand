@@ -79,13 +79,7 @@ func generateItems(cfg *config.Config, input string) []*alfred.Item {
 		}
 
 		if len(result.Repo) == 0 && len(result.Path) > 0 {
-			items = append(items, &alfred.Item{
-				UID:   "gh:" + result.Path,
-				Title: fmt.Sprintf("Open %s on GitHub", result.Path),
-				Arg:   "open https://github.com" + result.Path,
-				Valid: true,
-				Icon:  pathIcon,
-			})
+			items = append(items, openPathItem(result.Path))
 		}
 
 		if len(input) > 0 && !strings.Contains(input, " ") {
@@ -158,6 +152,16 @@ func openRepoItems(result *parser.Result, usedDefault bool) (items []*alfred.Ite
 		Icon:  icon,
 	})
 	return items
+}
+
+func openPathItem(path string) *alfred.Item {
+	return &alfred.Item{
+		UID:   "gh:" + path,
+		Title: fmt.Sprintf("Open %s on GitHub", path),
+		Arg:   "open https://github.com" + path,
+		Valid: true,
+		Icon:  pathIcon,
+	}
 }
 
 func openIssueItems(result *parser.Result, usedDefault bool, fullInput string) (items []*alfred.Item) {
