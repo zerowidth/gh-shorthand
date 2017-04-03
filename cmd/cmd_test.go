@@ -26,13 +26,13 @@ var defaultInMap = &config.Config{
 var emptyConfig = &config.Config{}
 
 func TestDefaults(t *testing.T) {
-	items := generateItems(cfg, "")
+	items := completeItems(cfg, "")
 	if len(items) > 0 {
 		t.Errorf("expected default result to be empty, got %#v", items)
 	}
 }
 
-type testCase struct {
+type completeTestCase struct {
 	input   string         // input string
 	uid     string         // the results must contain an entry with this uid
 	valid   bool           // and with the valid flag set to this
@@ -43,13 +43,13 @@ type testCase struct {
 	exclude string         // exclude any item with this UID or title
 }
 
-func (tc *testCase) testItem(t *testing.T) {
+func (tc *completeTestCase) testItem(t *testing.T) {
 	if tc.cfg == nil {
 		tc.cfg = cfg
 	}
-	items := generateItems(tc.cfg, tc.input)
+	items := completeItems(tc.cfg, tc.input)
 
-	validateItems(t, tc, items)
+	validateItems(t, items)
 
 	if tc.exclude != "" {
 		item := findMatchingItem(tc.exclude, tc.exclude, items)
@@ -85,12 +85,12 @@ func (tc *testCase) testItem(t *testing.T) {
 	}
 }
 
-func TestItems(t *testing.T) {
+func TestCompleteItems(t *testing.T) {
 	// Based on input, the resulting items must include one that matches either
 	// the given UID or title. All items are also validated for correctness and
 	// uniqueness by UID.
 	// rm thixs var
-	for desc, tc := range map[string]testCase{
+	for desc, tc := range map[string]completeTestCase{
 		// basic parsing tests
 		"open a shorthand repo": {
 			input: " df",
@@ -331,7 +331,7 @@ func TestItems(t *testing.T) {
 	}
 }
 
-func validateItems(t *testing.T, tc *testCase, items []*alfred.Item) {
+func validateItems(t *testing.T, items []*alfred.Item) {
 	uids := map[string]bool{}
 	for _, item := range items {
 		if item.Title == "" {

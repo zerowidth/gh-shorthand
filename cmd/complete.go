@@ -46,14 +46,14 @@ the script filter), and uses the first character of the input as a mode string:
 		if err != nil {
 			items = []*alfred.Item{errorItem("when loading ~/.gh-shorthand.yml", err.Error())}
 		} else {
-			items = generateItems(cfg, input)
+			items = completeItems(cfg, input)
 		}
 
 		printItems(items)
 	},
 }
 
-func generateItems(cfg *config.Config, input string) []*alfred.Item {
+func completeItems(cfg *config.Config, input string) []*alfred.Item {
 	items := []*alfred.Item{}
 	fullInput := input
 
