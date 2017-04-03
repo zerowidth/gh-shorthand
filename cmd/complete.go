@@ -15,15 +15,6 @@ import (
 	"github.com/zerowidth/gh-shorthand/parser"
 )
 
-var (
-	repoIcon        = octicon("repo")
-	issueIcon       = octicon("git-pull-request")
-	issueListIcon   = octicon("list-ordered")
-	pathIcon        = octicon("browser")
-	issueSearchIcon = octicon("issue-opened")
-	newIssueIcon    = octicon("bug")
-)
-
 func init() {
 	RootCmd.AddCommand(completeCommand)
 }
@@ -336,13 +327,5 @@ func printItems(items []*alfred.Item) {
 	doc := alfred.Items{Items: items}
 	if err := json.NewEncoder(os.Stdout).Encode(doc); err != nil {
 		panic(err.Error())
-	}
-}
-
-// octicon is relative to the alfred workflow, so this tells alfred to retrieve
-// icons from there rather than relative to this go binary.
-func octicon(name string) *alfred.Icon {
-	return &alfred.Icon{
-		Path: fmt.Sprintf("octicons-%s.png", name),
 	}
 }
