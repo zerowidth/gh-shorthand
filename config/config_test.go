@@ -44,26 +44,38 @@ func TestLoad(t *testing.T) {
 	}
 }
 
-func TestLoadProjectDirs(t *testing.T) {
+func TestProjectDirMap(t *testing.T) {
 	config, _ := Load(configYaml)
-	if len(config.ProjectDirs) != 3 {
-		t.Errorf("expected ProjectDirs to have three entries, got %#v", config.ProjectDirs)
+	dirs := config.ProjectDirMap()
+	if len(dirs) != 3 {
+		t.Errorf("expected ProjectDirs() to have three entries in %#v", dirs)
 	} else {
+
+		dir, ok := dirs["/foo/foo"]
+		if !ok {
+			t.Errorf("expected /foo/foo in %#v", dirs)
+		} else if !filepath.IsAbs(dir) {
+			t.Errorf("expected expanded /foo/foo %s to be an absolute path", dir)
+		}
+
 		barPath, err := homedir.Expand("~/bar")
 		if err != nil {
 			t.Errorf("error expanding ~/bar: %#v", err.Error())
+		} else {
+			dir, ok := dirs["~/bar"]
+			if !ok {
+			} else if dir != barPath {
+				t.Errorf("expected ~/bar to be expanded to %s, got %s", barPath, dir)
+			}
 		}
-		if config.ProjectDirs[0] != "/foo/foo" {
-			t.Errorf("expected first project dir to be /foo/foo, got %#v", config.ProjectDirs[0])
-		}
-		if config.ProjectDirs[1] != barPath {
-			t.Errorf("expected ~/bar to be expanded, got %#v", config.ProjectDirs[1])
-		}
-		if !filepath.IsAbs(config.ProjectDirs[2]) {
-			t.Errorf("expected relative path to be expanded to absolute path, got %#v", config.ProjectDirs[2])
+
+		dir, ok = dirs["relative"]
+		if !ok {
+			t.Errorf("expected relative dir in %#v", dirs)
+		} else if !filepath.IsAbs(dir) {
+			t.Errorf("expected relative path to be expanded to absolute path, got %s", dir)
 		}
 	}
-
 }
 
 func TestLoadFromFile(t *testing.T) {

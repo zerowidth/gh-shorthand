@@ -16,6 +16,22 @@ type Config struct {
 	ProjectDirs []string          `yaml:"project_dirs"`
 }
 
+func (config Config) ProjectDirMap() (dirs map[string]string) {
+	dirs = map[string]string{}
+	for _, path := range config.ProjectDirs {
+		expanded, err := homedir.Expand(path)
+		if err != nil {
+			continue
+		}
+		absolute, err := filepath.Abs(expanded)
+		if err != nil {
+			continue
+		}
+		dirs[path] = absolute
+	}
+	return
+}
+
 // Load a Config from a yaml string.
 func Load(yml string) (*Config, error) {
 	var config Config
@@ -23,21 +39,6 @@ func Load(yml string) (*Config, error) {
 	if err := yaml.Unmarshal([]byte(yml), &config); err != nil {
 		return nil, err
 	}
-
-	// normalize the project directories
-	paths := make([]string, len(config.ProjectDirs))
-	for i, path := range config.ProjectDirs {
-		expanded, err := homedir.Expand(path)
-		if err != nil {
-			return nil, err
-		}
-		absolute, err := filepath.Abs(expanded)
-		if err != nil {
-			return nil, err
-		}
-		paths[i] = absolute
-	}
-	config.ProjectDirs = paths
 
 	return &config, nil
 }
