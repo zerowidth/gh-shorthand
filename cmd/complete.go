@@ -115,6 +115,12 @@ func completeItems(cfg *config.Config, input string) []*alfred.Item {
 				autocompleteItems(cfg, input, result,
 					autocompleteNewIssueItem, openEndedNewIssueItem)...)
 		}
+	case "e":
+		items = append(items, actionItems(cfg.ProjectDirMap(), "ghe", "edit", "Edit", editorIcon)...)
+	case "o":
+		items = append(items, actionItems(cfg.ProjectDirMap(), "gho", "finder", "Open Finder in", editorIcon)...)
+	case "t":
+		items = append(items, actionItems(cfg.ProjectDirMap(), "ght", "term", "Open terminal in", editorIcon)...)
 	}
 
 	return items
