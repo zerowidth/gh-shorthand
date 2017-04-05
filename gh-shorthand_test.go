@@ -1,4 +1,4 @@
-package cmd
+package main
 
 import (
 	"fmt"
@@ -15,7 +15,7 @@ var cfg = &config.Config{
 		"df":  "zerowidth/dotfiles",
 		"df2": "zerowidth/df2",
 	},
-	ProjectDirs: []string{"../fixtures/work", "../fixtures/projects"},
+	ProjectDirs: []string{"fixtures/work", "fixtures/projects"},
 }
 
 var defaultInMap = &config.Config{
@@ -88,10 +88,11 @@ func (tc *completeTestCase) testItem(t *testing.T) {
 }
 
 func TestCompleteItems(t *testing.T) {
+	fixturePath, _ := filepath.Abs("fixtures")
+
 	// Based on input, the resulting items must include one that matches either
 	// the given UID or title. All items are also validated for correctness and
 	// uniqueness by UID.
-	// rm thixs var
 	for desc, tc := range map[string]completeTestCase{
 		// basic parsing tests
 		"open a shorthand repo": {
@@ -328,120 +329,55 @@ func TestCompleteItems(t *testing.T) {
 			title: "New issue in foo...",
 			auto:  "n foo",
 		},
+
+		"edit project includes fixtures/work/work-foo": {
+			input: "e ",
+			uid:   "ghe:fixtures/work/work-foo",
+			valid: true,
+			title: "Edit fixtures/work/work-foo",
+			arg:   "edit " + fixturePath + "/work/work-foo",
+		},
+		"edit project includes fixtures/projects/project-bar": {
+			input: "e ",
+			uid:   "ghe:fixtures/projects/project-bar",
+			valid: true,
+			title: "Edit fixtures/projects/project-bar",
+			arg:   "edit " + fixturePath + "/projects/project-bar",
+		},
+		"open finder includes fixtures/work/work-foo": {
+			input: "o ",
+			uid:   "gho:fixtures/work/work-foo",
+			valid: true,
+			title: "Open Finder in fixtures/work/work-foo",
+			arg:   "finder " + fixturePath + "/work/work-foo",
+		},
+		"open finder includes fixtures/projects/project-bar": {
+			input: "o ",
+			uid:   "gho:fixtures/projects/project-bar",
+			valid: true,
+			title: "Open Finder in fixtures/projects/project-bar",
+			arg:   "finder " + fixturePath + "/projects/project-bar",
+		},
+		"open terminal includes fixtures/work/work-foo": {
+			input: "t ",
+			uid:   "ght:fixtures/work/work-foo",
+			valid: true,
+			title: "Open terminal in fixtures/work/work-foo",
+			arg:   "term " + fixturePath + "/work/work-foo",
+		},
+		"open terminal includes fixtures/projects/project-bar": {
+			input: "t ",
+			uid:   "ght:fixtures/projects/project-bar",
+			valid: true,
+			title: "Open terminal in fixtures/projects/project-bar",
+			arg:   "term " + fixturePath + "/projects/project-bar",
+		},
+		"edit project excludes files (listing only directories)": {
+			input:   "e ",
+			exclude: "ghe:fixtures/work/ignored-file",
+		},
 	} {
 		t.Run(fmt.Sprintf("generateItems(%#v): %s", tc.input, desc), tc.testItem)
-	}
-}
-
-type projectTestCase struct {
-	action  string // which action to run
-	uid     string // the results must contain an entry with this uid
-	valid   bool   // and with the valid flag set to this
-	title   string // the expected title
-	arg     string // expected argument
-	exclude string // exclude any item with this UID or title
-}
-
-func (tc *projectTestCase) testItem(t *testing.T) {
-	items := projectItems(cfg, tc.action)
-
-	validateItems(t, items)
-
-	if len(tc.exclude) > 0 {
-		item := findMatchingItem(tc.exclude, tc.exclude, items)
-		if item != nil {
-			t.Errorf("%+v\nexpected no item with UID or Title %q", items, tc.exclude)
-		}
-		return
-	}
-
-	item := findMatchingItem(tc.uid, tc.title, items)
-	if item != nil {
-		if len(tc.uid) > 0 && item.UID != tc.uid {
-			t.Errorf("%+v\nexpected UID %q to be %q", item, item.UID, tc.uid)
-		}
-
-		if len(tc.title) > 0 && item.Title != tc.title {
-			t.Errorf("%+v\nexpected Title %q to be %q", item, item.Title, tc.title)
-		}
-
-		if item.Valid != tc.valid {
-			t.Errorf("%+v\nexpected Valid %t to be %t", item, item.Valid, tc.valid)
-		}
-
-		if len(tc.arg) > 0 && item.Arg != tc.arg {
-			t.Errorf("%+v\nexpected Arg %q to be %q", item, item.Arg, tc.arg)
-		}
-	} else {
-		t.Errorf("expected item with uid %q and/or title %q in %+v", tc.uid, tc.title, items)
-	}
-}
-
-func TestProjectItems(t *testing.T) {
-	fixturePath, _ := filepath.Abs("../fixtures")
-
-	itemCount := len(cfg.ProjectDirs)
-	for _, action := range []string{"edit"} {
-		t.Run(fmt.Sprintf("projectItems(%#v) count", action), func(t *testing.T) {
-			items := projectItems(cfg, action)
-			if len(items) != itemCount {
-				t.Errorf("expected %d items, got %d in:\n%#v", itemCount, len(items), items)
-			}
-		})
-	}
-
-	for desc, tc := range map[string]projectTestCase{
-		// list dirs with different actions
-		// ignore files
-		// return error item for invalid directory
-		"edit includes ../fixtures/work/work-foo": {
-			action: "edit",
-			uid:    "ghe:../fixtures/work/work-foo",
-			valid:  true,
-			title:  "Edit ../fixtures/work/work-foo",
-			arg:    "edit " + fixturePath + "/work/work-foo",
-		},
-		"edit includes ../fixtures/projects/project-bar": {
-			action: "edit",
-			uid:    "ghe:../fixtures/projects/project-bar",
-			valid:  true,
-			title:  "Edit ../fixtures/projects/project-bar",
-			arg:    "edit " + fixturePath + "/projects/project-bar",
-		},
-		"finder includes ../fixtures/work/work-foo": {
-			action: "finder",
-			uid:    "gho:../fixtures/work/work-foo",
-			valid:  true,
-			title:  "Open Finder in ../fixtures/work/work-foo",
-			arg:    "finder " + fixturePath + "/work/work-foo",
-		},
-		"finder includes ../fixtures/projects/project-bar": {
-			action: "finder",
-			uid:    "gho:../fixtures/projects/project-bar",
-			valid:  true,
-			title:  "Open Finder in ../fixtures/projects/project-bar",
-			arg:    "finder " + fixturePath + "/projects/project-bar",
-		},
-		"term includes ../fixtures/work/work-foo": {
-			action: "term",
-			uid:    "ght:../fixtures/work/work-foo",
-			valid:  true,
-			title:  "Open terminal in ../fixtures/work/work-foo",
-			arg:    "term " + fixturePath + "/work/work-foo",
-		},
-		"term includes ../fixtures/projects/project-bar": {
-			action: "term",
-			uid:    "ght:../fixtures/projects/project-bar",
-			valid:  true,
-			title:  "Open terminal in ../fixtures/projects/project-bar",
-			arg:    "term " + fixturePath + "/projects/project-bar",
-		},
-		"excludes files": {
-			action:  "edit",
-			exclude: "ghe:../fixtures/work/ignored-file",
-		},
-	} {
-		t.Run(fmt.Sprintf("projectItems(%#v): %s", tc.action, desc), tc.testItem)
 	}
 }
 
