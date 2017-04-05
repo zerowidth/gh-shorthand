@@ -331,10 +331,8 @@ func autocompleteItems(cfg *config.Config, input string, result *parser.Result,
 }
 
 func findProjectDirs(root string) (dirs []string) {
-	fmt.Fprintf(os.Stderr, "reading entries in %s\n", root)
 	if entries, err := ioutil.ReadDir(root); err == nil {
 		for _, entry := range entries {
-			fmt.Fprintf(os.Stderr, "  checking %s\n", entry.Name())
 			if entry.IsDir() {
 				dirs = append(dirs, entry.Name())
 			}
