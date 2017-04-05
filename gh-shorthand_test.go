@@ -376,6 +376,26 @@ func TestCompleteItems(t *testing.T) {
 			input:   "e ",
 			exclude: "ghe:fixtures/work/ignored-file",
 		},
+
+		// edit/open/auto filtering
+		"edit project with input matches directories": {
+			input: "e work-foo",
+			uid:   "ghe:fixtures/work/work-foo",
+			valid: true,
+		},
+		"edit project with input excludes non-matches": {
+			input:   "e work-foo",
+			exclude: "ghe:fixtures/projects/project-bar",
+		},
+		"edit project with input fuzzy-matches directories": {
+			input: "e wf",
+			uid:   "ghe:fixtures/work/work-foo",
+			valid: true,
+		},
+		"edit project with input excludes non-fuzzy matches": {
+			input:   "e wf",
+			exclude: "ghe:fixtures/projects/project-bar",
+		},
 	} {
 		t.Run(fmt.Sprintf("generateItems(%#v): %s", tc.input, desc), tc.testItem)
 	}
