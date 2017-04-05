@@ -1,4 +1,4 @@
-package cmd
+package main
 
 import (
 	"fmt"
@@ -15,7 +15,7 @@ var cfg = &config.Config{
 		"df":  "zerowidth/dotfiles",
 		"df2": "zerowidth/df2",
 	},
-	ProjectDirs: []string{"../fixtures/work", "../fixtures/projects"},
+	ProjectDirs: []string{"fixtures/work", "fixtures/projects"},
 }
 
 var defaultInMap = &config.Config{
@@ -88,7 +88,7 @@ func (tc *completeTestCase) testItem(t *testing.T) {
 }
 
 func TestCompleteItems(t *testing.T) {
-	fixturePath, _ := filepath.Abs("../fixtures")
+	fixturePath, _ := filepath.Abs("fixtures")
 
 	// Based on input, the resulting items must include one that matches either
 	// the given UID or title. All items are also validated for correctness and
@@ -330,51 +330,51 @@ func TestCompleteItems(t *testing.T) {
 			auto:  "n foo",
 		},
 
-		"edit project includes ../fixtures/work/work-foo": {
+		"edit project includes fixtures/work/work-foo": {
 			input: "e ",
-			uid:   "ghe:../fixtures/work/work-foo",
+			uid:   "ghe:fixtures/work/work-foo",
 			valid: true,
-			title: "Edit ../fixtures/work/work-foo",
+			title: "Edit fixtures/work/work-foo",
 			arg:   "edit " + fixturePath + "/work/work-foo",
 		},
-		"edit project includes ../fixtures/projects/project-bar": {
+		"edit project includes fixtures/projects/project-bar": {
 			input: "e ",
-			uid:   "ghe:../fixtures/projects/project-bar",
+			uid:   "ghe:fixtures/projects/project-bar",
 			valid: true,
-			title: "Edit ../fixtures/projects/project-bar",
+			title: "Edit fixtures/projects/project-bar",
 			arg:   "edit " + fixturePath + "/projects/project-bar",
 		},
-		"open finder includes ../fixtures/work/work-foo": {
+		"open finder includes fixtures/work/work-foo": {
 			input: "o ",
-			uid:   "gho:../fixtures/work/work-foo",
+			uid:   "gho:fixtures/work/work-foo",
 			valid: true,
-			title: "Open Finder in ../fixtures/work/work-foo",
+			title: "Open Finder in fixtures/work/work-foo",
 			arg:   "finder " + fixturePath + "/work/work-foo",
 		},
-		"open finder includes ../fixtures/projects/project-bar": {
+		"open finder includes fixtures/projects/project-bar": {
 			input: "o ",
-			uid:   "gho:../fixtures/projects/project-bar",
+			uid:   "gho:fixtures/projects/project-bar",
 			valid: true,
-			title: "Open Finder in ../fixtures/projects/project-bar",
+			title: "Open Finder in fixtures/projects/project-bar",
 			arg:   "finder " + fixturePath + "/projects/project-bar",
 		},
-		"open terminal includes ../fixtures/work/work-foo": {
+		"open terminal includes fixtures/work/work-foo": {
 			input: "t ",
-			uid:   "ght:../fixtures/work/work-foo",
+			uid:   "ght:fixtures/work/work-foo",
 			valid: true,
-			title: "Open terminal in ../fixtures/work/work-foo",
+			title: "Open terminal in fixtures/work/work-foo",
 			arg:   "term " + fixturePath + "/work/work-foo",
 		},
-		"open terminal includes ../fixtures/projects/project-bar": {
+		"open terminal includes fixtures/projects/project-bar": {
 			input: "t ",
-			uid:   "ght:../fixtures/projects/project-bar",
+			uid:   "ght:fixtures/projects/project-bar",
 			valid: true,
-			title: "Open terminal in ../fixtures/projects/project-bar",
+			title: "Open terminal in fixtures/projects/project-bar",
 			arg:   "term " + fixturePath + "/projects/project-bar",
 		},
 		"edit project excludes files (listing only directories)": {
 			input:   "e ",
-			exclude: "ghe:../fixtures/work/ignored-file",
+			exclude: "ghe:fixtures/work/ignored-file",
 		},
 	} {
 		t.Run(fmt.Sprintf("generateItems(%#v): %s", tc.input, desc), tc.testItem)
