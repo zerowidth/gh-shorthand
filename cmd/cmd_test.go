@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"path/filepath"
 	"testing"
 
 	"github.com/zerowidth/gh-shorthand/alfred"
@@ -14,6 +15,7 @@ var cfg = &config.Config{
 		"df":  "zerowidth/dotfiles",
 		"df2": "zerowidth/df2",
 	},
+	ProjectDirs: []string{"../fixtures/work", "../fixtures/projects"},
 }
 
 var defaultInMap = &config.Config{
@@ -26,13 +28,13 @@ var defaultInMap = &config.Config{
 var emptyConfig = &config.Config{}
 
 func TestDefaults(t *testing.T) {
-	items := generateItems(cfg, "")
+	items := completeItems(cfg, "")
 	if len(items) > 0 {
 		t.Errorf("expected default result to be empty, got %#v", items)
 	}
 }
 
-type testCase struct {
+type completeTestCase struct {
 	input   string         // input string
 	uid     string         // the results must contain an entry with this uid
 	valid   bool           // and with the valid flag set to this
@@ -43,15 +45,15 @@ type testCase struct {
 	exclude string         // exclude any item with this UID or title
 }
 
-func (tc *testCase) testItem(t *testing.T) {
+func (tc *completeTestCase) testItem(t *testing.T) {
 	if tc.cfg == nil {
 		tc.cfg = cfg
 	}
-	items := generateItems(tc.cfg, tc.input)
+	items := completeItems(tc.cfg, tc.input)
 
-	validateItems(t, tc, items)
+	validateItems(t, items)
 
-	if tc.exclude != "" {
+	if len(tc.exclude) > 0 {
 		item := findMatchingItem(tc.exclude, tc.exclude, items)
 		if item != nil {
 			t.Errorf("%+v\nexpected no item with UID or Title %q", items, tc.exclude)
@@ -61,11 +63,11 @@ func (tc *testCase) testItem(t *testing.T) {
 
 	item := findMatchingItem(tc.uid, tc.title, items)
 	if item != nil {
-		if tc.uid != "" && item.UID != tc.uid {
+		if len(tc.uid) > 0 && item.UID != tc.uid {
 			t.Errorf("%+v\nexpected UID %q to be %q", item, item.UID, tc.uid)
 		}
 
-		if tc.title != "" && item.Title != tc.title {
+		if len(tc.title) > 0 && item.Title != tc.title {
 			t.Errorf("%+v\nexpected Title %q to be %q", item, item.Title, tc.title)
 		}
 
@@ -73,11 +75,11 @@ func (tc *testCase) testItem(t *testing.T) {
 			t.Errorf("%+v\nexpected Valid %t to be %t", item, item.Valid, tc.valid)
 		}
 
-		if tc.arg != "" && item.Arg != tc.arg {
+		if len(tc.arg) > 0 && item.Arg != tc.arg {
 			t.Errorf("%+v\nexpected Arg %q to be %q", item, item.Arg, tc.arg)
 		}
 
-		if tc.auto != "" && item.Autocomplete != tc.auto {
+		if len(tc.auto) > 0 && item.Autocomplete != tc.auto {
 			t.Errorf("%+v\nexpected Autocomplete %q to be %q", item, item.Autocomplete, tc.auto)
 		}
 	} else {
@@ -85,12 +87,12 @@ func (tc *testCase) testItem(t *testing.T) {
 	}
 }
 
-func TestItems(t *testing.T) {
+func TestCompleteItems(t *testing.T) {
 	// Based on input, the resulting items must include one that matches either
 	// the given UID or title. All items are also validated for correctness and
 	// uniqueness by UID.
 	// rm thixs var
-	for desc, tc := range map[string]testCase{
+	for desc, tc := range map[string]completeTestCase{
 		// basic parsing tests
 		"open a shorthand repo": {
 			input: " df",
@@ -331,21 +333,135 @@ func TestItems(t *testing.T) {
 	}
 }
 
-func validateItems(t *testing.T, tc *testCase, items []*alfred.Item) {
+type projectTestCase struct {
+	action  string // which action to run
+	uid     string // the results must contain an entry with this uid
+	valid   bool   // and with the valid flag set to this
+	title   string // the expected title
+	arg     string // expected argument
+	exclude string // exclude any item with this UID or title
+}
+
+func (tc *projectTestCase) testItem(t *testing.T) {
+	items := projectItems(cfg, tc.action)
+
+	validateItems(t, items)
+
+	if len(tc.exclude) > 0 {
+		item := findMatchingItem(tc.exclude, tc.exclude, items)
+		if item != nil {
+			t.Errorf("%+v\nexpected no item with UID or Title %q", items, tc.exclude)
+		}
+		return
+	}
+
+	item := findMatchingItem(tc.uid, tc.title, items)
+	if item != nil {
+		if len(tc.uid) > 0 && item.UID != tc.uid {
+			t.Errorf("%+v\nexpected UID %q to be %q", item, item.UID, tc.uid)
+		}
+
+		if len(tc.title) > 0 && item.Title != tc.title {
+			t.Errorf("%+v\nexpected Title %q to be %q", item, item.Title, tc.title)
+		}
+
+		if item.Valid != tc.valid {
+			t.Errorf("%+v\nexpected Valid %t to be %t", item, item.Valid, tc.valid)
+		}
+
+		if len(tc.arg) > 0 && item.Arg != tc.arg {
+			t.Errorf("%+v\nexpected Arg %q to be %q", item, item.Arg, tc.arg)
+		}
+	} else {
+		t.Errorf("expected item with uid %q and/or title %q in %+v", tc.uid, tc.title, items)
+	}
+}
+
+func TestProjectItems(t *testing.T) {
+	fixturePath, _ := filepath.Abs("../fixtures")
+
+	itemCount := len(cfg.ProjectDirs)
+	for _, action := range []string{"edit"} {
+		t.Run(fmt.Sprintf("projectItems(%#v) count", action), func(t *testing.T) {
+			items := projectItems(cfg, action)
+			if len(items) != itemCount {
+				t.Errorf("expected %d items, got %d in:\n%#v", itemCount, len(items), items)
+			}
+		})
+	}
+
+	for desc, tc := range map[string]projectTestCase{
+		// list dirs with different actions
+		// ignore files
+		// return error item for invalid directory
+		"edit includes ../fixtures/work/work-foo": {
+			action: "edit",
+			uid:    "ghe:../fixtures/work/work-foo",
+			valid:  true,
+			title:  "Edit ../fixtures/work/work-foo",
+			arg:    "edit " + fixturePath + "/work/work-foo",
+		},
+		"edit includes ../fixtures/projects/project-bar": {
+			action: "edit",
+			uid:    "ghe:../fixtures/projects/project-bar",
+			valid:  true,
+			title:  "Edit ../fixtures/projects/project-bar",
+			arg:    "edit " + fixturePath + "/projects/project-bar",
+		},
+		"finder includes ../fixtures/work/work-foo": {
+			action: "finder",
+			uid:    "gho:../fixtures/work/work-foo",
+			valid:  true,
+			title:  "Open Finder in ../fixtures/work/work-foo",
+			arg:    "finder " + fixturePath + "/work/work-foo",
+		},
+		"finder includes ../fixtures/projects/project-bar": {
+			action: "finder",
+			uid:    "gho:../fixtures/projects/project-bar",
+			valid:  true,
+			title:  "Open Finder in ../fixtures/projects/project-bar",
+			arg:    "finder " + fixturePath + "/projects/project-bar",
+		},
+		"term includes ../fixtures/work/work-foo": {
+			action: "term",
+			uid:    "ght:../fixtures/work/work-foo",
+			valid:  true,
+			title:  "Open terminal in ../fixtures/work/work-foo",
+			arg:    "term " + fixturePath + "/work/work-foo",
+		},
+		"term includes ../fixtures/projects/project-bar": {
+			action: "term",
+			uid:    "ght:../fixtures/projects/project-bar",
+			valid:  true,
+			title:  "Open terminal in ../fixtures/projects/project-bar",
+			arg:    "term " + fixturePath + "/projects/project-bar",
+		},
+		"excludes files": {
+			action:  "edit",
+			exclude: "ghe:../fixtures/work/ignored-file",
+		},
+	} {
+		t.Run(fmt.Sprintf("projectItems(%#v): %s", tc.action, desc), tc.testItem)
+	}
+}
+
+// validateItems validates alfred items, checking for UID uniqueness and
+// required fields.
+func validateItems(t *testing.T, items []*alfred.Item) {
 	uids := map[string]bool{}
 	for _, item := range items {
-		if item.Title == "" {
+		if len(item.Title) == 0 {
 			t.Errorf("%+v is missing a title", item)
 		}
 		if item.Valid {
-			if item.UID == "" {
+			if len(item.UID) == 0 {
 				t.Errorf("%+v is valid but missing its uid", item)
 			}
-			if item.Arg == "" {
+			if len(item.Arg) == 0 {
 				t.Errorf("%+v is valid but missing its arg", item)
 			}
 		}
-		if item.UID != "" {
+		if len(item.UID) > 0 {
 			if _, ok := uids[item.UID]; ok {
 				t.Errorf("non-unique UID %#v in %+v", item.UID, items)
 			} else {
@@ -359,7 +475,7 @@ func validateItems(t *testing.T, tc *testCase, items []*alfred.Item) {
 // Try to find item by uid or title
 func findMatchingItem(uid, title string, items []*alfred.Item) *alfred.Item {
 	for _, item := range items {
-		if item.Title == title || (item.UID != "" && item.UID == uid) {
+		if item.Title == title || (len(item.UID) > 0 && item.UID == uid) {
 			return item
 		}
 	}

@@ -1,5 +1,7 @@
 package alfred
 
+import "fmt"
+
 // Items is a list of items to return to Alfred
 type Items struct {
 	Items []*Item `json:"items"`
@@ -26,6 +28,10 @@ type Item struct {
 	// Mod Modifier // optional modifier keys object
 	// Text string // optional text if copied to clipboard or displayed as large text
 	// Quicklook string // optional url for quicklook
+}
+
+func (i *Item) String() string {
+	return fmt.Sprintf("%#v", *i)
 }
 
 // Icon is a custom icon for an item

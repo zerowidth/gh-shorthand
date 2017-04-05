@@ -2,6 +2,9 @@ package config
 
 import (
 	"io/ioutil"
+	"path/filepath"
+
+	homedir "github.com/mitchellh/go-homedir"
 
 	"gopkg.in/yaml.v2"
 )
@@ -10,6 +13,23 @@ import (
 type Config struct {
 	RepoMap     map[string]string `yaml:"repos"`
 	DefaultRepo string            `yaml:"default_repo"`
+	ProjectDirs []string          `yaml:"project_dirs"`
+}
+
+func (config Config) ProjectDirMap() (dirs map[string]string) {
+	dirs = map[string]string{}
+	for _, path := range config.ProjectDirs {
+		expanded, err := homedir.Expand(path)
+		if err != nil {
+			continue
+		}
+		absolute, err := filepath.Abs(expanded)
+		if err != nil {
+			continue
+		}
+		dirs[path] = absolute
+	}
+	return
 }
 
 // Load a Config from a yaml string.
@@ -19,6 +39,7 @@ func Load(yml string) (*Config, error) {
 	if err := yaml.Unmarshal([]byte(yml), &config); err != nil {
 		return nil, err
 	}
+
 	return &config, nil
 }
 

@@ -1,11 +1,8 @@
 package cmd
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/url"
-	"os"
-	"sort"
 	"strings"
 
 	homedir "github.com/mitchellh/go-homedir"
@@ -46,14 +43,14 @@ the script filter), and uses the first character of the input as a mode string:
 		if err != nil {
 			items = []*alfred.Item{errorItem("when loading ~/.gh-shorthand.yml", err.Error())}
 		} else {
-			items = generateItems(cfg, input)
+			items = completeItems(cfg, input)
 		}
 
 		printItems(items)
 	},
 }
 
-func generateItems(cfg *config.Config, input string) []*alfred.Item {
+func completeItems(cfg *config.Config, input string) []*alfred.Item {
 	items := []*alfred.Item{}
 	fullInput := input
 
@@ -311,21 +308,4 @@ func autocompleteItems(cfg *config.Config, input string, result *parser.Result,
 		items = append(items, openEndedItem(input))
 	}
 	return
-}
-
-func errorItem(context, msg string) *alfred.Item {
-	return &alfred.Item{
-		Title:    fmt.Sprintf("Error %s", context),
-		Subtitle: msg,
-		Icon:     octicon("alert"),
-		Valid:    false,
-	}
-}
-
-func printItems(items []*alfred.Item) {
-	sort.Sort(alfred.ByTitle(items))
-	doc := alfred.Items{Items: items}
-	if err := json.NewEncoder(os.Stdout).Encode(doc); err != nil {
-		panic(err.Error())
-	}
 }

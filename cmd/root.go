@@ -1,7 +1,10 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
+	"os"
+	"sort"
 
 	"github.com/spf13/cobra"
 	"github.com/zerowidth/gh-shorthand/alfred"
@@ -14,6 +17,9 @@ var (
 	pathIcon        = octicon("browser")
 	issueSearchIcon = octicon("issue-opened")
 	newIssueIcon    = octicon("bug")
+	editorIcon      = octicon("file-code")
+	finderIcon      = octicon("file-directory")
+	terminalIcon    = octicon("terminal")
 )
 
 // RootCmd is the default gh-shorthand command, does nothing but print help.
@@ -32,5 +38,22 @@ in Alfred's JSON RPC format for use as an Alfred script filter.`,
 func octicon(name string) *alfred.Icon {
 	return &alfred.Icon{
 		Path: fmt.Sprintf("octicons-%s.png", name),
+	}
+}
+
+func errorItem(context, msg string) *alfred.Item {
+	return &alfred.Item{
+		Title:    fmt.Sprintf("Error %s", context),
+		Subtitle: msg,
+		Icon:     octicon("alert"),
+		Valid:    false,
+	}
+}
+
+func printItems(items []*alfred.Item) {
+	sort.Sort(alfred.ByTitle(items))
+	doc := alfred.Items{Items: items}
+	if err := json.NewEncoder(os.Stdout).Encode(doc); err != nil {
+		panic(err.Error())
 	}
 }
