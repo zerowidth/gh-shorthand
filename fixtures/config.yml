@@ -2,3 +2,6 @@
 repos:
   df: zerowidth/dotfiles
 default_repo: zerowidth/default
+project_dir:
+  - fixtures/projects
+  - fixtures/work

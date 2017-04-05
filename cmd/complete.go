@@ -1,11 +1,8 @@
 package cmd
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/url"
-	"os"
-	"sort"
 	"strings"
 
 	homedir "github.com/mitchellh/go-homedir"
@@ -311,21 +308,4 @@ func autocompleteItems(cfg *config.Config, input string, result *parser.Result,
 		items = append(items, openEndedItem(input))
 	}
 	return
-}
-
-func errorItem(context, msg string) *alfred.Item {
-	return &alfred.Item{
-		Title:    fmt.Sprintf("Error %s", context),
-		Subtitle: msg,
-		Icon:     octicon("alert"),
-		Valid:    false,
-	}
-}
-
-func printItems(items []*alfred.Item) {
-	sort.Sort(alfred.ByTitle(items))
-	doc := alfred.Items{Items: items}
-	if err := json.NewEncoder(os.Stdout).Encode(doc); err != nil {
-		panic(err.Error())
-	}
 }

@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"path/filepath"
 	"testing"
 
 	"github.com/zerowidth/gh-shorthand/alfred"
@@ -14,6 +15,7 @@ var cfg = &config.Config{
 		"df":  "zerowidth/dotfiles",
 		"df2": "zerowidth/df2",
 	},
+	ProjectDirs: []string{"../fixtures/work", "../fixtures/projects"},
 }
 
 var defaultInMap = &config.Config{
