@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	homedir "github.com/mitchellh/go-homedir"
+	"github.com/renstrom/fuzzysearch/fuzzy"
 	"github.com/zerowidth/gh-shorthand/alfred"
 	"github.com/zerowidth/gh-shorthand/config"
 	"github.com/zerowidth/gh-shorthand/parser"
@@ -115,28 +116,43 @@ func completeItems(cfg *config.Config, input string) []*alfred.Item {
 					autocompleteNewIssueItem, openEndedNewIssueItem)...)
 		}
 	case "e":
-		items = append(items, actionItems(cfg.ProjectDirMap(), "ghe", "edit", "Edit", editorIcon)...)
+		items = append(items, actionItems(cfg.ProjectDirMap(), input, "ghe", "edit", "Edit", editorIcon)...)
 	case "o":
-		items = append(items, actionItems(cfg.ProjectDirMap(), "gho", "finder", "Open Finder in", editorIcon)...)
+		items = append(items, actionItems(cfg.ProjectDirMap(), input, "gho", "finder", "Open Finder in", editorIcon)...)
 	case "t":
-		items = append(items, actionItems(cfg.ProjectDirMap(), "ght", "term", "Open terminal in", editorIcon)...)
+		items = append(items, actionItems(cfg.ProjectDirMap(), input, "ght", "term", "Open terminal in", editorIcon)...)
 	}
 
 	return items
 }
 
-func actionItems(dirs map[string]string, uidPrefix, action, desc string, icon *alfred.Icon) (items []*alfred.Item) {
-	for short, expanded := range dirs {
+func actionItems(dirs map[string]string, search, uidPrefix, action, desc string, icon *alfred.Icon) (items []*alfred.Item) {
+	projects := map[string]string{}
+	projectNames := []string{}
+
+	for base, expanded := range dirs {
 		for _, dirname := range findProjectDirs(expanded) {
-			items = append(items, &alfred.Item{
-				UID:   uidPrefix + ":" + filepath.Join(short, dirname),
-				Title: desc + " " + filepath.Join(short, dirname),
-				Arg:   action + " " + filepath.Join(expanded, dirname),
-				Valid: true,
-				Icon:  icon,
-			})
+			short := filepath.Join(base, dirname)
+			full := filepath.Join(expanded, dirname)
+			projects[short] = full
+			projectNames = append(projectNames, short)
 		}
 	}
+
+	if len(search) > 0 {
+		projectNames = fuzzy.Find(search, projectNames)
+	}
+
+	for _, short := range projectNames {
+		items = append(items, &alfred.Item{
+			UID:   uidPrefix + ":" + short,
+			Title: desc + " " + short,
+			Arg:   action + " " + projects[short],
+			Valid: true,
+			Icon:  icon,
+		})
+	}
+
 	return
 }
 
