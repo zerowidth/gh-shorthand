@@ -278,13 +278,6 @@ func TestCompleteItems(t *testing.T) {
 			valid: true,
 			arg:   "paste [zerowidth/dotfiles#123](https://github.com/zerowidth/dotfiles/issues/123)",
 		},
-		"issue reference with a repo": {
-			input: "r foo/bar",
-			uid:   "ghr:foo/bar",
-			valid: true,
-			title: "Insert issue reference to foo/bar",
-			arg:   "paste foo/bar",
-		},
 		"issue reference with a repo and issue": {
 			input: "r foo/bar 123",
 			uid:   "ghr:foo/bar#123",
@@ -298,6 +291,10 @@ func TestCompleteItems(t *testing.T) {
 			valid: true,
 			title: "Insert issue reference to zerowidth/dotfiles#123 (df#123)",
 			arg:   "paste zerowidth/dotfiles#123",
+		},
+		"no bare repos for issue references": {
+			input:   "r df",
+			exclude: "ghr:zerowidth/dotfiles",
 		},
 
 		// repo autocomplete
@@ -417,6 +414,37 @@ func TestCompleteItems(t *testing.T) {
 		"edit project excludes files (listing only directories)": {
 			input:   "e ",
 			exclude: "ghe:fixtures/work/ignored-file",
+		},
+
+		// issue reference / markdown link autocomplete
+		"autocompletes for markdown links": {
+			input: "m d",
+			uid:   "ghm:zerowidth/dotfiles",
+			title: "Insert Markdown link to zerowidth/dotfiles (df)",
+			valid: true,
+			arg:   "paste [zerowidth/dotfiles](https://github.com/zerowidth/dotfiles)",
+		},
+		"autocompletes for issue references with shorthand": {
+			input: "r d",
+			valid: false,
+			title: "Insert issue reference to zerowidth/dotfiles#... (df#...)",
+			auto:  "r df ",
+		},
+		"autocompletes for issue references with repos alone": {
+			input: "r foo/bar",
+			valid: false,
+			title: "Insert issue reference to foo/bar#...",
+			auto:  "r foo/bar ",
+		},
+		"autocompletes for issue references incomplete input": {
+			input: "r foo",
+			valid: false,
+			title: "Insert issue reference to foo...",
+			auto:  "r foo",
+		},
+		"does not autocomplete with open-ended when a repo is present": {
+			input:   "r foo/bar ",
+			exclude: "Insert issue reference to foo/bar...",
 		},
 
 		// edit/open/auto filtering
