@@ -296,6 +296,29 @@ func TestCompleteItems(t *testing.T) {
 			valid: true,
 			title: "New issue in zerowidth/default (default repo): foo",
 		},
+		"markdown link with default repo": {
+			input: "m ",
+			uid:   "ghm:zerowidth/default",
+			valid: true,
+			title: "Insert Markdown link to zerowidth/default (default repo)",
+		},
+		"markdown link with default repo and issue": {
+			input: "m 123",
+			uid:   "ghm:zerowidth/default#123",
+			valid: true,
+			title: "Insert Markdown link to zerowidth/default#123 (default repo)",
+		},
+		"issue reference with no issue, using default repo": {
+			input: "r ",
+			title: "Insert issue reference to zerowidth/default#... (default repo)",
+			valid: false,
+		},
+		"issue reference with issue, using default repo": {
+			input: "r 123",
+			uid:   "ghr:zerowidth/default#123",
+			title: "Insert issue reference to zerowidth/default#123 (default repo)",
+			valid: true,
+		},
 
 		// repo autocomplete
 		"no autocomplete for empty input": {
