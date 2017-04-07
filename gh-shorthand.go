@@ -27,6 +27,7 @@ var (
 	editorIcon      = octicon("file-code")
 	finderIcon      = octicon("file-directory")
 	terminalIcon    = octicon("terminal")
+	markdownIcon    = octicon("markdown")
 )
 
 func main() {
@@ -114,6 +115,16 @@ func completeItems(cfg *config.Config, input string) []*alfred.Item {
 			items = append(items,
 				autocompleteItems(cfg, input, result,
 					autocompleteNewIssueItem, openEndedNewIssueItem)...)
+		}
+	case "m":
+		// repo required, issue optional
+		if len(result.Repo) > 0 && len(result.Path) == 0 && len(result.Query) == 0 {
+			items = append(items, markdownLinkItems(result, usedDefault)...)
+		}
+	case "r":
+		// repo required, issue optional
+		if len(result.Repo) > 0 && len(result.Path) == 0 && len(result.Query) == 0 {
+			items = append(items, issueReferenceItems(result, usedDefault)...)
 		}
 	case "e":
 		items = append(items, actionItems(cfg.ProjectDirMap(), input, "ghe", "edit", "Edit", editorIcon)...)
@@ -269,6 +280,72 @@ func newIssueItems(result *parser.Result, usedDefault bool) (items []*alfred.Ite
 			Icon:  newIssueIcon,
 		})
 	}
+	return
+}
+
+func markdownLinkItems(result *parser.Result, usedDefault bool) (items []*alfred.Item) {
+	uid := "ghm:" + result.Repo
+	title := "Insert Markdown link to " + result.Repo
+	desc := result.Repo
+	link := "https://github.com/" + result.Repo
+	icon := markdownIcon
+
+	if len(result.Issue) > 0 {
+		uid += "#" + result.Issue
+		title += "#" + result.Issue
+		desc += "#" + result.Issue
+		link += "/issues/" + result.Issue
+		icon = issueIcon
+	}
+
+	if len(result.Match) > 0 {
+		title += " (" + result.Match
+		if len(result.Issue) > 0 {
+			title += "#" + result.Issue
+		}
+		title += ")"
+	} else if usedDefault {
+		title += " (default repo)"
+	}
+
+	items = append(items, &alfred.Item{
+		UID:   uid,
+		Title: title,
+		Arg:   fmt.Sprintf("paste [%s](%s)", desc, link),
+		Valid: true,
+		Icon:  icon,
+	})
+	return
+}
+
+func issueReferenceItems(result *parser.Result, usedDefault bool) (items []*alfred.Item) {
+	title := "Insert issue reference to " + result.Repo
+	ref := result.Repo
+	icon := issueSearchIcon
+
+	if len(result.Issue) > 0 {
+		title += "#" + result.Issue
+		ref += "#" + result.Issue
+		icon = issueIcon
+	}
+
+	if len(result.Match) > 0 {
+		title += " (" + result.Match
+		if len(result.Issue) > 0 {
+			title += "#" + result.Issue
+		}
+		title += ")"
+	} else if usedDefault {
+		title += " (default repo)"
+	}
+
+	items = append(items, &alfred.Item{
+		UID:   "ghr:" + ref,
+		Title: title,
+		Arg:   "paste " + ref,
+		Valid: true,
+		Icon:  icon,
+	})
 	return
 }
 
