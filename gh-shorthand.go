@@ -27,6 +27,7 @@ var (
 	editorIcon      = octicon("file-code")
 	finderIcon      = octicon("file-directory")
 	terminalIcon    = octicon("terminal")
+	markdownIcon    = octicon("markdown")
 )
 
 func main() {
@@ -114,6 +115,28 @@ func completeItems(cfg *config.Config, input string) []*alfred.Item {
 			items = append(items,
 				autocompleteItems(cfg, input, result,
 					autocompleteNewIssueItem, openEndedNewIssueItem)...)
+		}
+	case "m":
+		// repo required, issue optional
+		if len(result.Repo) > 0 && len(result.Path) == 0 && len(result.Query) == 0 {
+			items = append(items, markdownLinkItems(result, usedDefault)...)
+		}
+
+		if len(input) > 0 && !strings.Contains(input, " ") {
+			items = append(items,
+				autocompleteItems(cfg, input, result,
+					autocompleteMarkdownLinkItem, openEndedMarkdownLinkItem)...)
+		}
+	case "r":
+		// repo required, issue required (issue handled in issueReferenceItem)
+		if len(result.Repo) > 0 && len(result.Path) == 0 && len(result.Query) == 0 {
+			items = append(items, issueReferenceItem(result, usedDefault))
+		}
+
+		if len(input) > 0 && !strings.Contains(input, " ") {
+			items = append(items,
+				autocompleteItems(cfg, input, result,
+					autocompleteIssueReferenceItem, openEndedIssueReferenceItem)...)
 		}
 	case "e":
 		items = append(items, actionItems(cfg.ProjectDirMap(), input, "ghe", "edit", "Edit", editorIcon)...)
@@ -272,6 +295,88 @@ func newIssueItems(result *parser.Result, usedDefault bool) (items []*alfred.Ite
 	return
 }
 
+func markdownLinkItems(result *parser.Result, usedDefault bool) (items []*alfred.Item) {
+	uid := "ghm:" + result.Repo
+	title := "Insert Markdown link to " + result.Repo
+	desc := result.Repo
+	link := "https://github.com/" + result.Repo
+	icon := markdownIcon
+
+	if len(result.Issue) > 0 {
+		uid += "#" + result.Issue
+		title += "#" + result.Issue
+		desc += "#" + result.Issue
+		link += "/issues/" + result.Issue
+		icon = issueIcon
+	}
+
+	if len(result.Match) > 0 {
+		title += " (" + result.Match
+		if len(result.Issue) > 0 {
+			title += "#" + result.Issue
+		}
+		title += ")"
+	} else if usedDefault {
+		title += " (default repo)"
+	}
+
+	items = append(items, &alfred.Item{
+		UID:   uid,
+		Title: title,
+		Arg:   fmt.Sprintf("paste [%s](%s)", desc, link),
+		Valid: true,
+		Icon:  icon,
+	})
+	return
+}
+
+func issueReferenceItem(result *parser.Result, usedDefault bool) *alfred.Item {
+	title := "Insert issue reference to " + result.Repo
+	ref := result.Repo
+
+	if len(result.Issue) > 0 {
+		title += "#" + result.Issue
+		ref += "#" + result.Issue
+	} else {
+		title += "#..."
+	}
+
+	if len(result.Match) > 0 {
+		title += " (" + result.Match
+		if len(result.Issue) > 0 {
+			title += "#" + result.Issue
+		} else {
+			title += "#..."
+		}
+		title += ")"
+	} else if usedDefault {
+		title += " (default repo)"
+	}
+
+	if len(result.Issue) > 0 {
+
+		return &alfred.Item{
+			UID:   "ghr:" + ref,
+			Title: title,
+			Arg:   "paste " + ref,
+			Valid: true,
+			Icon:  issueIcon,
+		}
+
+	}
+
+	auto := "r " + result.Repo
+	if len(result.Match) > 0 {
+		auto = "r " + result.Match
+	}
+	return &alfred.Item{
+		Title:        title,
+		Autocomplete: auto + " ",
+		Valid:        false,
+		Icon:         issueIcon,
+	}
+}
+
 func autocompleteOpenItem(key, repo string) *alfred.Item {
 	return &alfred.Item{
 		UID:          "gh:" + repo,
@@ -305,6 +410,27 @@ func autocompleteNewIssueItem(key, repo string) *alfred.Item {
 	}
 }
 
+func autocompleteMarkdownLinkItem(key, repo string) *alfred.Item {
+	return &alfred.Item{
+		UID:          "ghm:" + repo,
+		Title:        fmt.Sprintf("Insert Markdown link to %s (%s)", repo, key),
+		Valid:        true,
+		Arg:          fmt.Sprintf("paste [%s](https://github.com/%s)", repo, repo),
+		Autocomplete: "m " + key,
+		Icon:         markdownIcon,
+	}
+}
+
+func autocompleteIssueReferenceItem(key, repo string) *alfred.Item {
+	return &alfred.Item{
+		UID:          "ghr:" + repo,
+		Title:        fmt.Sprintf("Insert issue reference to %s#... (%s#...)", repo, key),
+		Valid:        false,
+		Autocomplete: "r " + key + " ",
+		Icon:         issueSearchIcon,
+	}
+}
+
 func openEndedOpenItem(input string) *alfred.Item {
 	return &alfred.Item{
 		Title:        fmt.Sprintf("Open %s... on GitHub", input),
@@ -328,6 +454,24 @@ func openEndedNewIssueItem(input string) *alfred.Item {
 		Autocomplete: "n " + input,
 		Valid:        false,
 		Icon:         newIssueIcon,
+	}
+}
+
+func openEndedMarkdownLinkItem(input string) *alfred.Item {
+	return &alfred.Item{
+		Title:        fmt.Sprintf("Insert Markdown link to %s...", input),
+		Autocomplete: "m " + input,
+		Valid:        false,
+		Icon:         markdownIcon,
+	}
+}
+
+func openEndedIssueReferenceItem(input string) *alfred.Item {
+	return &alfred.Item{
+		Title:        fmt.Sprintf("Insert issue reference to %s...", input),
+		Autocomplete: "r " + input,
+		Valid:        false,
+		Icon:         issueSearchIcon,
 	}
 }
 
