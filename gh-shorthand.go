@@ -82,7 +82,7 @@ func completeItems(cfg *config.Config, input string) []*alfred.Item {
 	case " ": // open repo, issue, and/or path
 		// repo required, no query allowed
 		if len(result.Repo) > 0 && len(result.Query) == 0 {
-			items = append(items, openRepoItems(result, usedDefault)...)
+			items = append(items, openRepoItem(result, usedDefault))
 		}
 
 		if len(result.Repo) == 0 && len(result.Path) > 0 {
@@ -108,7 +108,7 @@ func completeItems(cfg *config.Config, input string) []*alfred.Item {
 	case "n":
 		// repo required, no issue or path, query allowed
 		if len(result.Repo) > 0 && len(result.Issue) == 0 && len(result.Path) == 0 {
-			items = append(items, newIssueItems(result, usedDefault)...)
+			items = append(items, newIssueItem(result, usedDefault))
 		}
 
 		if len(input) > 0 && !strings.Contains(input, " ") {
@@ -119,7 +119,7 @@ func completeItems(cfg *config.Config, input string) []*alfred.Item {
 	case "m":
 		// repo required, issue optional
 		if len(result.Repo) > 0 && len(result.Path) == 0 && len(result.Query) == 0 {
-			items = append(items, markdownLinkItems(result, usedDefault)...)
+			items = append(items, markdownLinkItem(result, usedDefault))
 		}
 
 		if len(input) > 0 && !strings.Contains(input, " ") {
@@ -139,11 +139,14 @@ func completeItems(cfg *config.Config, input string) []*alfred.Item {
 					autocompleteIssueReferenceItem, openEndedIssueReferenceItem)...)
 		}
 	case "e":
-		items = append(items, actionItems(cfg.ProjectDirMap(), input, "ghe", "edit", "Edit", editorIcon)...)
+		items = append(items,
+			actionItems(cfg.ProjectDirMap(), input, "ghe", "edit", "Edit", editorIcon)...)
 	case "o":
-		items = append(items, actionItems(cfg.ProjectDirMap(), input, "gho", "finder", "Open Finder in", editorIcon)...)
+		items = append(items,
+			actionItems(cfg.ProjectDirMap(), input, "gho", "finder", "Open Finder in", editorIcon)...)
 	case "t":
-		items = append(items, actionItems(cfg.ProjectDirMap(), input, "ght", "term", "Open terminal in", editorIcon)...)
+		items = append(items,
+			actionItems(cfg.ProjectDirMap(), input, "ght", "term", "Open terminal in", editorIcon)...)
 	}
 
 	return items
@@ -179,7 +182,7 @@ func actionItems(dirs map[string]string, search, uidPrefix, action, desc string,
 	return
 }
 
-func openRepoItems(result *parser.Result, usedDefault bool) (items []*alfred.Item) {
+func openRepoItem(result *parser.Result, usedDefault bool) *alfred.Item {
 	uid := "gh:" + result.Repo
 	title := "Open " + result.Repo
 	arg := "open https://github.com/" + result.Repo
@@ -209,14 +212,13 @@ func openRepoItems(result *parser.Result, usedDefault bool) (items []*alfred.Ite
 		title += " (default repo)"
 	}
 
-	items = append(items, &alfred.Item{
+	return &alfred.Item{
 		UID:   uid,
 		Title: title + " on GitHub",
 		Arg:   arg,
 		Valid: true,
 		Icon:  icon,
-	})
-	return items
+	}
 }
 
 func openPathItem(path string) *alfred.Item {
@@ -265,7 +267,7 @@ func openIssueItems(result *parser.Result, usedDefault bool, fullInput string) (
 	return
 }
 
-func newIssueItems(result *parser.Result, usedDefault bool) (items []*alfred.Item) {
+func newIssueItem(result *parser.Result, usedDefault bool) *alfred.Item {
 	title := "New issue in " + result.Repo
 	if len(result.Match) > 0 {
 		title += " (" + result.Match + ")"
@@ -274,28 +276,27 @@ func newIssueItems(result *parser.Result, usedDefault bool) (items []*alfred.Ite
 	}
 
 	if len(result.Query) == 0 {
-		items = append(items, &alfred.Item{
+		return &alfred.Item{
 			UID:   "ghn:" + result.Repo,
 			Title: title,
 			Arg:   "open https://github.com/" + result.Repo + "/issues/new",
 			Valid: true,
 			Icon:  newIssueIcon,
-		})
-	} else {
-		escaped := url.PathEscape(result.Query)
-		arg := "open https://github.com/" + result.Repo + "/issues/new?title=" + escaped
-		items = append(items, &alfred.Item{
-			UID:   "ghn:" + result.Repo,
-			Title: title + ": " + result.Query,
-			Arg:   arg,
-			Valid: true,
-			Icon:  newIssueIcon,
-		})
+		}
 	}
-	return
+
+	escaped := url.PathEscape(result.Query)
+	arg := "open https://github.com/" + result.Repo + "/issues/new?title=" + escaped
+	return &alfred.Item{
+		UID:   "ghn:" + result.Repo,
+		Title: title + ": " + result.Query,
+		Arg:   arg,
+		Valid: true,
+		Icon:  newIssueIcon,
+	}
 }
 
-func markdownLinkItems(result *parser.Result, usedDefault bool) (items []*alfred.Item) {
+func markdownLinkItem(result *parser.Result, usedDefault bool) *alfred.Item {
 	uid := "ghm:" + result.Repo
 	title := "Insert Markdown link to " + result.Repo
 	desc := result.Repo
@@ -320,14 +321,13 @@ func markdownLinkItems(result *parser.Result, usedDefault bool) (items []*alfred
 		title += " (default repo)"
 	}
 
-	items = append(items, &alfred.Item{
+	return &alfred.Item{
 		UID:   uid,
 		Title: title,
 		Arg:   fmt.Sprintf("paste [%s](%s)", desc, link),
 		Valid: true,
 		Icon:  icon,
-	})
-	return
+	}
 }
 
 func issueReferenceItem(result *parser.Result, usedDefault bool) *alfred.Item {
