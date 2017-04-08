@@ -8,12 +8,19 @@ type Items struct {
 	Rerun float32 `json:"rerun,omitempty"`
 }
 
-// ByTitle provides a sorting interface for stable output
-type ByTitle []*Item
+// ByValidAndTitle for stable output: sort by title, but prioritize valid entries.
+type ByValidAndTitle []*Item
 
-func (a ByTitle) Len() int           { return len(a) }
-func (a ByTitle) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
-func (a ByTitle) Less(i, j int) bool { return a[i].Title < a[j].Title }
+func (a ByValidAndTitle) Len() int      { return len(a) }
+func (a ByValidAndTitle) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
+func (a ByValidAndTitle) Less(i, j int) bool {
+	if a[i].Valid && !a[j].Valid {
+		return true
+	} else if !a[i].Valid && a[j].Valid {
+		return false
+	}
+	return a[i].Title < a[j].Title
+}
 
 // Item is an Alfred result item
 type Item struct {

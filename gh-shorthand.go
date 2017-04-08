@@ -519,7 +519,7 @@ func errorItem(context, msg string) *alfred.Item {
 }
 
 func printItems(items []*alfred.Item) {
-	sort.Sort(alfred.ByTitle(items))
+	sort.Sort(alfred.ByValidAndTitle(items))
 	doc := alfred.Items{Items: items}
 	if err := json.NewEncoder(os.Stdout).Encode(doc); err != nil {
 		panic(err.Error())
