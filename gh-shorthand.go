@@ -214,7 +214,7 @@ func openRepoItem(result *parser.Result, usedDefault bool) *alfred.Item {
 
 	return &alfred.Item{
 		UID:   uid,
-		Title: title + " on GitHub",
+		Title: title,
 		Arg:   arg,
 		Valid: true,
 		Icon:  icon,
@@ -224,7 +224,7 @@ func openRepoItem(result *parser.Result, usedDefault bool) *alfred.Item {
 func openPathItem(path string) *alfred.Item {
 	return &alfred.Item{
 		UID:   "gh:" + path,
-		Title: fmt.Sprintf("Open %s on GitHub", path),
+		Title: fmt.Sprintf("Open %s", path),
 		Arg:   "open https://github.com" + path,
 		Valid: true,
 		Icon:  pathIcon,
@@ -380,7 +380,7 @@ func issueReferenceItem(result *parser.Result, usedDefault bool) *alfred.Item {
 func autocompleteOpenItem(key, repo string) *alfred.Item {
 	return &alfred.Item{
 		UID:          "gh:" + repo,
-		Title:        fmt.Sprintf("Open %s (%s) on GitHub", repo, key),
+		Title:        fmt.Sprintf("Open %s (%s)", repo, key),
 		Arg:          "open https://github.com/" + repo,
 		Valid:        true,
 		Autocomplete: " " + key,
@@ -433,7 +433,7 @@ func autocompleteIssueReferenceItem(key, repo string) *alfred.Item {
 
 func openEndedOpenItem(input string) *alfred.Item {
 	return &alfred.Item{
-		Title:        fmt.Sprintf("Open %s... on GitHub", input),
+		Title:        fmt.Sprintf("Open %s...", input),
 		Autocomplete: " " + input,
 		Valid:        false,
 	}
