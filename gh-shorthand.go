@@ -32,7 +32,7 @@ var (
 
 func main() {
 	var input string
-	var items = []*alfred.Item{}
+	var items = alfred.Items{}
 
 	if len(os.Args) == 1 {
 		input = ""
@@ -43,7 +43,7 @@ func main() {
 	path, _ := homedir.Expand("~/.gh-shorthand.yml")
 	cfg, err := config.LoadFromFile(path)
 	if err != nil {
-		items = []*alfred.Item{errorItem("when loading ~/.gh-shorthand.yml", err.Error())}
+		items = alfred.Items{errorItem("when loading ~/.gh-shorthand.yml", err.Error())}
 	} else {
 		items = completeItems(cfg, input)
 	}
@@ -51,8 +51,8 @@ func main() {
 	printItems(items)
 }
 
-func completeItems(cfg *config.Config, input string) []*alfred.Item {
-	items := []*alfred.Item{}
+func completeItems(cfg *config.Config, input string) alfred.Items {
+	items := alfred.Items{}
 	fullInput := input
 
 	if len(input) == 0 {
@@ -152,7 +152,7 @@ func completeItems(cfg *config.Config, input string) []*alfred.Item {
 	return items
 }
 
-func actionItems(dirs map[string]string, search, uidPrefix, action, desc string, icon *alfred.Icon) (items []*alfred.Item) {
+func actionItems(dirs map[string]string, search, uidPrefix, action, desc string, icon *alfred.Icon) (items alfred.Items) {
 	projects := map[string]string{}
 	projectNames := []string{}
 
@@ -231,7 +231,7 @@ func openPathItem(path string) *alfred.Item {
 	}
 }
 
-func openIssueItems(result *parser.Result, usedDefault bool, fullInput string) (items []*alfred.Item) {
+func openIssueItems(result *parser.Result, usedDefault bool, fullInput string) (items alfred.Items) {
 	extra := ""
 	if len(result.Match) > 0 {
 		extra += " (" + result.Match + ")"
@@ -477,7 +477,7 @@ func openEndedIssueReferenceItem(input string) *alfred.Item {
 
 func autocompleteItems(cfg *config.Config, input string, result *parser.Result,
 	autocompleteItem func(string, string) *alfred.Item,
-	openEndedItem func(string) *alfred.Item) (items []*alfred.Item) {
+	openEndedItem func(string) *alfred.Item) (items alfred.Items) {
 	for key, repo := range cfg.RepoMap {
 		if strings.HasPrefix(key, input) && key != result.Match && repo != result.Repo {
 			items = append(items, autocompleteItem(key, repo))
@@ -518,9 +518,9 @@ func errorItem(context, msg string) *alfred.Item {
 	}
 }
 
-func printItems(items []*alfred.Item) {
+func printItems(items alfred.Items) {
 	sort.Sort(alfred.ByValidAndTitle(items))
-	doc := alfred.Items{Items: items}
+	doc := alfred.FilterResult{Items: items}
 	if err := json.NewEncoder(os.Stdout).Encode(doc); err != nil {
 		panic(err.Error())
 	}

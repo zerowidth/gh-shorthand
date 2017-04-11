@@ -496,7 +496,7 @@ func TestCompleteItems(t *testing.T) {
 
 // validateItems validates alfred items, checking for UID uniqueness and
 // required fields.
-func validateItems(t *testing.T, items []*alfred.Item) {
+func validateItems(t *testing.T, items alfred.Items) {
 	uids := map[string]bool{}
 	for _, item := range items {
 		if len(item.Title) == 0 {
@@ -522,7 +522,7 @@ func validateItems(t *testing.T, items []*alfred.Item) {
 }
 
 // Try to find item by uid or title
-func findMatchingItem(uid, title string, items []*alfred.Item) *alfred.Item {
+func findMatchingItem(uid, title string, items alfred.Items) *alfred.Item {
 	for _, item := range items {
 		if item.Title == title || (len(item.UID) > 0 && item.UID == uid) {
 			return item

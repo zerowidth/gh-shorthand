@@ -2,14 +2,23 @@ package alfred
 
 import "fmt"
 
-// Items is a list of items to return to Alfred
-type Items struct {
-	Items []*Item `json:"items"`
-	Rerun float32 `json:"rerun,omitempty"`
+// FilterResult is the final result of an Alfred script filter,
+// to be rendered as JSON.
+type FilterResult struct {
+	Items     Items      `json:"items"`
+	Rerun     float32    `json:"rerun,omitempty"`
+	Variables *Variables `json:"variables,omitempty"`
 }
 
-// ByValidAndTitle for stable output: sort by title, but prioritize valid entries.
-type ByValidAndTitle []*Item
+// Items is a list of Item pointers.
+type Items []*Item
+
+// Variables is a map of string to string variables for alfred to pass on to a
+// subsquent iteration of a script filter
+type Variables map[string]string
+
+// ByValidAndTitle type for stable output: sort by title, but prioritize valid entries.
+type ByValidAndTitle Items
 
 func (a ByValidAndTitle) Len() int      { return len(a) }
 func (a ByValidAndTitle) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
