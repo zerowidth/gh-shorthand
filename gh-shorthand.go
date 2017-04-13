@@ -17,6 +17,8 @@ import (
 	"github.com/zerowidth/gh-shorthand/parser"
 )
 
+type envVars map[string]string
+
 var (
 	repoIcon        = octicon("repo")
 	issueIcon       = octicon("git-pull-request")
@@ -32,7 +34,9 @@ var (
 
 func main() {
 	var input string
-	var result = &alfred.FilterResult{}
+	var result = &alfred.FilterResult{
+		Items: alfred.Items{},
+	}
 
 	if len(os.Args) == 1 {
 		input = ""
@@ -45,18 +49,19 @@ func main() {
 	if err != nil {
 		result.AppendItems(errorItem("when loading ~/.gh-shorthand.yml", err.Error()))
 	} else {
-		result.AppendItems(completeItems(cfg, input)...)
+		vars := getEnvironment()
+		appendParsedItems(result, cfg, vars, input)
+		// result.AppendItems((result, cfg, input))
 	}
 
 	printResult(result)
 }
 
-func completeItems(cfg *config.Config, input string) alfred.Items {
-	items := alfred.Items{}
+func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, vars map[string]string, input string) {
 	fullInput := input
 
 	if len(input) == 0 {
-		return items
+		return
 	}
 
 	// input includes leading space or leading mode char followed by a space
@@ -79,77 +84,89 @@ func completeItems(cfg *config.Config, input string) alfred.Items {
 	}
 
 	switch mode {
+	case "b":
+		// FIXME move the vars to a param, rather than reaching into env from here
+		if query, ok := os.LookupEnv("query"); ok {
+			result.AppendItems(
+				&alfred.Item{
+					Title: "Processing: " + query,
+				})
+		}
+
+		if len(input) > 0 {
+			// append "query" var here
+		}
+
 	case " ": // open repo, issue, and/or path
 		// repo required, no query allowed
 		if len(parsed.Repo) > 0 && len(parsed.Query) == 0 {
-			items = append(items, openRepoItem(parsed, usedDefault))
+			result.AppendItems(openRepoItem(parsed, usedDefault))
 		}
 
 		if len(parsed.Repo) == 0 && len(parsed.Path) > 0 {
-			items = append(items, openPathItem(parsed.Path))
+			result.AppendItems(openPathItem(parsed.Path))
 		}
 
 		if len(input) > 0 && !strings.Contains(input, " ") {
-			items = append(items,
+			result.AppendItems(
 				autocompleteItems(cfg, input, parsed,
 					autocompleteOpenItem, openEndedOpenItem)...)
 		}
 	case "i":
 		// repo required, no issue or path, query allowed
 		if len(parsed.Repo) > 0 && len(parsed.Issue) == 0 && len(parsed.Path) == 0 {
-			items = append(items, openIssueItems(parsed, usedDefault, fullInput)...)
+			result.AppendItems(openIssueItems(parsed, usedDefault, fullInput)...)
 		}
 
 		if len(input) > 0 && !strings.Contains(input, " ") {
-			items = append(items,
+			result.AppendItems(
 				autocompleteItems(cfg, input, parsed,
 					autocompleteIssueItem, openEndedIssueItem)...)
 		}
 	case "n":
 		// repo required, no issue or path, query allowed
 		if len(parsed.Repo) > 0 && len(parsed.Issue) == 0 && len(parsed.Path) == 0 {
-			items = append(items, newIssueItem(parsed, usedDefault))
+			result.AppendItems(newIssueItem(parsed, usedDefault))
 		}
 
 		if len(input) > 0 && !strings.Contains(input, " ") {
-			items = append(items,
+			result.AppendItems(
 				autocompleteItems(cfg, input, parsed,
 					autocompleteNewIssueItem, openEndedNewIssueItem)...)
 		}
 	case "m":
 		// repo required, issue optional
 		if len(parsed.Repo) > 0 && len(parsed.Path) == 0 && len(parsed.Query) == 0 {
-			items = append(items, markdownLinkItem(parsed, usedDefault))
+			result.AppendItems(markdownLinkItem(parsed, usedDefault))
 		}
 
 		if len(input) > 0 && !strings.Contains(input, " ") {
-			items = append(items,
+			result.AppendItems(
 				autocompleteItems(cfg, input, parsed,
 					autocompleteMarkdownLinkItem, openEndedMarkdownLinkItem)...)
 		}
 	case "r":
 		// repo required, issue required (issue handled in issueReferenceItem)
 		if len(parsed.Repo) > 0 && len(parsed.Path) == 0 && len(parsed.Query) == 0 {
-			items = append(items, issueReferenceItem(parsed, usedDefault))
+			result.AppendItems(issueReferenceItem(parsed, usedDefault))
 		}
 
 		if len(input) > 0 && !strings.Contains(input, " ") {
-			items = append(items,
+			result.AppendItems(
 				autocompleteItems(cfg, input, parsed,
 					autocompleteIssueReferenceItem, openEndedIssueReferenceItem)...)
 		}
 	case "e":
-		items = append(items,
+		result.AppendItems(
 			actionItems(cfg.ProjectDirMap(), input, "ghe", "edit", "Edit", editorIcon)...)
 	case "o":
-		items = append(items,
+		result.AppendItems(
 			actionItems(cfg.ProjectDirMap(), input, "gho", "finder", "Open Finder in", editorIcon)...)
 	case "t":
-		items = append(items,
+		result.AppendItems(
 			actionItems(cfg.ProjectDirMap(), input, "ght", "term", "Open terminal in", editorIcon)...)
 	}
 
-	return items
 }
 
 func actionItems(dirs map[string]string, search, uidPrefix, action, desc string, icon *alfred.Icon) (items alfred.Items) {
@@ -516,6 +533,16 @@ func errorItem(context, msg string) *alfred.Item {
 		Icon:     octicon("alert"),
 		Valid:    false,
 	}
+}
+
+// getEnvironment parses the environment and returns a map.
+func getEnvironment() envVars {
+	env := envVars{}
+	for _, entry := range os.Environ() {
+		pair := strings.SplitN(entry, "=", 2)
+		env[pair[0]] = pair[1]
+	}
+	return env
 }
 
 func printResult(result *alfred.FilterResult) {
