@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 
 	homedir "github.com/mitchellh/go-homedir"
@@ -20,6 +21,7 @@ import (
 type envVars map[string]string
 
 var (
+	rerunAfter      = 0.1
 	repoIcon        = octicon("repo")
 	issueIcon       = octicon("git-pull-request")
 	issueListIcon   = octicon("list-ordered")
@@ -54,10 +56,11 @@ func main() {
 		// result.AppendItems((result, cfg, input))
 	}
 
+	finalizeResult(result)
 	printResult(result)
 }
 
-func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, vars map[string]string, input string) {
+func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[string]string, input string) {
 	fullInput := input
 
 	if len(input) == 0 {
@@ -85,17 +88,21 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, vars map
 
 	switch mode {
 	case "b":
-		// FIXME move the vars to a param, rather than reaching into env from here
-		if query, ok := os.LookupEnv("query"); ok {
-			result.AppendItems(
-				&alfred.Item{
-					Title: "Processing: " + query,
-				})
+		var count int64
+
+		countStr, hasCount := env["count"]
+		if hasCount {
+			count, _ = strconv.ParseInt(countStr, 10, 64)
+			count++
 		}
 
-		if len(input) > 0 {
-			// append "query" var here
-		}
+		result.AppendItems(
+			&alfred.Item{
+				Title:    "Processing: " + input,
+				Subtitle: fmt.Sprintf("count: %d", count),
+			})
+
+		result.SetVariable("count", fmt.Sprintf("%d", count))
 
 	case " ": // open repo, issue, and/or path
 		// repo required, no query allowed
@@ -545,8 +552,14 @@ func getEnvironment() envVars {
 	return env
 }
 
-func printResult(result *alfred.FilterResult) {
+func finalizeResult(result *alfred.FilterResult) {
 	sort.Sort(alfred.ByValidAndTitle(result.Items))
+	if result.Variables != nil && len(*result.Variables) > 0 {
+		result.Rerun = rerunAfter
+	}
+}
+
+func printResult(result *alfred.FilterResult) {
 	if err := json.NewEncoder(os.Stdout).Encode(result); err != nil {
 		panic(err.Error())
 	}

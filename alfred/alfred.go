@@ -6,7 +6,7 @@ import "fmt"
 // to be rendered as JSON.
 type FilterResult struct {
 	Items     Items      `json:"items"`
-	Rerun     float32    `json:"rerun,omitempty"`
+	Rerun     float64    `json:"rerun,omitempty"`
 	Variables *Variables `json:"variables,omitempty"`
 }
 
@@ -53,6 +53,15 @@ func (i *Item) String() string {
 // AppendItems is shorthand for adding more items to a FilterResult's Items list
 func (result *FilterResult) AppendItems(items ...*Item) {
 	result.Items = append(result.Items, items...)
+}
+
+// SetVariable to set a variable in the result output
+func (result *FilterResult) SetVariable(name, value string) {
+	if result.Variables == nil {
+		result.Variables = &Variables{name: value}
+	} else {
+		(*result.Variables)[name] = value
+	}
 }
 
 // Icon is a custom icon for an item
