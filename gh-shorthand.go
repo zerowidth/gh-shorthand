@@ -32,7 +32,7 @@ var (
 
 func main() {
 	var input string
-	var items = alfred.Items{}
+	var result = &alfred.FilterResult{}
 
 	if len(os.Args) == 1 {
 		input = ""
@@ -43,12 +43,12 @@ func main() {
 	path, _ := homedir.Expand("~/.gh-shorthand.yml")
 	cfg, err := config.LoadFromFile(path)
 	if err != nil {
-		items = alfred.Items{errorItem("when loading ~/.gh-shorthand.yml", err.Error())}
+		result.AppendItems(errorItem("when loading ~/.gh-shorthand.yml", err.Error()))
 	} else {
-		items = completeItems(cfg, input)
+		result.AppendItems(completeItems(cfg, input)...)
 	}
 
-	printItems(items)
+	printResult(result)
 }
 
 func completeItems(cfg *config.Config, input string) alfred.Items {
@@ -518,10 +518,9 @@ func errorItem(context, msg string) *alfred.Item {
 	}
 }
 
-func printItems(items alfred.Items) {
-	sort.Sort(alfred.ByValidAndTitle(items))
-	doc := alfred.FilterResult{Items: items}
-	if err := json.NewEncoder(os.Stdout).Encode(doc); err != nil {
+func printResult(result *alfred.FilterResult) {
+	sort.Sort(alfred.ByValidAndTitle(result.Items))
+	if err := json.NewEncoder(os.Stdout).Encode(result); err != nil {
 		panic(err.Error())
 	}
 }

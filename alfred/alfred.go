@@ -50,6 +50,11 @@ func (i *Item) String() string {
 	return fmt.Sprintf("%#v", *i)
 }
 
+// AppendItems is shorthand for adding more items to a FilterResult's Items list
+func (result *FilterResult) AppendItems(items ...*Item) {
+	result.Items = append(result.Items, items...)
+}
+
 // Icon is a custom icon for an item
 type Icon struct {
 	Path string `json:"path"`           // the path to a file
