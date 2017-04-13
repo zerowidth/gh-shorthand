@@ -69,73 +69,73 @@ func completeItems(cfg *config.Config, input string) alfred.Items {
 		input = input[1:]
 	}
 
-	result := parser.Parse(cfg.RepoMap, input)
+	parsed := parser.Parse(cfg.RepoMap, input)
 	usedDefault := false
 
-	if len(cfg.DefaultRepo) > 0 && len(result.Repo) == 0 && len(result.Path) == 0 &&
-		((mode == "i" || mode == "n") || len(result.Query) == 0) {
-		result.Repo = cfg.DefaultRepo
+	if len(cfg.DefaultRepo) > 0 && len(parsed.Repo) == 0 && len(parsed.Path) == 0 &&
+		((mode == "i" || mode == "n") || len(parsed.Query) == 0) {
+		parsed.Repo = cfg.DefaultRepo
 		usedDefault = true
 	}
 
 	switch mode {
 	case " ": // open repo, issue, and/or path
 		// repo required, no query allowed
-		if len(result.Repo) > 0 && len(result.Query) == 0 {
-			items = append(items, openRepoItem(result, usedDefault))
+		if len(parsed.Repo) > 0 && len(parsed.Query) == 0 {
+			items = append(items, openRepoItem(parsed, usedDefault))
 		}
 
-		if len(result.Repo) == 0 && len(result.Path) > 0 {
-			items = append(items, openPathItem(result.Path))
+		if len(parsed.Repo) == 0 && len(parsed.Path) > 0 {
+			items = append(items, openPathItem(parsed.Path))
 		}
 
 		if len(input) > 0 && !strings.Contains(input, " ") {
 			items = append(items,
-				autocompleteItems(cfg, input, result,
+				autocompleteItems(cfg, input, parsed,
 					autocompleteOpenItem, openEndedOpenItem)...)
 		}
 	case "i":
 		// repo required, no issue or path, query allowed
-		if len(result.Repo) > 0 && len(result.Issue) == 0 && len(result.Path) == 0 {
-			items = append(items, openIssueItems(result, usedDefault, fullInput)...)
+		if len(parsed.Repo) > 0 && len(parsed.Issue) == 0 && len(parsed.Path) == 0 {
+			items = append(items, openIssueItems(parsed, usedDefault, fullInput)...)
 		}
 
 		if len(input) > 0 && !strings.Contains(input, " ") {
 			items = append(items,
-				autocompleteItems(cfg, input, result,
+				autocompleteItems(cfg, input, parsed,
 					autocompleteIssueItem, openEndedIssueItem)...)
 		}
 	case "n":
 		// repo required, no issue or path, query allowed
-		if len(result.Repo) > 0 && len(result.Issue) == 0 && len(result.Path) == 0 {
-			items = append(items, newIssueItem(result, usedDefault))
+		if len(parsed.Repo) > 0 && len(parsed.Issue) == 0 && len(parsed.Path) == 0 {
+			items = append(items, newIssueItem(parsed, usedDefault))
 		}
 
 		if len(input) > 0 && !strings.Contains(input, " ") {
 			items = append(items,
-				autocompleteItems(cfg, input, result,
+				autocompleteItems(cfg, input, parsed,
 					autocompleteNewIssueItem, openEndedNewIssueItem)...)
 		}
 	case "m":
 		// repo required, issue optional
-		if len(result.Repo) > 0 && len(result.Path) == 0 && len(result.Query) == 0 {
-			items = append(items, markdownLinkItem(result, usedDefault))
+		if len(parsed.Repo) > 0 && len(parsed.Path) == 0 && len(parsed.Query) == 0 {
+			items = append(items, markdownLinkItem(parsed, usedDefault))
 		}
 
 		if len(input) > 0 && !strings.Contains(input, " ") {
 			items = append(items,
-				autocompleteItems(cfg, input, result,
+				autocompleteItems(cfg, input, parsed,
 					autocompleteMarkdownLinkItem, openEndedMarkdownLinkItem)...)
 		}
 	case "r":
 		// repo required, issue required (issue handled in issueReferenceItem)
-		if len(result.Repo) > 0 && len(result.Path) == 0 && len(result.Query) == 0 {
-			items = append(items, issueReferenceItem(result, usedDefault))
+		if len(parsed.Repo) > 0 && len(parsed.Path) == 0 && len(parsed.Query) == 0 {
+			items = append(items, issueReferenceItem(parsed, usedDefault))
 		}
 
 		if len(input) > 0 && !strings.Contains(input, " ") {
 			items = append(items,
-				autocompleteItems(cfg, input, result,
+				autocompleteItems(cfg, input, parsed,
 					autocompleteIssueReferenceItem, openEndedIssueReferenceItem)...)
 		}
 	case "e":
@@ -182,30 +182,30 @@ func actionItems(dirs map[string]string, search, uidPrefix, action, desc string,
 	return
 }
 
-func openRepoItem(result *parser.Result, usedDefault bool) *alfred.Item {
-	uid := "gh:" + result.Repo
-	title := "Open " + result.Repo
-	arg := "open https://github.com/" + result.Repo
+func openRepoItem(parsed *parser.Result, usedDefault bool) *alfred.Item {
+	uid := "gh:" + parsed.Repo
+	title := "Open " + parsed.Repo
+	arg := "open https://github.com/" + parsed.Repo
 	icon := repoIcon
 
-	if len(result.Issue) > 0 {
-		uid += "#" + result.Issue
-		title += "#" + result.Issue
-		arg += "/issues/" + result.Issue
+	if len(parsed.Issue) > 0 {
+		uid += "#" + parsed.Issue
+		title += "#" + parsed.Issue
+		arg += "/issues/" + parsed.Issue
 		icon = issueIcon
 	}
 
-	if len(result.Path) > 0 {
-		uid += result.Path
-		title += result.Path
-		arg += result.Path
+	if len(parsed.Path) > 0 {
+		uid += parsed.Path
+		title += parsed.Path
+		arg += parsed.Path
 		icon = pathIcon
 	}
 
-	if len(result.Match) > 0 {
-		title += " (" + result.Match
-		if len(result.Issue) > 0 {
-			title += "#" + result.Issue
+	if len(parsed.Match) > 0 {
+		title += " (" + parsed.Match
+		if len(parsed.Issue) > 0 {
+			title += "#" + parsed.Issue
 		}
 		title += ")"
 	} else if usedDefault {
@@ -231,34 +231,34 @@ func openPathItem(path string) *alfred.Item {
 	}
 }
 
-func openIssueItems(result *parser.Result, usedDefault bool, fullInput string) (items alfred.Items) {
+func openIssueItems(parsed *parser.Result, usedDefault bool, fullInput string) (items alfred.Items) {
 	extra := ""
-	if len(result.Match) > 0 {
-		extra += " (" + result.Match + ")"
+	if len(parsed.Match) > 0 {
+		extra += " (" + parsed.Match + ")"
 	} else if usedDefault {
 		extra += " (default repo)"
 	}
 
-	if len(result.Query) == 0 {
+	if len(parsed.Query) == 0 {
 		items = append(items, &alfred.Item{
-			UID:   "ghi:" + result.Repo,
-			Title: "Open issues for " + result.Repo + extra,
-			Arg:   "open https://github.com/" + result.Repo + "/issues",
+			UID:   "ghi:" + parsed.Repo,
+			Title: "Open issues for " + parsed.Repo + extra,
+			Arg:   "open https://github.com/" + parsed.Repo + "/issues",
 			Valid: true,
 			Icon:  issueListIcon,
 		})
 		items = append(items, &alfred.Item{
-			Title:        "Search issues in " + result.Repo + extra + " for...",
+			Title:        "Search issues in " + parsed.Repo + extra + " for...",
 			Valid:        false,
 			Icon:         issueSearchIcon,
 			Autocomplete: fullInput + " ",
 		})
 	} else {
-		escaped := url.PathEscape(result.Query)
-		arg := "open https://github.com/" + result.Repo + "/search?utf8=✓&type=Issues&q=" + escaped
+		escaped := url.PathEscape(parsed.Query)
+		arg := "open https://github.com/" + parsed.Repo + "/search?utf8=✓&type=Issues&q=" + escaped
 		items = append(items, &alfred.Item{
-			UID:   "ghis:" + result.Repo,
-			Title: "Search issues in " + result.Repo + extra + " for " + result.Query,
+			UID:   "ghis:" + parsed.Repo,
+			Title: "Search issues in " + parsed.Repo + extra + " for " + parsed.Query,
 			Arg:   arg,
 			Valid: true,
 			Icon:  issueSearchIcon,
@@ -267,54 +267,54 @@ func openIssueItems(result *parser.Result, usedDefault bool, fullInput string) (
 	return
 }
 
-func newIssueItem(result *parser.Result, usedDefault bool) *alfred.Item {
-	title := "New issue in " + result.Repo
-	if len(result.Match) > 0 {
-		title += " (" + result.Match + ")"
+func newIssueItem(parsed *parser.Result, usedDefault bool) *alfred.Item {
+	title := "New issue in " + parsed.Repo
+	if len(parsed.Match) > 0 {
+		title += " (" + parsed.Match + ")"
 	} else if usedDefault {
 		title += " (default repo)"
 	}
 
-	if len(result.Query) == 0 {
+	if len(parsed.Query) == 0 {
 		return &alfred.Item{
-			UID:   "ghn:" + result.Repo,
+			UID:   "ghn:" + parsed.Repo,
 			Title: title,
-			Arg:   "open https://github.com/" + result.Repo + "/issues/new",
+			Arg:   "open https://github.com/" + parsed.Repo + "/issues/new",
 			Valid: true,
 			Icon:  newIssueIcon,
 		}
 	}
 
-	escaped := url.PathEscape(result.Query)
-	arg := "open https://github.com/" + result.Repo + "/issues/new?title=" + escaped
+	escaped := url.PathEscape(parsed.Query)
+	arg := "open https://github.com/" + parsed.Repo + "/issues/new?title=" + escaped
 	return &alfred.Item{
-		UID:   "ghn:" + result.Repo,
-		Title: title + ": " + result.Query,
+		UID:   "ghn:" + parsed.Repo,
+		Title: title + ": " + parsed.Query,
 		Arg:   arg,
 		Valid: true,
 		Icon:  newIssueIcon,
 	}
 }
 
-func markdownLinkItem(result *parser.Result, usedDefault bool) *alfred.Item {
-	uid := "ghm:" + result.Repo
-	title := "Insert Markdown link to " + result.Repo
-	desc := result.Repo
-	link := "https://github.com/" + result.Repo
+func markdownLinkItem(parsed *parser.Result, usedDefault bool) *alfred.Item {
+	uid := "ghm:" + parsed.Repo
+	title := "Insert Markdown link to " + parsed.Repo
+	desc := parsed.Repo
+	link := "https://github.com/" + parsed.Repo
 	icon := markdownIcon
 
-	if len(result.Issue) > 0 {
-		uid += "#" + result.Issue
-		title += "#" + result.Issue
-		desc += "#" + result.Issue
-		link += "/issues/" + result.Issue
+	if len(parsed.Issue) > 0 {
+		uid += "#" + parsed.Issue
+		title += "#" + parsed.Issue
+		desc += "#" + parsed.Issue
+		link += "/issues/" + parsed.Issue
 		icon = issueIcon
 	}
 
-	if len(result.Match) > 0 {
-		title += " (" + result.Match
-		if len(result.Issue) > 0 {
-			title += "#" + result.Issue
+	if len(parsed.Match) > 0 {
+		title += " (" + parsed.Match
+		if len(parsed.Issue) > 0 {
+			title += "#" + parsed.Issue
 		}
 		title += ")"
 	} else if usedDefault {
@@ -330,21 +330,21 @@ func markdownLinkItem(result *parser.Result, usedDefault bool) *alfred.Item {
 	}
 }
 
-func issueReferenceItem(result *parser.Result, usedDefault bool) *alfred.Item {
-	title := "Insert issue reference to " + result.Repo
-	ref := result.Repo
+func issueReferenceItem(parsed *parser.Result, usedDefault bool) *alfred.Item {
+	title := "Insert issue reference to " + parsed.Repo
+	ref := parsed.Repo
 
-	if len(result.Issue) > 0 {
-		title += "#" + result.Issue
-		ref += "#" + result.Issue
+	if len(parsed.Issue) > 0 {
+		title += "#" + parsed.Issue
+		ref += "#" + parsed.Issue
 	} else {
 		title += "#..."
 	}
 
-	if len(result.Match) > 0 {
-		title += " (" + result.Match
-		if len(result.Issue) > 0 {
-			title += "#" + result.Issue
+	if len(parsed.Match) > 0 {
+		title += " (" + parsed.Match
+		if len(parsed.Issue) > 0 {
+			title += "#" + parsed.Issue
 		} else {
 			title += "#..."
 		}
@@ -353,7 +353,7 @@ func issueReferenceItem(result *parser.Result, usedDefault bool) *alfred.Item {
 		title += " (default repo)"
 	}
 
-	if len(result.Issue) > 0 {
+	if len(parsed.Issue) > 0 {
 
 		return &alfred.Item{
 			UID:   "ghr:" + ref,
@@ -365,9 +365,9 @@ func issueReferenceItem(result *parser.Result, usedDefault bool) *alfred.Item {
 
 	}
 
-	auto := "r " + result.Repo
-	if len(result.Match) > 0 {
-		auto = "r " + result.Match
+	auto := "r " + parsed.Repo
+	if len(parsed.Match) > 0 {
+		auto = "r " + parsed.Match
 	}
 	return &alfred.Item{
 		Title:        title,
@@ -475,16 +475,16 @@ func openEndedIssueReferenceItem(input string) *alfred.Item {
 	}
 }
 
-func autocompleteItems(cfg *config.Config, input string, result *parser.Result,
+func autocompleteItems(cfg *config.Config, input string, parsed *parser.Result,
 	autocompleteItem func(string, string) *alfred.Item,
 	openEndedItem func(string) *alfred.Item) (items alfred.Items) {
 	for key, repo := range cfg.RepoMap {
-		if strings.HasPrefix(key, input) && key != result.Match && repo != result.Repo {
+		if strings.HasPrefix(key, input) && key != parsed.Match && repo != parsed.Repo {
 			items = append(items, autocompleteItem(key, repo))
 		}
 	}
 
-	if len(input) > 0 && result.Repo != input {
+	if len(input) > 0 && parsed.Repo != input {
 		items = append(items, openEndedItem(input))
 	}
 	return
