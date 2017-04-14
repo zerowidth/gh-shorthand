@@ -98,6 +98,7 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[
 
 		if countStr, ok := env["count"]; ok {
 			count, _ = strconv.ParseInt(countStr, 10, 64)
+			count++
 		}
 		if sStr, ok := env["s"]; ok {
 			if nsStr, ok := env["ns"]; ok {
@@ -112,9 +113,10 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[
 		// reset the clock if query changes
 		if query, ok := env["query"]; ok && query != input {
 			start = time.Now()
+			count = 0
 		}
 
-		result.SetVariable("count", fmt.Sprintf("%d", count+1))
+		result.SetVariable("count", fmt.Sprintf("%d", count))
 		result.SetVariable("query", input)
 		result.SetVariable("s", fmt.Sprintf("%d", start.Unix()))
 		result.SetVariable("ns", fmt.Sprintf("%d", start.Nanosecond()))
