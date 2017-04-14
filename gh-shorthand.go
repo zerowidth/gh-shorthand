@@ -10,6 +10,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/renstrom/fuzzysearch/fuzzy"
@@ -21,9 +22,10 @@ import (
 type envVars map[string]string
 
 const (
-	// rerunAfter defines how soon the alfred filter is invoked again
+	// rerunAfter defines how soon the alfred filter is invoked again.
+	// This number is an ideal, so true delay must be measured externally.
 	rerunAfter = 0.1
-	// delay is how long to wait before showing "processing"
+	// delay is how many seconds to wait before showing "processing"
 	delay = 2.0
 )
 
@@ -91,29 +93,41 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[
 
 	switch mode {
 	case "b":
-		var count int64 = 1
+		var count int64 = 0
+		start := time.Now()
 
+		if sStr, ok := env["s"]; ok {
+			if nsStr, ok := env["ns"]; ok {
+				if s, err := strconv.ParseInt(sStr, 10, 64); err == nil {
+					if ns, err := strconv.ParseInt(nsStr, 10, 64); err == nil {
+						start = time.Unix(s, ns)
+					}
+				}
+			}
+		}
 		if countStr, ok := env["count"]; ok {
 			count, _ = strconv.ParseInt(countStr, 10, 64)
 		}
-
 		if query, ok := env["query"]; ok {
 			if query == input {
 				count++
-			} else {
-				count = 1
 			}
 		}
 		result.SetVariable("count", fmt.Sprintf("%d", count))
 		result.SetVariable("query", input)
+		result.SetVariable("s", fmt.Sprintf("%d", start.Unix()))
+		result.SetVariable("ns", fmt.Sprintf("%d", start.Nanosecond()))
 
 		if rerunAfter*float64(count) >= delay {
+
 			ellipsis := strings.Repeat(".", int(count)%4)
+			duration := time.Since(start).Seconds()
+			actual := duration / float64(count)
 
 			result.AppendItems(
 				&alfred.Item{
 					Title:    fmt.Sprintf("Processing %q%s", input, ellipsis),
-					Subtitle: fmt.Sprintf("count: %d", count),
+					Subtitle: fmt.Sprintf("count: %d duration: %0.3f actual: %0.3f", count, duration, actual),
 				})
 		}
 
