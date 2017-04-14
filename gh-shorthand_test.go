@@ -29,7 +29,7 @@ var emptyConfig = &config.Config{}
 
 func TestDefaults(t *testing.T) {
 	env := envVars{}
-	result := &alfred.FilterResult{}
+	result := alfred.NewFilterResult()
 	appendParsedItems(result, cfg, env, "")
 	if len(result.Items) > 0 {
 		t.Errorf("expected default result to be empty, got %#v", result.Items)
@@ -52,7 +52,7 @@ func (tc *completeTestCase) testItem(t *testing.T) {
 		tc.cfg = cfg
 	}
 	env := envVars{}
-	result := &alfred.FilterResult{}
+	result := alfred.NewFilterResult()
 
 	appendParsedItems(result, tc.cfg, env, tc.input)
 

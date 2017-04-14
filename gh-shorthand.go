@@ -38,9 +38,7 @@ var (
 
 func main() {
 	var input string
-	var result = &alfred.FilterResult{
-		Items: alfred.Items{},
-	}
+	var result = alfred.NewFilterResult()
 
 	if len(os.Args) == 1 {
 		input = ""

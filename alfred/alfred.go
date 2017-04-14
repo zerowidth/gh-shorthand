@@ -10,6 +10,12 @@ type FilterResult struct {
 	Variables *Variables `json:"variables,omitempty"`
 }
 
+// NewFilterResult provides an initialized FilterResult that contains the
+// required (but empty) Items list
+func NewFilterResult() *FilterResult {
+	return &FilterResult{Items: Items{}}
+}
+
 // Items is a list of Item pointers.
 type Items []*Item
 
