@@ -535,3 +535,33 @@ func findMatchingItem(uid, title string, items alfred.Items) *alfred.Item {
 	}
 	return nil
 }
+
+func TestFinalizeResult(t *testing.T) {
+	result := alfred.NewFilterResult()
+	result.AppendItems(
+		&alfred.Item{Title: "bother, invalid", Valid: false},
+		&alfred.Item{Title: "valid", Valid: true},
+		&alfred.Item{Title: "also valid", Valid: true},
+		&alfred.Item{Title: "an invalid item", Valid: false},
+	)
+	finalizeResult(result)
+
+	// test that sorting is by valid and then title
+	for i, title := range []string{
+		"also valid", "valid", "an invalid item", "bother, invalid"} {
+		if result.Items[i].Title != title {
+			t.Errorf("expected item at position %d: %#v to have title %q", i, result.Items[i], title)
+		}
+	}
+
+	// test that Rerun only gets set if a variable's been set
+	if result.Rerun != 0 {
+		t.Errorf("expected result %#v to not have a Rerun value", result)
+	}
+	result = alfred.NewFilterResult()
+	result.SetVariable("foo", "bar")
+	finalizeResult(result)
+	if result.Rerun != rerunAfter {
+		t.Errorf("expected result %#v to have Rerun of %f", result, rerunAfter)
+	}
+}
