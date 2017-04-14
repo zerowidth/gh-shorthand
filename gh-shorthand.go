@@ -103,9 +103,11 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[
 		result.SetVariable("count", fmt.Sprintf("%d", count))
 		result.SetVariable("query", input)
 
+		ellipsis := strings.Repeat(".", int(count)%4)
+
 		result.AppendItems(
 			&alfred.Item{
-				Title:    fmt.Sprintf("Processing %q", input),
+				Title:    fmt.Sprintf("Processing %q%s", input, ellipsis),
 				Subtitle: fmt.Sprintf("count: %d", count),
 			})
 
