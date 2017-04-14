@@ -20,8 +20,10 @@ import (
 
 type envVars map[string]string
 
+// rerunAfter defines how soon the alfred filter is invoked again
+const rerunAfter = 0.1
+
 var (
-	rerunAfter      = 0.1
 	repoIcon        = octicon("repo")
 	issueIcon       = octicon("git-pull-request")
 	issueListIcon   = octicon("list-ordered")
@@ -53,7 +55,6 @@ func main() {
 	} else {
 		vars := getEnvironment()
 		appendParsedItems(result, cfg, vars, input)
-		// result.AppendItems((result, cfg, input))
 	}
 
 	finalizeResult(result)
@@ -88,21 +89,27 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[
 
 	switch mode {
 	case "b":
-		var count int64
+		var count int64 = 1
 
-		countStr, hasCount := env["count"]
-		if hasCount {
+		if countStr, ok := env["count"]; ok {
 			count, _ = strconv.ParseInt(countStr, 10, 64)
-			count++
 		}
+
+		if query, ok := env["query"]; ok {
+			if query == input {
+				count++
+			} else {
+				count = 1
+			}
+		}
+		result.SetVariable("count", fmt.Sprintf("%d", count))
+		result.SetVariable("query", input)
 
 		result.AppendItems(
 			&alfred.Item{
-				Title:    "Processing: " + input,
+				Title:    fmt.Sprintf("Processing %q", input),
 				Subtitle: fmt.Sprintf("count: %d", count),
 			})
-
-		result.SetVariable("count", fmt.Sprintf("%d", count))
 
 	case " ": // open repo, issue, and/or path
 		// repo required, no query allowed
