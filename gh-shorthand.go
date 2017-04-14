@@ -26,7 +26,7 @@ const (
 	// This number is an ideal, so true delay must be measured externally.
 	rerunAfter = 0.1
 	// delay is how many seconds to wait before showing "processing"
-	delay = 2.0
+	delay = 0.5
 )
 
 var (
@@ -93,9 +93,12 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[
 
 	switch mode {
 	case "b":
-		var count int64 = 0
+		var count int64
 		start := time.Now()
 
+		if countStr, ok := env["count"]; ok {
+			count, _ = strconv.ParseInt(countStr, 10, 64)
+		}
 		if sStr, ok := env["s"]; ok {
 			if nsStr, ok := env["ns"]; ok {
 				if s, err := strconv.ParseInt(sStr, 10, 64); err == nil {
@@ -105,29 +108,25 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[
 				}
 			}
 		}
-		if countStr, ok := env["count"]; ok {
-			count, _ = strconv.ParseInt(countStr, 10, 64)
+
+		// reset the clock if query changes
+		if query, ok := env["query"]; ok && query != input {
+			start = time.Now()
 		}
-		if query, ok := env["query"]; ok {
-			if query == input {
-				count++
-			}
-		}
-		result.SetVariable("count", fmt.Sprintf("%d", count))
+
+		result.SetVariable("count", fmt.Sprintf("%d", count+1))
 		result.SetVariable("query", input)
 		result.SetVariable("s", fmt.Sprintf("%d", start.Unix()))
 		result.SetVariable("ns", fmt.Sprintf("%d", start.Nanosecond()))
 
-		if rerunAfter*float64(count) >= delay {
-
+		duration := time.Since(start).Seconds()
+		if duration >= delay {
 			ellipsis := strings.Repeat(".", int(count)%4)
-			duration := time.Since(start).Seconds()
-			actual := duration / float64(count)
-
+			average := duration / float64(count)
 			result.AppendItems(
 				&alfred.Item{
 					Title:    fmt.Sprintf("Processing %q%s", input, ellipsis),
-					Subtitle: fmt.Sprintf("count: %d duration: %0.3f actual: %0.3f", count, duration, actual),
+					Subtitle: fmt.Sprintf("count: %d duration: %0.3f average: %0.3f", count, duration, average),
 				})
 		}
 
