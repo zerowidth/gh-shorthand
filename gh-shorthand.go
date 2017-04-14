@@ -20,8 +20,12 @@ import (
 
 type envVars map[string]string
 
-// rerunAfter defines how soon the alfred filter is invoked again
-const rerunAfter = 0.1
+const (
+	// rerunAfter defines how soon the alfred filter is invoked again
+	rerunAfter = 0.1
+	// delay is how long to wait before showing "processing"
+	delay = 2.0
+)
 
 var (
 	repoIcon        = octicon("repo")
@@ -103,13 +107,15 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[
 		result.SetVariable("count", fmt.Sprintf("%d", count))
 		result.SetVariable("query", input)
 
-		ellipsis := strings.Repeat(".", int(count)%4)
+		if rerunAfter*float64(count) >= delay {
+			ellipsis := strings.Repeat(".", int(count)%4)
 
-		result.AppendItems(
-			&alfred.Item{
-				Title:    fmt.Sprintf("Processing %q%s", input, ellipsis),
-				Subtitle: fmt.Sprintf("count: %d", count),
-			})
+			result.AppendItems(
+				&alfred.Item{
+					Title:    fmt.Sprintf("Processing %q%s", input, ellipsis),
+					Subtitle: fmt.Sprintf("count: %d", count),
+				})
+		}
 
 	case " ": // open repo, issue, and/or path
 		// repo required, no query allowed
