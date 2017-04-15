@@ -98,12 +98,6 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[
 	switch mode {
 	case "b":
 		shouldRetry := false
-
-		// first: check delay
-		// if delay reached, consult backend
-		// if no final response OR delay not reached, retry.
-
-		var count int64
 		start := time.Now()
 
 		if sStr, ok := env["s"]; ok {
@@ -119,16 +113,10 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[
 		// reset the clock if query changes
 		if query, ok := env["query"]; ok && query != input {
 			start = time.Now()
-			count = 0
 		}
 
-		if countStr, ok := env["count"]; ok {
-			count, _ = strconv.ParseInt(countStr, 10, 64)
-			count++
-		}
-
-		duration := time.Since(start).Seconds()
-		if duration < delay {
+		duration := time.Since(start)
+		if duration.Seconds() < delay {
 			shouldRetry = true
 		} else {
 			// consult backend
@@ -158,10 +146,9 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[
 							})
 						}
 					case "PENDING":
-						ellipsis := strings.Repeat(".", int(count)%4)
+						ellipsis := strings.Repeat(".", int((duration.Nanoseconds()/250000000)%4))
 						result.AppendItems(&alfred.Item{
-							Title:    fmt.Sprintf("Processing %q%s", input, ellipsis),
-							Subtitle: fmt.Sprintf("count: %d duration: %0.3f", count, duration),
+							Title: fmt.Sprintf("Processing %q%s", input, ellipsis),
 						})
 						shouldRetry = true
 					default:
@@ -182,7 +169,6 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[
 		}
 
 		if shouldRetry {
-			result.SetVariable("count", fmt.Sprintf("%d", count))
 			result.SetVariable("query", input)
 			result.SetVariable("s", fmt.Sprintf("%d", start.Unix()))
 			result.SetVariable("ns", fmt.Sprintf("%d", start.Nanosecond()))
