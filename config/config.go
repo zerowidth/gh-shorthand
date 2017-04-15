@@ -14,6 +14,7 @@ type Config struct {
 	RepoMap     map[string]string `yaml:"repos"`
 	DefaultRepo string            `yaml:"default_repo"`
 	ProjectDirs []string          `yaml:"project_dirs"`
+	SocketPath  string            `yaml:"socket_path"`
 }
 
 func (config Config) ProjectDirMap() (dirs map[string]string) {

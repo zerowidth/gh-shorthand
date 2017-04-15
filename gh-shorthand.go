@@ -1,9 +1,11 @@
 package main
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -27,6 +29,8 @@ const (
 	rerunAfter = 0.1
 	// delay is how many seconds to wait before showing "processing"
 	delay = 0.5
+	// socketTimeout is how long to wait before giving up on the backend
+	socketTimeout = 100 * time.Millisecond
 )
 
 var (
@@ -93,13 +97,15 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[
 
 	switch mode {
 	case "b":
+		shouldRetry := false
+
+		// first: check delay
+		// if delay reached, consult backend
+		// if no final response OR delay not reached, retry.
+
 		var count int64
 		start := time.Now()
 
-		if countStr, ok := env["count"]; ok {
-			count, _ = strconv.ParseInt(countStr, 10, 64)
-			count++
-		}
 		if sStr, ok := env["s"]; ok {
 			if nsStr, ok := env["ns"]; ok {
 				if s, err := strconv.ParseInt(sStr, 10, 64); err == nil {
@@ -116,20 +122,70 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[
 			count = 0
 		}
 
-		result.SetVariable("count", fmt.Sprintf("%d", count))
-		result.SetVariable("query", input)
-		result.SetVariable("s", fmt.Sprintf("%d", start.Unix()))
-		result.SetVariable("ns", fmt.Sprintf("%d", start.Nanosecond()))
+		if countStr, ok := env["count"]; ok {
+			count, _ = strconv.ParseInt(countStr, 10, 64)
+			count++
+		}
 
 		duration := time.Since(start).Seconds()
-		if duration >= delay {
-			ellipsis := strings.Repeat(".", int(count)%4)
-			average := duration / float64(count)
-			result.AppendItems(
-				&alfred.Item{
-					Title:    fmt.Sprintf("Processing %q%s", input, ellipsis),
-					Subtitle: fmt.Sprintf("count: %d duration: %0.3f average: %0.3f", count, duration, average),
-				})
+		if duration < delay {
+			shouldRetry = true
+		} else {
+			// consult backend
+			if len(cfg.SocketPath) == 0 {
+				result.AppendItems(errorItem("when loading config", "no socket path"))
+			} else {
+				sock, err := net.Dial("unix", cfg.SocketPath)
+				if err != nil {
+					result.AppendItems(errorItem("when loading "+cfg.SocketPath, err.Error()))
+					return
+				}
+				sock.SetDeadline(time.Now().Add(socketTimeout))
+				// write query to socket:
+				if _, err := sock.Write([]byte(input + "\n")); err != nil {
+					result.AppendItems(errorItem("when querying gh-shorthand backend ", err.Error()))
+					return
+				}
+				// now, read results:
+				scanner := bufio.NewScanner(sock)
+				if scanner.Scan() {
+					status := scanner.Text()
+					switch status {
+					case "OK":
+						for scanner.Scan() {
+							result.AppendItems(&alfred.Item{
+								Title: "RESULT: " + scanner.Text(),
+							})
+						}
+					case "PENDING":
+						ellipsis := strings.Repeat(".", int(count)%4)
+						result.AppendItems(&alfred.Item{
+							Title:    fmt.Sprintf("Processing %q%s", input, ellipsis),
+							Subtitle: fmt.Sprintf("count: %d duration: %0.3f", count, duration),
+						})
+						shouldRetry = true
+					default:
+						if err := scanner.Err(); err != nil {
+							result.AppendItems(errorItem("when reading from gh-shorthand backend: ", err.Error()))
+						} else {
+							result.AppendItems(errorItem("when querying gh-shorthand backend", ""))
+						}
+					}
+				} else {
+					if err := scanner.Err(); err != nil {
+						result.AppendItems(errorItem("when reading from gh-shorthand backend: ", err.Error()))
+					} else {
+						result.AppendItems(errorItem("when querying gh-shorthand backend", "no response"))
+					}
+				}
+			}
+		}
+
+		if shouldRetry {
+			result.SetVariable("count", fmt.Sprintf("%d", count))
+			result.SetVariable("query", input)
+			result.SetVariable("s", fmt.Sprintf("%d", start.Unix()))
+			result.SetVariable("ns", fmt.Sprintf("%d", start.Nanosecond()))
 		}
 
 	case " ": // open repo, issue, and/or path
