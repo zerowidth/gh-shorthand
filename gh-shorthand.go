@@ -128,7 +128,10 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[
 					result.AppendItems(errorItem("when loading "+cfg.SocketPath, err.Error()))
 					return
 				}
-				sock.SetDeadline(time.Now().Add(socketTimeout))
+				if err := sock.SetDeadline(time.Now().Add(socketTimeout)); err != nil {
+					result.AppendItems(errorItem("when connecting to "+cfg.SocketPath, err.Error()))
+					return
+				}
 				// write query to socket:
 				if _, err := sock.Write([]byte(input + "\n")); err != nil {
 					result.AppendItems(errorItem("when querying gh-shorthand backend ", err.Error()))
