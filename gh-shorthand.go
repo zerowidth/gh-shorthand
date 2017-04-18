@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net"
@@ -180,7 +181,13 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[
 	case " ": // open repo, issue, and/or path
 		// repo required, no query allowed
 		if len(parsed.Repo) > 0 && len(parsed.Query) == 0 {
-			result.AppendItems(openRepoItem(parsed, usedDefault))
+			item := openRepoItem(parsed, usedDefault)
+			if len(parsed.Issue) == 0 {
+				retrieveRepoDescription(result, item, input, parsed, cfg, env)
+			} else {
+				retrieveIssueTitle(result, item, input, parsed, cfg, env)
+			}
+			result.AppendItems(item)
 		}
 
 		if len(parsed.Repo) == 0 && len(parsed.Path) > 0 {
@@ -596,6 +603,127 @@ func findProjectDirs(root string) (dirs []string) {
 		}
 	}
 	return
+}
+
+func queryStart(input string, env envVars) time.Time {
+	if query, ok := env["query"]; ok && query == input {
+		if sStr, ok := env["s"]; ok {
+			if nsStr, ok := env["ns"]; ok {
+				if s, err := strconv.ParseInt(sStr, 10, 64); err == nil {
+					if ns, err := strconv.ParseInt(nsStr, 10, 64); err == nil {
+						return time.Unix(s, ns)
+					}
+				}
+			}
+		}
+	}
+
+	return time.Now()
+}
+
+func rpcRequest(query string, cfg *config.Config) (shouldRetry bool, results []string, err error) {
+	if len(cfg.SocketPath) == 0 {
+		return false, results, errors.New("RPC not configured")
+	}
+	sock, err := net.Dial("unix", cfg.SocketPath)
+	if err != nil {
+		return false, results, fmt.Errorf("Could not connect to %s: %s", cfg.SocketPath, err)
+	}
+	defer sock.Close()
+	if err := sock.SetDeadline(time.Now().Add(socketTimeout)); err != nil {
+		return false, results, fmt.Errorf("Could not set socket timeout: %s: %s", cfg.SocketPath, err)
+	}
+	// write query to socket:
+	if _, err := sock.Write([]byte(query + "\n")); err != nil {
+		return false, results, fmt.Errorf("Could not send query: %s", err)
+	}
+	// now, read results:
+	scanner := bufio.NewScanner(sock)
+	if scanner.Scan() {
+		status := scanner.Text()
+		switch status {
+		case "OK":
+			for scanner.Scan() {
+				results = append(results, scanner.Text())
+			}
+			return false, results, nil
+		case "PENDING":
+			return true, results, nil
+		default:
+			if err := scanner.Err(); err != nil {
+				return false, results, fmt.Errorf("Error when reading RPC response: %s", err)
+			}
+			return false, results, fmt.Errorf("Unexpected RPC response status: %s", status)
+		}
+	} else {
+		if err := scanner.Err(); err != nil {
+			return false, results, fmt.Errorf("Error when reading RPC response: %s", err)
+		}
+		return false, results, fmt.Errorf("Error: no response from RPC backend: %s", err)
+	}
+}
+
+func ellipsis(prefix string, duration time.Duration) string {
+	return prefix + strings.Repeat(".", int((duration.Nanoseconds()/250000000)%4))
+}
+
+// retrieveRepoDescription adds the repo description to the "open repo" item
+// using an RPC call.
+func retrieveRepoDescription(result *alfred.FilterResult, item *alfred.Item, input string, parsed *parser.Result, cfg *config.Config, env envVars) {
+	shouldRetry := false
+	start := queryStart(input, env)
+
+	duration := time.Since(start)
+	if duration.Seconds() < delay {
+		shouldRetry = true
+	} else {
+		retry, results, err := rpcRequest("repo:"+parsed.Repo, cfg)
+		shouldRetry = retry
+		if err != nil {
+			item.Subtitle = err.Error()
+		} else if shouldRetry {
+			item.Subtitle = ellipsis("Retrieving description", duration)
+		} else if len(results) > 0 {
+			item.Subtitle = results[0]
+		} else {
+			item.Subtitle = "No description found."
+		}
+	}
+
+	if shouldRetry {
+		result.SetVariable("query", input)
+		result.SetVariable("s", fmt.Sprintf("%d", start.Unix()))
+		result.SetVariable("ns", fmt.Sprintf("%d", start.Nanosecond()))
+	}
+}
+
+// retrieveIssueTitle adds the title to the "open issue" item using an RPC call
+func retrieveIssueTitle(result *alfred.FilterResult, item *alfred.Item, input string, parsed *parser.Result, cfg *config.Config, env envVars) {
+	shouldRetry := false
+	start := queryStart(input, env)
+
+	duration := time.Since(start)
+	if duration.Seconds() < delay {
+		shouldRetry = true
+	} else {
+		retry, results, err := rpcRequest("issue:"+parsed.Repo+"#"+parsed.Issue, cfg)
+		shouldRetry = retry
+		if err != nil {
+			item.Subtitle = err.Error()
+		} else if shouldRetry {
+			item.Subtitle = ellipsis("Retrieving issue title", duration)
+		} else if len(results) > 0 {
+			item.Subtitle = results[0]
+		} else {
+			item.Subtitle = "No issue title found."
+		}
+	}
+
+	if shouldRetry {
+		result.SetVariable("query", input)
+		result.SetVariable("s", fmt.Sprintf("%d", start.Unix()))
+		result.SetVariable("ns", fmt.Sprintf("%d", start.Nanosecond()))
+	}
 }
 
 // octicon is relative to the alfred workflow, so this tells alfred to retrieve
