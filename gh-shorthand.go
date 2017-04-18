@@ -90,6 +90,11 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[
 	parsed := parser.Parse(cfg.RepoMap, input)
 	usedDefault := false
 
+	// for RPC calls on idle query input:
+	shouldRetry := false
+	start := queryStart(input, env)
+	duration := time.Since(start)
+
 	if len(cfg.DefaultRepo) > 0 && len(parsed.Repo) == 0 && len(parsed.Path) == 0 &&
 		((mode == "i" || mode == "n") || len(parsed.Query) == 0) {
 		parsed.Repo = cfg.DefaultRepo
@@ -102,9 +107,9 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[
 		if len(parsed.Repo) > 0 && len(parsed.Query) == 0 {
 			item := openRepoItem(parsed, usedDefault)
 			if len(parsed.Issue) == 0 {
-				retrieveRepoDescription(result, item, input, parsed, cfg, env)
+				shouldRetry = retrieveRepoDescription(item, duration, parsed, cfg)
 			} else {
-				retrieveIssueTitle(result, item, input, parsed, cfg, env)
+				shouldRetry = retrieveIssueTitle(item, duration, parsed, cfg)
 			}
 			result.AppendItems(item)
 		}
@@ -173,6 +178,13 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[
 			actionItems(cfg.ProjectDirMap(), input, "ght", "term", "Open terminal in", editorIcon)...)
 	}
 
+	// if any RPC-decorated items require a re-invocation of the script, save that
+	// information in the environment for the next time
+	if shouldRetry {
+		result.SetVariable("query", input)
+		result.SetVariable("s", fmt.Sprintf("%d", start.Unix()))
+		result.SetVariable("ns", fmt.Sprintf("%d", start.Nanosecond()))
+	}
 }
 
 func actionItems(dirs map[string]string, search, uidPrefix, action, desc string, icon *alfred.Icon) (items alfred.Items) {
@@ -588,11 +600,7 @@ func ellipsis(prefix string, duration time.Duration) string {
 
 // retrieveRepoDescription adds the repo description to the "open repo" item
 // using an RPC call.
-func retrieveRepoDescription(result *alfred.FilterResult, item *alfred.Item, input string, parsed *parser.Result, cfg *config.Config, env envVars) {
-	shouldRetry := false
-	start := queryStart(input, env)
-
-	duration := time.Since(start)
+func retrieveRepoDescription(item *alfred.Item, duration time.Duration, parsed *parser.Result, cfg *config.Config) (shouldRetry bool) {
 	if duration.Seconds() < delay {
 		shouldRetry = true
 	} else {
@@ -609,19 +617,11 @@ func retrieveRepoDescription(result *alfred.FilterResult, item *alfred.Item, inp
 		}
 	}
 
-	if shouldRetry {
-		result.SetVariable("query", input)
-		result.SetVariable("s", fmt.Sprintf("%d", start.Unix()))
-		result.SetVariable("ns", fmt.Sprintf("%d", start.Nanosecond()))
-	}
+	return shouldRetry
 }
 
 // retrieveIssueTitle adds the title to the "open issue" item using an RPC call
-func retrieveIssueTitle(result *alfred.FilterResult, item *alfred.Item, input string, parsed *parser.Result, cfg *config.Config, env envVars) {
-	shouldRetry := false
-	start := queryStart(input, env)
-
-	duration := time.Since(start)
+func retrieveIssueTitle(item *alfred.Item, duration time.Duration, parsed *parser.Result, cfg *config.Config) (shouldRetry bool) {
 	if duration.Seconds() < delay {
 		shouldRetry = true
 	} else {
@@ -637,12 +637,7 @@ func retrieveIssueTitle(result *alfred.FilterResult, item *alfred.Item, input st
 			item.Subtitle = "No issue title found."
 		}
 	}
-
-	if shouldRetry {
-		result.SetVariable("query", input)
-		result.SetVariable("s", fmt.Sprintf("%d", start.Unix()))
-		result.SetVariable("ns", fmt.Sprintf("%d", start.Nanosecond()))
-	}
+	return shouldRetry
 }
 
 // octicon is relative to the alfred workflow, so this tells alfred to retrieve
