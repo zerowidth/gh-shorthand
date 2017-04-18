@@ -580,6 +580,16 @@ func rpcRequest(query string, cfg *config.Config) (shouldRetry bool, results []s
 			return false, results, nil
 		case "PENDING":
 			return true, results, nil
+		case "ERROR":
+			for scanner.Scan() {
+				results = append(results, scanner.Text())
+			}
+			if len(results) > 0 {
+				err = errors.New(results[0])
+			} else {
+				err = errors.New("unknown RPC error")
+			}
+			return false, results, err
 		default:
 			if err := scanner.Err(); err != nil {
 				return false, results, fmt.Errorf("Error when reading RPC response: %s", err)
