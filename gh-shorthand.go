@@ -28,8 +28,8 @@ const (
 	// rerunAfter defines how soon the alfred filter is invoked again.
 	// This number is an ideal, so true delay must be measured externally.
 	rerunAfter = 0.1
-	// delay is how many seconds to wait before showing "processing"
-	delay = 0.5
+	// delay is how long in seconds to wait before showing "processing"
+	delay = 0.1
 	// socketTimeout is how long to wait before giving up on the backend
 	socketTimeout = 100 * time.Millisecond
 )
