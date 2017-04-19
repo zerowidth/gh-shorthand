@@ -28,9 +28,11 @@ var defaultInMap = &config.Config{
 var emptyConfig = &config.Config{}
 
 func TestDefaults(t *testing.T) {
-	items := completeItems(cfg, "")
-	if len(items) > 0 {
-		t.Errorf("expected default result to be empty, got %#v", items)
+	env := envVars{}
+	result := alfred.NewFilterResult()
+	appendParsedItems(result, cfg, env, "")
+	if len(result.Items) > 0 {
+		t.Errorf("expected default result to be empty, got %#v", result.Items)
 	}
 }
 
@@ -49,19 +51,22 @@ func (tc *completeTestCase) testItem(t *testing.T) {
 	if tc.cfg == nil {
 		tc.cfg = cfg
 	}
-	items := completeItems(tc.cfg, tc.input)
+	env := envVars{}
+	result := alfred.NewFilterResult()
 
-	validateItems(t, items)
+	appendParsedItems(result, tc.cfg, env, tc.input)
+
+	validateItems(t, result.Items)
 
 	if len(tc.exclude) > 0 {
-		item := findMatchingItem(tc.exclude, tc.exclude, items)
+		item := findMatchingItem(tc.exclude, tc.exclude, result.Items)
 		if item != nil {
-			t.Errorf("%+v\nexpected no item with UID or Title %q", items, tc.exclude)
+			t.Errorf("%+v\nexpected no item with UID or Title %q", result.Items, tc.exclude)
 		}
 		return
 	}
 
-	item := findMatchingItem(tc.uid, tc.title, items)
+	item := findMatchingItem(tc.uid, tc.title, result.Items)
 	if item != nil {
 		if len(tc.uid) > 0 && item.UID != tc.uid {
 			t.Errorf("%+v\nexpected UID %q to be %q", item, item.UID, tc.uid)
@@ -83,7 +88,7 @@ func (tc *completeTestCase) testItem(t *testing.T) {
 			t.Errorf("%+v\nexpected Autocomplete %q to be %q", item, item.Autocomplete, tc.auto)
 		}
 	} else {
-		t.Errorf("expected item with uid %q and/or title %q in %+v", tc.uid, tc.title, items)
+		t.Errorf("expected item with uid %q and/or title %q in %+v", tc.uid, tc.title, result.Items)
 	}
 }
 
@@ -496,7 +501,7 @@ func TestCompleteItems(t *testing.T) {
 
 // validateItems validates alfred items, checking for UID uniqueness and
 // required fields.
-func validateItems(t *testing.T, items []*alfred.Item) {
+func validateItems(t *testing.T, items alfred.Items) {
 	uids := map[string]bool{}
 	for _, item := range items {
 		if len(item.Title) == 0 {
@@ -522,11 +527,33 @@ func validateItems(t *testing.T, items []*alfred.Item) {
 }
 
 // Try to find item by uid or title
-func findMatchingItem(uid, title string, items []*alfred.Item) *alfred.Item {
+func findMatchingItem(uid, title string, items alfred.Items) *alfred.Item {
 	for _, item := range items {
 		if item.Title == title || (len(item.UID) > 0 && item.UID == uid) {
 			return item
 		}
 	}
 	return nil
+}
+
+func TestFinalizeResult(t *testing.T) {
+	result := alfred.NewFilterResult()
+	result.AppendItems(
+		&alfred.Item{Title: "bother, invalid", Valid: false},
+		&alfred.Item{Title: "valid", Valid: true},
+		&alfred.Item{Title: "also valid", Valid: true},
+		&alfred.Item{Title: "an invalid item", Valid: false},
+	)
+	finalizeResult(result)
+
+	// test that Rerun only gets set if a variable's been set
+	if result.Rerun != 0 {
+		t.Errorf("expected result %#v to not have a Rerun value", result)
+	}
+	result = alfred.NewFilterResult()
+	result.SetVariable("foo", "bar")
+	finalizeResult(result)
+	if result.Rerun != rerunAfter {
+		t.Errorf("expected result %#v to have Rerun of %f", result, rerunAfter)
+	}
 }

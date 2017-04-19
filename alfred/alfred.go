@@ -2,25 +2,26 @@ package alfred
 
 import "fmt"
 
-// Items is a list of items to return to Alfred
-type Items struct {
-	Items []*Item `json:"items"`
-	Rerun float32 `json:"rerun,omitempty"`
+// FilterResult is the final result of an Alfred script filter,
+// to be rendered as JSON.
+type FilterResult struct {
+	Items     Items      `json:"items"`
+	Rerun     float64    `json:"rerun,omitempty"`
+	Variables *Variables `json:"variables,omitempty"`
 }
 
-// ByValidAndTitle for stable output: sort by title, but prioritize valid entries.
-type ByValidAndTitle []*Item
-
-func (a ByValidAndTitle) Len() int      { return len(a) }
-func (a ByValidAndTitle) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
-func (a ByValidAndTitle) Less(i, j int) bool {
-	if a[i].Valid && !a[j].Valid {
-		return true
-	} else if !a[i].Valid && a[j].Valid {
-		return false
-	}
-	return a[i].Title < a[j].Title
+// NewFilterResult provides an initialized FilterResult that contains the
+// required (but empty) Items list
+func NewFilterResult() *FilterResult {
+	return &FilterResult{Items: Items{}}
 }
+
+// Items is a list of Item pointers.
+type Items []*Item
+
+// Variables is a map of string to string variables for alfred to pass on to a
+// subsquent iteration of a script filter
+type Variables map[string]string
 
 // Item is an Alfred result item
 type Item struct {
@@ -39,6 +40,20 @@ type Item struct {
 
 func (i *Item) String() string {
 	return fmt.Sprintf("%#v", *i)
+}
+
+// AppendItems is shorthand for adding more items to a FilterResult's Items list
+func (result *FilterResult) AppendItems(items ...*Item) {
+	result.Items = append(result.Items, items...)
+}
+
+// SetVariable to set a variable in the result output
+func (result *FilterResult) SetVariable(name, value string) {
+	if result.Variables == nil {
+		result.Variables = &Variables{name: value}
+	} else {
+		(*result.Variables)[name] = value
+	}
 }
 
 // Icon is a custom icon for an item
