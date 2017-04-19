@@ -531,7 +531,7 @@ func queryStart(input string, env envVars) time.Time {
 
 func rpcRequest(query string, cfg *config.Config) (shouldRetry bool, results []string, err error) {
 	if len(cfg.SocketPath) == 0 {
-		return false, results, errors.New("RPC not configured")
+		return false, results, nil // RPC isn't enabled, don't worry about it
 	}
 	sock, err := net.Dial("unix", cfg.SocketPath)
 	if err != nil {
@@ -631,8 +631,6 @@ func retrieveIssueTitle(item *alfred.Item, duration time.Duration, parsed *parse
 		if kind == "PullRequest" {
 			item.Icon = pullRequestIcon
 		}
-	} else {
-		item.Subtitle = "No issue title found."
 	}
 
 	return
@@ -675,8 +673,6 @@ func retrieveIssueSearchItems(item *alfred.Item, duration time.Duration, parsed 
 				Icon:     icon,
 			})
 		}
-	} else {
-		item.Subtitle = "No issues found."
 	}
 
 	return
