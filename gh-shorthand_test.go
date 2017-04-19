@@ -546,14 +546,6 @@ func TestFinalizeResult(t *testing.T) {
 	)
 	finalizeResult(result)
 
-	// test that sorting is by valid and then title
-	for i, title := range []string{
-		"also valid", "valid", "an invalid item", "bother, invalid"} {
-		if result.Items[i].Title != title {
-			t.Errorf("expected item at position %d: %#v to have title %q", i, result.Items[i], title)
-		}
-	}
-
 	// test that Rerun only gets set if a variable's been set
 	if result.Rerun != 0 {
 		t.Errorf("expected result %#v to not have a Rerun value", result)

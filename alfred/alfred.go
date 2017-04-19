@@ -23,20 +23,6 @@ type Items []*Item
 // subsquent iteration of a script filter
 type Variables map[string]string
 
-// ByValidAndTitle type for stable output: sort by title, but prioritize valid entries.
-type ByValidAndTitle Items
-
-func (a ByValidAndTitle) Len() int      { return len(a) }
-func (a ByValidAndTitle) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
-func (a ByValidAndTitle) Less(i, j int) bool {
-	if a[i].Valid && !a[j].Valid {
-		return true
-	} else if !a[i].Valid && a[j].Valid {
-		return false
-	}
-	return a[i].Title < a[j].Title
-}
-
 // Item is an Alfred result item
 type Item struct {
 	UID          string `json:"uid,omitempty"`          // optional unique identifier for alfred to learn from

@@ -10,7 +10,6 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -702,7 +701,6 @@ func getEnvironment() envVars {
 }
 
 func finalizeResult(result *alfred.FilterResult) {
-	sort.Sort(alfred.ByValidAndTitle(result.Items))
 	if result.Variables != nil && len(*result.Variables) > 0 {
 		result.Rerun = rerunAfter
 	}
