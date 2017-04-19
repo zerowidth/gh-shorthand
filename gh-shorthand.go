@@ -30,21 +30,25 @@ const (
 	rerunAfter = 0.1
 	// delay is how long in seconds to wait before showing "processing"
 	delay = 0.1
+	// searchDelay is how long to wait before issuing a search query
+	searchDelay = 0.5
 	// socketTimeout is how long to wait before giving up on the backend
 	socketTimeout = 100 * time.Millisecond
 )
 
 var (
+	githubIcon      = octicon("mark-github")
 	repoIcon        = octicon("repo")
-	issueIcon       = octicon("git-pull-request")
+	pullRequestIcon = octicon("git-pull-request")
 	issueListIcon   = octicon("list-ordered")
 	pathIcon        = octicon("browser")
-	issueSearchIcon = octicon("issue-opened")
+	issueIcon       = octicon("issue-opened")
 	newIssueIcon    = octicon("bug")
 	editorIcon      = octicon("file-code")
 	finderIcon      = octicon("file-directory")
 	terminalIcon    = octicon("terminal")
 	markdownIcon    = octicon("markdown")
+	searchIcon      = octicon("search")
 )
 
 func main() {
@@ -126,7 +130,15 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[
 	case "i":
 		// repo required, no issue or path, query allowed
 		if len(parsed.Repo) > 0 && len(parsed.Issue) == 0 && len(parsed.Path) == 0 {
-			result.AppendItems(openIssueItems(parsed, usedDefault, fullInput)...)
+			if len(parsed.Query) == 0 {
+				result.AppendItems(openIssuesAndSearchItems(parsed, usedDefault, fullInput)...)
+			} else {
+				searchItem := searchIssuesItem(parsed, usedDefault)
+				retry, matches := retrieveIssueSearchItems(searchItem, duration, parsed, cfg)
+				shouldRetry = retry
+				result.AppendItems(searchItem)
+				result.AppendItems(matches...)
+			}
 		}
 
 		if len(input) > 0 && !strings.Contains(input, " ") {
@@ -258,41 +270,36 @@ func openPathItem(path string) *alfred.Item {
 	}
 }
 
-func openIssueItems(parsed *parser.Result, usedDefault bool, fullInput string) (items alfred.Items) {
+func openIssuesAndSearchItems(parsed *parser.Result, usedDefault bool, fullInput string) (items alfred.Items) {
 	extra := parsed.Annotation(usedDefault)
 
-	if len(parsed.Query) == 0 {
-		items = append(items, &alfred.Item{
-			UID:   "ghi:" + parsed.Repo,
-			Title: "Open issues for " + parsed.Repo + extra,
-			Arg:   "open https://github.com/" + parsed.Repo + "/issues",
-			Valid: true,
-			Icon:  issueListIcon,
-		})
-		items = append(items, &alfred.Item{
-			Title:        "Search issues in " + parsed.Repo + extra + " for...",
-			Valid:        false,
-			Icon:         issueSearchIcon,
-			Autocomplete: fullInput + " ",
-		})
-	} else {
-		escaped := url.PathEscape(parsed.Query)
-		arg := "open https://github.com/" + parsed.Repo + "/search?utf8=✓&type=Issues&q=" + escaped
-		items = append(items, &alfred.Item{
-			UID:   "ghis:" + parsed.Repo,
-			Title: "Search issues in " + parsed.Repo + extra + " for " + parsed.Query,
-			Arg:   arg,
-			Valid: true,
-			Icon:  issueSearchIcon,
-		})
-	}
+	items = append(items, &alfred.Item{
+		UID:   "ghi:" + parsed.Repo,
+		Title: "Open issues for " + parsed.Repo + extra,
+		Arg:   "open https://github.com/" + parsed.Repo + "/issues",
+		Valid: true,
+		Icon:  issueListIcon,
+	})
+	items = append(items, &alfred.Item{
+		Title:        "Search issues in " + parsed.Repo + extra + " for...",
+		Valid:        false,
+		Icon:         searchIcon,
+		Autocomplete: fullInput + " ",
+	})
 	return
 }
 
-// extract "extra" helper into func on parser.Result
 func searchIssuesItem(parsed *parser.Result, usedDefault bool) *alfred.Item {
-	// extra := parsed.Annotation(usedDefault)
-	return nil
+	extra := parsed.Annotation(usedDefault)
+	escaped := url.PathEscape(parsed.Query)
+	arg := "open https://github.com/" + parsed.Repo + "/search?utf8=✓&type=Issues&q=" + escaped
+	return &alfred.Item{
+		UID:   "ghis:" + parsed.Repo,
+		Title: "Search issues in " + parsed.Repo + extra + " for " + parsed.Query,
+		Arg:   arg,
+		Valid: true,
+		Icon:  searchIcon,
+	}
 }
 
 func newIssueItem(parsed *parser.Result, usedDefault bool) *alfred.Item {
@@ -433,7 +440,7 @@ func autocompleteIssueReferenceItem(key, repo string) *alfred.Item {
 		Title:        fmt.Sprintf("Insert issue reference to %s#... (%s#...)", repo, key),
 		Valid:        false,
 		Autocomplete: "r " + key + " ",
-		Icon:         issueSearchIcon,
+		Icon:         issueIcon,
 	}
 }
 
@@ -477,7 +484,7 @@ func openEndedIssueReferenceItem(input string) *alfred.Item {
 		Title:        fmt.Sprintf("Insert issue reference to %s...", input),
 		Autocomplete: "r " + input,
 		Valid:        false,
-		Icon:         issueSearchIcon,
+		Icon:         issueIcon,
 	}
 }
 
@@ -605,20 +612,66 @@ func retrieveRepoDescription(item *alfred.Item, duration time.Duration, parsed *
 func retrieveIssueTitle(item *alfred.Item, duration time.Duration, parsed *parser.Result, cfg *config.Config) (shouldRetry bool) {
 	if duration.Seconds() < delay {
 		shouldRetry = true
-	} else {
-		retry, results, err := rpcRequest("issue:"+parsed.Repo+"#"+parsed.Issue, cfg)
-		shouldRetry = retry
-		if err != nil {
-			item.Subtitle = err.Error()
-		} else if shouldRetry {
-			item.Subtitle = ellipsis("Retrieving issue title", duration)
-		} else if len(results) > 0 {
-			item.Subtitle = results[0]
-		} else {
-			item.Subtitle = "No issue title found."
-		}
+		return
 	}
-	return shouldRetry
+
+	retry, results, err := rpcRequest("issue:"+parsed.Repo+"#"+parsed.Issue, cfg)
+	shouldRetry = retry
+	if err != nil {
+		item.Subtitle = err.Error()
+	} else if shouldRetry {
+		item.Subtitle = ellipsis("Retrieving issue title", duration)
+	} else if len(results) > 0 {
+		item.Subtitle = results[0]
+	} else {
+		item.Subtitle = "No issue title found."
+	}
+
+	return
+}
+
+func retrieveIssueSearchItems(item *alfred.Item, duration time.Duration, parsed *parser.Result, cfg *config.Config) (shouldRetry bool, matches alfred.Items) {
+	if duration.Seconds() < searchDelay {
+		shouldRetry = true
+		return
+	}
+
+	retry, results, err := rpcRequest("issuesearch:repo:"+parsed.Repo+" "+parsed.Query, cfg)
+	shouldRetry = retry
+	if err != nil {
+		item.Subtitle = err.Error()
+	} else if shouldRetry {
+		item.Subtitle = ellipsis("Searching issues", duration)
+	} else if len(results) > 0 {
+		for _, result := range results {
+			parts := strings.SplitN(result, ":", 4)
+			if len(parts) != 4 {
+				continue
+			}
+			repo, number, kind, title := parts[0], parts[1], parts[2], parts[3]
+			arg := ""
+			icon := issueIcon
+			if kind == "Issue" {
+				arg = "open https://github.com/" + repo + "/issues/" + number
+			} else {
+				arg = "open https://github.com/" + repo + "/pull/" + number
+				icon = pullRequestIcon
+			}
+
+			// no UID so alfred doesn't remember these
+			matches = append(matches, &alfred.Item{
+				Title:    title,
+				Subtitle: fmt.Sprintf("Open %s#%s", repo, number),
+				Valid:    true,
+				Arg:      arg,
+				Icon:     icon,
+			})
+		}
+	} else {
+		item.Subtitle = "No issues found."
+	}
+
+	return
 }
 
 // octicon is relative to the alfred workflow, so this tells alfred to retrieve
