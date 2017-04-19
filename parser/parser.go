@@ -15,6 +15,21 @@ type Result struct {
 	Query string // the remainder of the input, if not otherwise parsed
 }
 
+// Annotation is a helper for displaying details about a match. Returns a string
+// with a leading space, noting the matched shorthand and issue if applicable.
+func (r *Result) Annotation(usedDefault bool) (ann string) {
+	if len(r.Match) > 0 {
+		ann += " (" + r.Match
+		if len(r.Issue) > 0 {
+			ann += "#" + r.Issue
+		}
+		ann += ")"
+	} else if usedDefault {
+		ann += " (default repo)"
+	}
+	return
+}
+
 // Parse takes a repo mapping and input string and attempts to extract a repo,
 // issue, etc. from the input using the repo map for shorthand expansion.
 func Parse(repoMap map[string]string, input string) *Result {

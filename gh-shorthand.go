@@ -237,15 +237,7 @@ func openRepoItem(parsed *parser.Result, usedDefault bool) *alfred.Item {
 		icon = pathIcon
 	}
 
-	if len(parsed.Match) > 0 {
-		title += " (" + parsed.Match
-		if len(parsed.Issue) > 0 {
-			title += "#" + parsed.Issue
-		}
-		title += ")"
-	} else if usedDefault {
-		title += " (default repo)"
-	}
+	title += parsed.Annotation(usedDefault)
 
 	return &alfred.Item{
 		UID:   uid,
@@ -267,12 +259,7 @@ func openPathItem(path string) *alfred.Item {
 }
 
 func openIssueItems(parsed *parser.Result, usedDefault bool, fullInput string) (items alfred.Items) {
-	extra := ""
-	if len(parsed.Match) > 0 {
-		extra += " (" + parsed.Match + ")"
-	} else if usedDefault {
-		extra += " (default repo)"
-	}
+	extra := parsed.Annotation(usedDefault)
 
 	if len(parsed.Query) == 0 {
 		items = append(items, &alfred.Item{
@@ -302,13 +289,15 @@ func openIssueItems(parsed *parser.Result, usedDefault bool, fullInput string) (
 	return
 }
 
+// extract "extra" helper into func on parser.Result
+func searchIssuesItem(parsed *parser.Result, usedDefault bool) *alfred.Item {
+	// extra := parsed.Annotation(usedDefault)
+	return nil
+}
+
 func newIssueItem(parsed *parser.Result, usedDefault bool) *alfred.Item {
 	title := "New issue in " + parsed.Repo
-	if len(parsed.Match) > 0 {
-		title += " (" + parsed.Match + ")"
-	} else if usedDefault {
-		title += " (default repo)"
-	}
+	title += parsed.Annotation(usedDefault)
 
 	if len(parsed.Query) == 0 {
 		return &alfred.Item{
@@ -346,15 +335,7 @@ func markdownLinkItem(parsed *parser.Result, usedDefault bool) *alfred.Item {
 		icon = issueIcon
 	}
 
-	if len(parsed.Match) > 0 {
-		title += " (" + parsed.Match
-		if len(parsed.Issue) > 0 {
-			title += "#" + parsed.Issue
-		}
-		title += ")"
-	} else if usedDefault {
-		title += " (default repo)"
-	}
+	title += parsed.Annotation(usedDefault)
 
 	return &alfred.Item{
 		UID:   uid,
@@ -376,17 +357,7 @@ func issueReferenceItem(parsed *parser.Result, usedDefault bool) *alfred.Item {
 		title += "#..."
 	}
 
-	if len(parsed.Match) > 0 {
-		title += " (" + parsed.Match
-		if len(parsed.Issue) > 0 {
-			title += "#" + parsed.Issue
-		} else {
-			title += "#..."
-		}
-		title += ")"
-	} else if usedDefault {
-		title += " (default repo)"
-	}
+	title += parsed.Annotation(usedDefault)
 
 	if len(parsed.Issue) > 0 {
 
