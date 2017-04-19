@@ -621,7 +621,16 @@ func retrieveIssueTitle(item *alfred.Item, duration time.Duration, parsed *parse
 	} else if shouldRetry {
 		item.Subtitle = ellipsis("Retrieving issue title", duration)
 	} else if len(results) > 0 {
-		item.Subtitle = results[0]
+		parts := strings.SplitN(results[0], ":", 2)
+		if len(parts) != 2 {
+			return
+		}
+		kind, title := parts[0], parts[1]
+		item.Subtitle = item.Title
+		item.Title = title
+		if kind == "PullRequest" {
+			item.Icon = pullRequestIcon
+		}
 	} else {
 		item.Subtitle = "No issue title found."
 	}
