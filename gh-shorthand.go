@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -48,6 +49,10 @@ var (
 	terminalIcon    = octicon("terminal")
 	markdownIcon    = octicon("markdown")
 	searchIcon      = octicon("search")
+	commitIcon      = octicon("git-commit")
+
+	// the minimum length of 7 is enforced elsewhere
+	sha1Regexp = regexp.MustCompile(`[0-9a-f]{1,40}$`)
 )
 
 func main() {
@@ -99,7 +104,7 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[
 	duration := time.Since(start)
 
 	if len(cfg.DefaultRepo) > 0 && len(parsed.Repo) == 0 && len(parsed.Path) == 0 &&
-		((mode == "i" || mode == "n") || len(parsed.Query) == 0) {
+		((mode == "i" || mode == "n" || mode == "c") || len(parsed.Query) == 0) {
 		parsed.Repo = cfg.DefaultRepo
 		usedDefault = true
 	}
@@ -155,6 +160,26 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[
 			result.AppendItems(
 				autocompleteItems(cfg, input, parsed,
 					autocompleteNewIssueItem, openEndedNewIssueItem)...)
+		}
+	case "c":
+		// repo required, query must look like a SHA of at least 7 hex digits.
+		if len(parsed.Repo) > 0 && len(parsed.Path) == 0 {
+			if len(parsed.Issue) > 0 {
+				parsed.Query = parsed.Issue
+				parsed.Issue = ""
+			}
+			isSHA1 := sha1Regexp.MatchString(parsed.Query)
+			if len(parsed.Query) >= 7 && isSHA1 {
+				result.AppendItems(commitSearchItem(parsed, true, usedDefault))
+			} else if len(parsed.Query) == 0 || isSHA1 {
+				result.AppendItems(commitSearchItem(parsed, false, usedDefault))
+			}
+		}
+
+		if len(input) > 0 && !strings.Contains(input, " ") {
+			result.AppendItems(
+				autocompleteItems(cfg, input, parsed,
+					autocompleteCommitSearchItem, openEndedCommitSearchItem)...)
 		}
 	case "m":
 		// repo required, issue optional
@@ -326,6 +351,35 @@ func newIssueItem(parsed *parser.Result, usedDefault bool) *alfred.Item {
 	}
 }
 
+func commitSearchItem(parsed *parser.Result, validQuery, usedDefault bool) *alfred.Item {
+	title := "Find commit in " + parsed.Repo
+	title += parsed.Annotation(usedDefault)
+
+	if validQuery {
+		escaped := url.PathEscape(parsed.Query)
+		arg := "open https://github.com/" + parsed.Repo + "/search?utf8=✓&type=Issues&q=" + escaped
+		return &alfred.Item{
+			UID:   "ghc:" + parsed.Repo,
+			Title: title + " with SHA1 " + parsed.Query,
+			Arg:   arg,
+			Valid: true,
+			Icon:  commitIcon,
+		}
+	}
+
+	space := ""
+	if len(parsed.Query) > 0 {
+		space = " "
+	}
+
+	return &alfred.Item{
+		Title: title + " with SHA1" + space + parsed.Query + "...",
+		Valid: false,
+		Icon:  commitIcon,
+	}
+
+}
+
 func markdownLinkItem(parsed *parser.Result, usedDefault bool) *alfred.Item {
 	uid := "ghm:" + parsed.Repo
 	title := "Insert Markdown link to " + parsed.Repo
@@ -422,6 +476,15 @@ func autocompleteNewIssueItem(key, repo string) *alfred.Item {
 	}
 }
 
+func autocompleteCommitSearchItem(key, repo string) *alfred.Item {
+	return &alfred.Item{
+		Title:        fmt.Sprintf("Find commit in %s (%s) with SHA1...", repo, key),
+		Valid:        false,
+		Autocomplete: "c " + key + " ",
+		Icon:         commitIcon,
+	}
+}
+
 func autocompleteMarkdownLinkItem(key, repo string) *alfred.Item {
 	return &alfred.Item{
 		UID:          "ghm:" + repo,
@@ -466,6 +529,15 @@ func openEndedNewIssueItem(input string) *alfred.Item {
 		Autocomplete: "n " + input,
 		Valid:        false,
 		Icon:         newIssueIcon,
+	}
+}
+
+func openEndedCommitSearchItem(input string) *alfred.Item {
+	return &alfred.Item{
+		Title:        fmt.Sprintf("Find commit in %s...", input),
+		Autocomplete: "c " + input,
+		Valid:        false,
+		Icon:         commitIcon,
 	}
 }
 

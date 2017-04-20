@@ -213,6 +213,29 @@ func TestCompleteItems(t *testing.T) {
 			title: "New issue in zerowidth/dotfiles (df): foo bar",
 			arg:   "open https://github.com/zerowidth/dotfiles/issues/new?title=foo%20bar",
 		},
+		"search for a commit in a repo": {
+			input: "c df deadbeef",
+			uid:   "ghc:zerowidth/dotfiles",
+			valid: true,
+			title: "Find commit in zerowidth/dotfiles (df) with SHA1 deadbeef",
+			arg:   "open https://github.com/zerowidth/dotfiles/search?utf8=✓&type=Issues&q=deadbeef",
+		},
+		"search for a commit in a repo with no query yet": {
+			input: "c df",
+			valid: false,
+			title: "Find commit in zerowidth/dotfiles (df) with SHA1...",
+		},
+		"search for a commit in a repo with partial query": {
+			input: "c df abcde",
+			valid: false,
+			title: "Find commit in zerowidth/dotfiles (df) with SHA1 abcde...",
+		},
+		"search for a commit with a numeric SHA1": {
+			input: "c df 1234567",
+			valid: true,
+			uid:   "ghc:zerowidth/dotfiles",
+			title: "Find commit in zerowidth/dotfiles (df) with SHA1 1234567",
+		},
 		"markdown link with a repo": {
 			input: "m foo/bar",
 			uid:   "ghm:foo/bar",
@@ -395,6 +418,20 @@ func TestCompleteItems(t *testing.T) {
 			valid: false,
 			title: "New issue in foo...",
 			auto:  "n foo",
+		},
+
+		// commit search autocomplete
+		"autocompletes commit search": {
+			input: "c d",
+			valid: false,
+			title: "Find commit in zerowidth/dotfiles (df) with SHA1...",
+			auto:  "c df ",
+		},
+		"autocompletes commit with open-ended": {
+			input: "c d",
+			valid: false,
+			title: "Find commit in d...",
+			auto:  "c d",
 		},
 
 		"edit project includes fixtures/work/work-foo": {
