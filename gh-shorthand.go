@@ -170,7 +170,11 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[
 			}
 			isSHA1 := sha1Regexp.MatchString(parsed.Query)
 			if len(parsed.Query) >= 7 && isSHA1 {
-				result.AppendItems(commitSearchItem(parsed, true, usedDefault))
+				searchItem := commitSearchItem(parsed, true, usedDefault)
+				retry, matches := retrieveIssueSearchItems(searchItem, duration, parsed, cfg)
+				shouldRetry = retry
+				result.AppendItems(searchItem)
+				result.AppendItems(matches...)
 			} else if len(parsed.Query) == 0 || isSHA1 {
 				result.AppendItems(commitSearchItem(parsed, false, usedDefault))
 			}
