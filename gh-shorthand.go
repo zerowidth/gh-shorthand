@@ -194,11 +194,9 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[
 			result.AppendItems(openPathItem(parsed.Path))
 		}
 
-		if len(input) > 0 && !strings.Contains(input, " ") {
-			result.AppendItems(
-				autocompleteItems(cfg, input, parsed,
-					autocompleteOpenItem, openEndedOpenItem)...)
-		}
+		result.AppendItems(
+			autocompleteItems(cfg, input, parsed,
+				autocompleteOpenItem, openEndedOpenItem)...)
 	case "i":
 		// repo required, no issue or path, query allowed
 		if len(parsed.Repo) > 0 && len(parsed.Issue) == 0 && len(parsed.Path) == 0 {
@@ -213,22 +211,18 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[
 			}
 		}
 
-		if len(input) > 0 && !strings.Contains(input, " ") {
-			result.AppendItems(
-				autocompleteItems(cfg, input, parsed,
-					autocompleteIssueItem, openEndedIssueItem)...)
-		}
+		result.AppendItems(
+			autocompleteItems(cfg, input, parsed,
+				autocompleteIssueItem, openEndedIssueItem)...)
 	case "n":
 		// repo required, no issue or path, query allowed
 		if len(parsed.Repo) > 0 && len(parsed.Issue) == 0 && len(parsed.Path) == 0 {
 			result.AppendItems(newIssueItem(parsed, usedDefault))
 		}
 
-		if len(input) > 0 && !strings.Contains(input, " ") {
-			result.AppendItems(
-				autocompleteItems(cfg, input, parsed,
-					autocompleteNewIssueItem, openEndedNewIssueItem)...)
-		}
+		result.AppendItems(
+			autocompleteItems(cfg, input, parsed,
+				autocompleteNewIssueItem, openEndedNewIssueItem)...)
 	case "c":
 		// repo required, query must look like a SHA of at least 7 hex digits.
 		if len(parsed.Repo) > 0 && len(parsed.Path) == 0 {
@@ -248,33 +242,27 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[
 			}
 		}
 
-		if len(input) > 0 && !strings.Contains(input, " ") {
-			result.AppendItems(
-				autocompleteItems(cfg, input, parsed,
-					autocompleteCommitSearchItem, openEndedCommitSearchItem)...)
-		}
+		result.AppendItems(
+			autocompleteItems(cfg, input, parsed,
+				autocompleteCommitSearchItem, openEndedCommitSearchItem)...)
 	case "m":
 		// repo required, issue optional
 		if len(parsed.Repo) > 0 && len(parsed.Path) == 0 && len(parsed.Query) == 0 {
 			result.AppendItems(markdownLinkItem(parsed, usedDefault))
 		}
 
-		if len(input) > 0 && !strings.Contains(input, " ") {
-			result.AppendItems(
-				autocompleteItems(cfg, input, parsed,
-					autocompleteMarkdownLinkItem, openEndedMarkdownLinkItem)...)
-		}
+		result.AppendItems(
+			autocompleteItems(cfg, input, parsed,
+				autocompleteMarkdownLinkItem, openEndedMarkdownLinkItem)...)
 	case "r":
 		// repo required, issue required (issue handled in issueReferenceItem)
 		if len(parsed.Repo) > 0 && len(parsed.Path) == 0 && len(parsed.Query) == 0 {
 			result.AppendItems(issueReferenceItem(parsed, usedDefault))
 		}
 
-		if len(input) > 0 && !strings.Contains(input, " ") {
-			result.AppendItems(
-				autocompleteItems(cfg, input, parsed,
-					autocompleteIssueReferenceItem, openEndedIssueReferenceItem)...)
-		}
+		result.AppendItems(
+			autocompleteItems(cfg, input, parsed,
+				autocompleteIssueReferenceItem, openEndedIssueReferenceItem)...)
 	case "e":
 		result.AppendItems(
 			actionItems(cfg.ProjectDirMap(), input, "ghe", "edit", "Edit", editorIcon)...)
@@ -633,9 +621,14 @@ func openEndedIssueReferenceItem(input string) *alfred.Item {
 func autocompleteItems(cfg *config.Config, input string, parsed *parser.Result,
 	autocompleteItem func(string, string) *alfred.Item,
 	openEndedItem func(string) *alfred.Item) (items alfred.Items) {
-	for key, repo := range cfg.RepoMap {
-		if strings.HasPrefix(key, input) && key != parsed.Match && repo != parsed.Repo {
-			items = append(items, autocompleteItem(key, repo))
+	if strings.Contains(input, " ") {
+		return
+	}
+	if len(input) > 0 {
+		for key, repo := range cfg.RepoMap {
+			if strings.HasPrefix(key, input) && key != parsed.Match && repo != parsed.Repo {
+				items = append(items, autocompleteItem(key, repo))
+			}
 		}
 	}
 
