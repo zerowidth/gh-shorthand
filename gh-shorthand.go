@@ -804,7 +804,7 @@ func retrieveIssueSearchItems(item *alfred.Item, duration time.Duration, parsed 
 
 			// no UID so alfred doesn't remember these
 			matches = append(matches, &alfred.Item{
-				Title:    title,
+				Title:    fmt.Sprintf("#%s %s", number, title),
 				Subtitle: fmt.Sprintf("Open %s#%s", repo, number),
 				Valid:    true,
 				Arg:      arg,
