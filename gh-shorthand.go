@@ -51,6 +51,12 @@ var (
 	searchIcon      = octicon("search")
 	commitIcon      = octicon("git-commit")
 
+	issueIconOpen         = octicon("issue-opened_open")
+	issueIconClosed       = octicon("issue-closed_closed")
+	pullRequestIconOpen   = octicon("git-pull-request_open")
+	pullRequestIconClosed = octicon("git-pull-request_closed")
+	pullRequestIconMerged = octicon("git-merge_merged")
+
 	// the minimum length of 7 is enforced elsewhere
 	sha1Regexp = regexp.MustCompile(`[0-9a-f]{1,40}$`)
 )
@@ -696,16 +702,14 @@ func retrieveIssueTitle(item *alfred.Item, duration time.Duration, parsed *parse
 	} else if shouldRetry {
 		item.Subtitle = ellipsis("Retrieving issue title", duration)
 	} else if len(results) > 0 {
-		parts := strings.SplitN(results[0], ":", 2)
-		if len(parts) != 2 {
+		parts := strings.SplitN(results[0], ":", 3)
+		if len(parts) != 3 {
 			return
 		}
-		kind, title := parts[0], parts[1]
+		kind, state, title := parts[0], parts[1], parts[2]
 		item.Subtitle = item.Title
 		item.Title = title
-		if kind == "PullRequest" {
-			item.Icon = pullRequestIcon
-		}
+		item.Icon = issueStateIcon(kind, state)
 	}
 
 	return
@@ -725,18 +729,16 @@ func retrieveIssueSearchItems(item *alfred.Item, duration time.Duration, parsed 
 		item.Subtitle = ellipsis("Searching issues", duration)
 	} else if len(results) > 0 {
 		for _, result := range results {
-			parts := strings.SplitN(result, ":", 4)
-			if len(parts) != 4 {
+			parts := strings.SplitN(result, ":", 5)
+			if len(parts) != 5 {
 				continue
 			}
-			repo, number, kind, title := parts[0], parts[1], parts[2], parts[3]
+			repo, number, kind, state, title := parts[0], parts[1], parts[2], parts[3], parts[4]
 			arg := ""
-			icon := issueIcon
 			if kind == "Issue" {
 				arg = "open https://github.com/" + repo + "/issues/" + number
 			} else {
 				arg = "open https://github.com/" + repo + "/pull/" + number
-				icon = pullRequestIcon
 			}
 
 			// no UID so alfred doesn't remember these
@@ -745,7 +747,7 @@ func retrieveIssueSearchItems(item *alfred.Item, duration time.Duration, parsed 
 				Subtitle: fmt.Sprintf("Open %s#%s", repo, number),
 				Valid:    true,
 				Arg:      arg,
-				Icon:     icon,
+				Icon:     issueStateIcon(kind, state),
 			})
 		}
 	}
@@ -759,6 +761,26 @@ func octicon(name string) *alfred.Icon {
 	return &alfred.Icon{
 		Path: fmt.Sprintf("octicons-%s.png", name),
 	}
+}
+
+func issueStateIcon(kind, state string) *alfred.Icon {
+	switch kind {
+	case "Issue":
+		if state == "OPEN" {
+			return issueIconOpen
+		}
+		return issueIconClosed
+	case "PullRequest":
+		switch state {
+		case "OPEN":
+			return pullRequestIconOpen
+		case "CLOSED":
+			return pullRequestIconClosed
+		case "MERGED":
+			return pullRequestIconMerged
+		}
+	}
+	return issueIcon // sane default
 }
 
 func errorItem(context, msg string) *alfred.Item {
