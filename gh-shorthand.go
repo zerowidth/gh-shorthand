@@ -199,7 +199,11 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[
 				autocompleteOpenItem, openEndedOpenItem)...)
 	case "i":
 		// repo required, no issue or path, query allowed
-		if len(parsed.Repo) > 0 && len(parsed.Issue) == 0 && len(parsed.Path) == 0 {
+		if len(parsed.Repo) > 0 && len(parsed.Path) == 0 {
+			if len(parsed.Issue) > 0 {
+				parsed.Query = parsed.Issue
+				parsed.Issue = ""
+			}
 			if len(parsed.Query) == 0 {
 				result.AppendItems(openIssuesAndSearchItems(parsed, usedDefault, fullInput)...)
 			} else {

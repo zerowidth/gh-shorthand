@@ -243,6 +243,12 @@ func TestCompleteItems(t *testing.T) {
 			title: "Search issues in zerowidth/dotfiles (df) for foo bar",
 			arg:   "open https://github.com/zerowidth/dotfiles/search?utf8=✓&type=Issues&q=foo%20bar",
 		},
+		"search issues for a numeric string on a repo": {
+			input: "i a/b 12345",
+			uid:   "ghis:a/b",
+			valid: true,
+			title: "Search issues in a/b for 12345",
+		},
 
 		// new issue
 		"open a new issue in a shorthand repo": {
