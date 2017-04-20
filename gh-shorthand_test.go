@@ -551,6 +551,8 @@ func validateItems(t *testing.T, items alfred.Items) {
 			if len(item.Arg) == 0 {
 				t.Errorf("%+v is valid but missing its arg", item)
 			}
+		} else if len(item.UID) > 0 {
+			t.Errorf("%+v is not valid but has a UID", item)
 		}
 		if len(item.UID) > 0 {
 			if _, ok := uids[item.UID]; ok {

@@ -498,7 +498,6 @@ func autocompleteMarkdownLinkItem(key, repo string) *alfred.Item {
 
 func autocompleteIssueReferenceItem(key, repo string) *alfred.Item {
 	return &alfred.Item{
-		UID:          "ghr:" + repo,
 		Title:        fmt.Sprintf("Insert issue reference to %s#... (%s#...)", repo, key),
 		Valid:        false,
 		Autocomplete: "r " + key + " ",
