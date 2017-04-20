@@ -27,15 +27,6 @@ var defaultInMap = &config.Config{
 
 var emptyConfig = &config.Config{}
 
-func TestDefaults(t *testing.T) {
-	env := envVars{}
-	result := alfred.NewFilterResult()
-	appendParsedItems(result, cfg, env, "")
-	if len(result.Items) > 0 {
-		t.Errorf("expected default result to be empty, got %#v", result.Items)
-	}
-}
-
 type completeTestCase struct {
 	input   string         // input string
 	uid     string         // the results must contain an entry with this uid
@@ -99,6 +90,68 @@ func TestCompleteItems(t *testing.T) {
 	// the given UID or title. All items are also validated for correctness and
 	// uniqueness by UID.
 	for desc, tc := range map[string]completeTestCase{
+
+		// defaults
+		"empty input shows open repo/issue default": {
+			input: "",
+			title: "Open repositories and issues on GitHub",
+			auto:  " ",
+		},
+		"empty input shows issue list/search default": {
+			input: "",
+			title: "List and search issues on GitHub",
+			auto:  "i ",
+		},
+		"empty input shows new issue default": {
+			input: "",
+			title: "New issue on GitHub",
+			auto:  "n ",
+		},
+		"empty input shows commit default": {
+			input: "",
+			title: "Find a commit in a GitHub repository",
+			auto:  "c ",
+		},
+		"empty input shows markdown link default": {
+			input: "",
+			title: "Insert Markdown link to a GitHub repository or issue",
+			auto:  "m ",
+		},
+		"empty input shows issue reference default": {
+			input: "",
+			title: "Insert issue reference shorthand for a GitHub repository or issue",
+			auto:  "r ",
+		},
+		"empty input shows edit project default": {
+			input: "",
+			title: "Edit a local project",
+			auto:  "e ",
+		},
+		"empty input shows open finder default": {
+			input: "",
+			title: "Open a project directory in Finder",
+			auto:  "o ",
+		},
+		"empty input shows open terminal default": {
+			input: "",
+			title: "Open terminal in a project",
+			auto:  "t ",
+		},
+		"a mode char by itself shows the default repo": {
+			input: "m",
+			uid:   "ghm:zerowidth/default",
+			valid: true,
+		},
+		"a mode char followed by a space shows the default repo": {
+			input: "m ",
+			uid:   "ghm:zerowidth/default",
+			valid: true,
+		},
+		"a mode char followed by a non-space shows nothing": {
+			input:   "mx",
+			exclude: "ghm:zerowidth/default",
+		},
+
 		// basic parsing tests
 		"open a shorthand repo": {
 			input: " df",
@@ -374,6 +427,12 @@ func TestCompleteItems(t *testing.T) {
 			title: "Open d...",
 			valid: false,
 		},
+		"autocomplete open-ended when no default": {
+			cfg:   emptyConfig,
+			input: " ",
+			title: "Open ...",
+			valid: false,
+		},
 		"autocomplete unmatched user prefix": {
 			input: " foo/",
 			title: "Open foo/...",
@@ -403,6 +462,12 @@ func TestCompleteItems(t *testing.T) {
 			title: "Open issues for foo...",
 			auto:  "i foo",
 		},
+		"autocomplete issues open-ended when no default": {
+			cfg:   emptyConfig,
+			input: "i ",
+			title: "Open issues for ...",
+			valid: false,
+		},
 
 		// new issue autocomplete
 		"autocompletes for new issue": {
@@ -419,6 +484,12 @@ func TestCompleteItems(t *testing.T) {
 			title: "New issue in foo...",
 			auto:  "n foo",
 		},
+		"autocomplete new issue open-ended when no default": {
+			cfg:   emptyConfig,
+			input: "n ",
+			title: "New issue in ...",
+			valid: false,
+		},
 
 		// commit search autocomplete
 		"autocompletes commit search": {
@@ -432,6 +503,12 @@ func TestCompleteItems(t *testing.T) {
 			valid: false,
 			title: "Find commit in d...",
 			auto:  "c d",
+		},
+		"autocomplete commit open-ended when no default": {
+			cfg:   emptyConfig,
+			input: "c ",
+			title: "Find commit in ...",
+			valid: false,
 		},
 
 		"edit project includes fixtures/work/work-foo": {
@@ -532,7 +609,7 @@ func TestCompleteItems(t *testing.T) {
 			exclude: "ghe:fixtures/projects/project-bar",
 		},
 	} {
-		t.Run(fmt.Sprintf("generateItems(%#v): %s", tc.input, desc), tc.testItem)
+		t.Run(fmt.Sprintf("appendParsedItems(%#v): %s", tc.input, desc), tc.testItem)
 	}
 }
 
