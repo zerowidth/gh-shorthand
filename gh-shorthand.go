@@ -3,7 +3,6 @@ package main
 import (
 	"bufio"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"net"
@@ -16,6 +15,7 @@ import (
 	"time"
 
 	homedir "github.com/mitchellh/go-homedir"
+	"github.com/pkg/errors"
 	"github.com/renstrom/fuzzysearch/fuzzy"
 	"github.com/zerowidth/gh-shorthand/alfred"
 	"github.com/zerowidth/gh-shorthand/config"
@@ -673,15 +673,15 @@ func rpcRequest(query string, cfg *config.Config) (shouldRetry bool, results []s
 	}
 	sock, err := net.Dial("unix", cfg.SocketPath)
 	if err != nil {
-		return false, results, fmt.Errorf("Could not connect to %s: %s", cfg.SocketPath, err)
+		return false, results, err
 	}
 	defer sock.Close()
 	if err := sock.SetDeadline(time.Now().Add(socketTimeout)); err != nil {
-		return false, results, fmt.Errorf("Could not set socket timeout: %s: %s", cfg.SocketPath, err)
+		return false, results, err
 	}
 	// write query to socket:
 	if _, err := sock.Write([]byte(query + "\n")); err != nil {
-		return false, results, fmt.Errorf("Could not send query: %s", err)
+		return false, results, err
 	}
 	// now, read results:
 	scanner := bufio.NewScanner(sock)
@@ -707,15 +707,15 @@ func rpcRequest(query string, cfg *config.Config) (shouldRetry bool, results []s
 			return false, results, err
 		default:
 			if err := scanner.Err(); err != nil {
-				return false, results, fmt.Errorf("Error when reading RPC response: %s", err)
+				return false, results, errors.Wrap(err, "Could not read RPC response")
 			}
-			return false, results, fmt.Errorf("Unexpected RPC response status: %s", status)
+			return false, results, errors.Wrap(err, "Unexpected RPC response status")
 		}
 	} else {
 		if err := scanner.Err(); err != nil {
-			return false, results, fmt.Errorf("Error when reading RPC response: %s", err)
+			return false, results, errors.Wrap(err, "Could not read RPC response")
 		}
-		return false, results, fmt.Errorf("Error: no response from RPC backend: %s", err)
+		return false, results, errors.Wrap(err, "No response from RPC backend")
 	}
 }
 
