@@ -59,6 +59,52 @@ var (
 
 	// the minimum length of 7 is enforced elsewhere
 	sha1Regexp = regexp.MustCompile(`[0-9a-f]{1,40}$`)
+
+	repoDefaultItem = &alfred.Item{
+		Title:        "Open repositories and issues on GitHub",
+		Autocomplete: " ",
+		Icon:         repoIcon,
+	}
+	issueListDefaultItem = &alfred.Item{
+		Title:        "List and search issues on GitHub",
+		Autocomplete: "i ",
+		Icon:         issueListIcon,
+	}
+	newIssueDefaultItem = &alfred.Item{
+		Title:        "New issue on GitHub",
+		Autocomplete: "n ",
+		Icon:         newIssueIcon,
+	}
+	commitDefaultItem = &alfred.Item{
+		Title:        "Find a commit in a GitHub repository",
+		Autocomplete: "c ",
+		Icon:         commitIcon,
+	}
+	markdownLinkDefaultItem = &alfred.Item{
+		Title:        "Insert Markdown link to a GitHub repository or issue",
+		Autocomplete: "m ",
+		Icon:         markdownIcon,
+	}
+	issueReferenceDefaultItem = &alfred.Item{
+		Title:        "Insert issue reference shorthand for a GitHub repository or issue",
+		Autocomplete: "r ",
+		Icon:         issueIcon,
+	}
+	editProjectDefaultItem = &alfred.Item{
+		Title:        "Edit a local project",
+		Autocomplete: "e ",
+		Icon:         editorIcon,
+	}
+	openFinderDefaultItem = &alfred.Item{
+		Title:        "Open a project directory in Finder",
+		Autocomplete: "o ",
+		Icon:         finderIcon,
+	}
+	openTerminalDefaultItem = &alfred.Item{
+		Title:        "Open terminal in a project",
+		Autocomplete: "t ",
+		Icon:         terminalIcon,
+	}
 )
 
 func main() {
@@ -87,10 +133,6 @@ func main() {
 func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[string]string, input string) {
 	fullInput := input
 
-	if len(input) == 0 {
-		return
-	}
-
 	// input includes leading space or leading mode char followed by a space
 	var mode string
 	if len(input) > 1 && input[0:1] != " " {
@@ -116,6 +158,19 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[
 	}
 
 	switch mode {
+	case "": // no input, show default items
+		result.AppendItems(
+			repoDefaultItem,
+			issueListDefaultItem,
+			newIssueDefaultItem,
+			commitDefaultItem,
+			markdownLinkDefaultItem,
+			issueReferenceDefaultItem,
+			editProjectDefaultItem,
+			openFinderDefaultItem,
+			openTerminalDefaultItem,
+		)
+
 	case " ": // open repo, issue, and/or path
 		// repo required, no query allowed
 		if len(parsed.Repo) > 0 && len(parsed.Query) == 0 {
