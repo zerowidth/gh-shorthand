@@ -273,10 +273,10 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[
 			actionItems(cfg.ProjectDirMap(), input, "ghe", "edit", "Edit", editorIcon)...)
 	case "o":
 		result.AppendItems(
-			actionItems(cfg.ProjectDirMap(), input, "gho", "finder", "Open Finder in", editorIcon)...)
+			actionItems(cfg.ProjectDirMap(), input, "gho", "finder", "Open Finder in", finderIcon)...)
 	case "t":
 		result.AppendItems(
-			actionItems(cfg.ProjectDirMap(), input, "ght", "term", "Open terminal in", editorIcon)...)
+			actionItems(cfg.ProjectDirMap(), input, "ght", "term", "Open terminal in", terminalIcon)...)
 	}
 
 	// if any RPC-decorated items require a re-invocation of the script, save that
