@@ -570,6 +570,7 @@ func openEndedOpenItem(input string) *alfred.Item {
 		Title:        fmt.Sprintf("Open %s...", input),
 		Autocomplete: " " + input,
 		Valid:        false,
+		Icon:         repoIcon,
 	}
 }
 
