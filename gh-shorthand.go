@@ -135,12 +135,19 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[
 
 	// input includes leading space or leading mode char followed by a space
 	var mode string
-	if len(input) > 1 && input[0:1] != " " {
+	if len(input) > 1 {
 		mode = input[0:1]
-		input = input[2:]
-	} else if len(input) > 0 && input[0:1] == " " {
-		mode = " "
-		input = input[1:]
+		if mode == " " {
+			input = input[1:]
+		} else {
+			if input[1:2] != " " {
+				return
+			}
+			input = input[2:]
+		}
+	} else if len(input) > 0 {
+		mode = input[0:1]
+		input = ""
 	}
 
 	parsed := parser.Parse(cfg.RepoMap, input)

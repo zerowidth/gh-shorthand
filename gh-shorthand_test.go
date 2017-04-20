@@ -137,6 +137,20 @@ func TestCompleteItems(t *testing.T) {
 			title: "Open terminal in a project",
 			auto:  "t ",
 		},
+		"a mode char by itself shows the default repo": {
+			input: "m",
+			uid:   "ghm:zerowidth/default",
+			valid: true,
+		},
+		"a mode char followed by a space shows the default repo": {
+			input: "m ",
+			uid:   "ghm:zerowidth/default",
+			valid: true,
+		},
+		"a mode char followed by a non-space shows nothing": {
+			input:   "mx",
+			exclude: "ghm:zerowidth/default",
+		},
 
 		// basic parsing tests
 		"open a shorthand repo": {
