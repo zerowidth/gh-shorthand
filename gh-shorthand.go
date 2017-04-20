@@ -624,6 +624,7 @@ func autocompleteItems(cfg *config.Config, input string, parsed *parser.Result,
 	if strings.Contains(input, " ") {
 		return
 	}
+
 	if len(input) > 0 {
 		for key, repo := range cfg.RepoMap {
 			if strings.HasPrefix(key, input) && key != parsed.Match && repo != parsed.Repo {
@@ -632,7 +633,7 @@ func autocompleteItems(cfg *config.Config, input string, parsed *parser.Result,
 		}
 	}
 
-	if len(input) > 0 && parsed.Repo != input {
+	if len(input) == 0 || parsed.Repo != input {
 		items = append(items, openEndedItem(input))
 	}
 	return

@@ -427,6 +427,12 @@ func TestCompleteItems(t *testing.T) {
 			title: "Open d...",
 			valid: false,
 		},
+		"autocomplete open-ended when no default": {
+			cfg:   emptyConfig,
+			input: " ",
+			title: "Open ...",
+			valid: false,
+		},
 		"autocomplete unmatched user prefix": {
 			input: " foo/",
 			title: "Open foo/...",
@@ -456,6 +462,12 @@ func TestCompleteItems(t *testing.T) {
 			title: "Open issues for foo...",
 			auto:  "i foo",
 		},
+		"autocomplete issues open-ended when no default": {
+			cfg:   emptyConfig,
+			input: "i ",
+			title: "Open issues for ...",
+			valid: false,
+		},
 
 		// new issue autocomplete
 		"autocompletes for new issue": {
@@ -472,6 +484,12 @@ func TestCompleteItems(t *testing.T) {
 			title: "New issue in foo...",
 			auto:  "n foo",
 		},
+		"autocomplete new issue open-ended when no default": {
+			cfg:   emptyConfig,
+			input: "n ",
+			title: "New issue in ...",
+			valid: false,
+		},
 
 		// commit search autocomplete
 		"autocompletes commit search": {
@@ -485,6 +503,12 @@ func TestCompleteItems(t *testing.T) {
 			valid: false,
 			title: "Find commit in d...",
 			auto:  "c d",
+		},
+		"autocomplete commit open-ended when no default": {
+			cfg:   emptyConfig,
+			input: "c ",
+			title: "Find commit in ...",
+			valid: false,
 		},
 
 		"edit project includes fixtures/work/work-foo": {
