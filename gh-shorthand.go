@@ -203,9 +203,10 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[
 				parsed.Issue = ""
 			}
 			if len(parsed.Query) == 0 {
-				result.AppendItems(openIssuesAndSearchItems(parsed, fullInput)...)
+				result.AppendItems(openIssuesItem(parsed))
+				result.AppendItems(searchIssuesItem(parsed, fullInput))
 			} else {
-				searchItem := searchIssuesItem(parsed)
+				searchItem := searchIssuesItem(parsed, fullInput)
 				retry, matches := retrieveIssueSearchItems(searchItem, duration, parsed, cfg)
 				shouldRetry = retry
 				result.AppendItems(searchItem)
@@ -356,35 +357,36 @@ func openPathItem(path string) *alfred.Item {
 	}
 }
 
-func openIssuesAndSearchItems(parsed *parser.Result, fullInput string) (items alfred.Items) {
-	extra := parsed.Annotation()
-
-	items = append(items, &alfred.Item{
+func openIssuesItem(parsed *parser.Result) (item *alfred.Item) {
+	return &alfred.Item{
 		UID:   "ghi:" + parsed.Repo,
-		Title: "Open issues for " + parsed.Repo + extra,
+		Title: "Open issues for " + parsed.Repo + parsed.Annotation(),
 		Arg:   "open https://github.com/" + parsed.Repo + "/issues",
 		Valid: true,
 		Icon:  issueListIcon,
-	})
-	items = append(items, &alfred.Item{
+	}
+}
+
+func searchIssuesItem(parsed *parser.Result, fullInput string) *alfred.Item {
+	extra := parsed.Annotation()
+
+	if len(parsed.Query) > 0 {
+		escaped := url.PathEscape(parsed.Query)
+		arg := "open https://github.com/" + parsed.Repo + "/search?utf8=✓&type=Issues&q=" + escaped
+		return &alfred.Item{
+			UID:   "ghis:" + parsed.Repo,
+			Title: "Search issues in " + parsed.Repo + extra + " for " + parsed.Query,
+			Arg:   arg,
+			Valid: true,
+			Icon:  searchIcon,
+		}
+	}
+
+	return &alfred.Item{
 		Title:        "Search issues in " + parsed.Repo + extra + " for...",
 		Valid:        false,
 		Icon:         searchIcon,
 		Autocomplete: fullInput + " ",
-	})
-	return
-}
-
-func searchIssuesItem(parsed *parser.Result) *alfred.Item {
-	extra := parsed.Annotation()
-	escaped := url.PathEscape(parsed.Query)
-	arg := "open https://github.com/" + parsed.Repo + "/search?utf8=✓&type=Issues&q=" + escaped
-	return &alfred.Item{
-		UID:   "ghis:" + parsed.Repo,
-		Title: "Search issues in " + parsed.Repo + extra + " for " + parsed.Query,
-		Arg:   arg,
-		Valid: true,
-		Icon:  searchIcon,
 	}
 }
 
