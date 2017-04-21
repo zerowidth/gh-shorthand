@@ -34,7 +34,7 @@ type Item struct {
 	Autocomplete string `json:"autocomplete,omitempty"` // recommended string to autocomplete with tab key
 	// Type string // "default", "file", "file:skipcheck" to treat the result as a file
 	// Mod Modifier // optional modifier keys object
-	// Text string // optional text if copied to clipboard or displayed as large text
+	Text *Text `json:"text,omitempty"` // optional text if copied to clipboard or displayed as large text
 	// Quicklook string // optional url for quicklook
 }
 
@@ -60,4 +60,10 @@ func (result *FilterResult) SetVariable(name, value string) {
 type Icon struct {
 	Path string `json:"path"`           // the path to a file
 	Type string `json:"type,omitempty"` // optional, "fileicon" for a path, "filetype" for a specific file
+}
+
+// Text defines copy text and/or large type display
+type Text struct {
+	Copy      string `json:"copy,omitempty"`
+	LargeType string `json:"largetype,omitempty"`
 }
