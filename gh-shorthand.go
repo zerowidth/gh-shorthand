@@ -28,11 +28,15 @@ const (
 	// rerunAfter defines how soon the alfred filter is invoked again.
 	// This number is an ideal, so true delay must be measured externally.
 	rerunAfter = 0.1
-	// delay is how long in seconds to wait before showing "processing"
+
+	// how long in seconds to wait before requesting repo title or issue details
 	delay = 0.1
-	// searchDelay is how long to wait before issuing a search query
+	// how long to wait before issuing a search query
 	searchDelay = 0.5
-	// socketTimeout is how long to wait before giving up on the backend
+	// how long to wait before listing recent issues in a repo
+	issueListDelay = 1.0
+
+	// how long to wait before giving up on the backend
 	socketTimeout = 100 * time.Millisecond
 )
 
@@ -203,9 +207,14 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[
 				parsed.Issue = ""
 			}
 			if len(parsed.Query) == 0 {
-				result.AppendItems(openIssuesAndSearchItems(parsed, fullInput)...)
+				issuesItem := openIssuesItem(parsed)
+				retry, matches := retrieveIssueList(issuesItem, duration, parsed, cfg)
+				shouldRetry = retry
+				result.AppendItems(issuesItem)
+				result.AppendItems(searchIssuesItem(parsed, fullInput))
+				result.AppendItems(matches...)
 			} else {
-				searchItem := searchIssuesItem(parsed)
+				searchItem := searchIssuesItem(parsed, fullInput)
 				retry, matches := retrieveIssueSearchItems(searchItem, duration, parsed, cfg)
 				shouldRetry = retry
 				result.AppendItems(searchItem)
@@ -356,35 +365,36 @@ func openPathItem(path string) *alfred.Item {
 	}
 }
 
-func openIssuesAndSearchItems(parsed *parser.Result, fullInput string) (items alfred.Items) {
-	extra := parsed.Annotation()
-
-	items = append(items, &alfred.Item{
+func openIssuesItem(parsed *parser.Result) (item *alfred.Item) {
+	return &alfred.Item{
 		UID:   "ghi:" + parsed.Repo,
-		Title: "Open issues for " + parsed.Repo + extra,
+		Title: "Open issues for " + parsed.Repo + parsed.Annotation(),
 		Arg:   "open https://github.com/" + parsed.Repo + "/issues",
 		Valid: true,
 		Icon:  issueListIcon,
-	})
-	items = append(items, &alfred.Item{
+	}
+}
+
+func searchIssuesItem(parsed *parser.Result, fullInput string) *alfred.Item {
+	extra := parsed.Annotation()
+
+	if len(parsed.Query) > 0 {
+		escaped := url.PathEscape(parsed.Query)
+		arg := "open https://github.com/" + parsed.Repo + "/search?utf8=✓&type=Issues&q=" + escaped
+		return &alfred.Item{
+			UID:   "ghis:" + parsed.Repo,
+			Title: "Search issues in " + parsed.Repo + extra + " for " + parsed.Query,
+			Arg:   arg,
+			Valid: true,
+			Icon:  searchIcon,
+		}
+	}
+
+	return &alfred.Item{
 		Title:        "Search issues in " + parsed.Repo + extra + " for...",
 		Valid:        false,
 		Icon:         searchIcon,
 		Autocomplete: fullInput + " ",
-	})
-	return
-}
-
-func searchIssuesItem(parsed *parser.Result) *alfred.Item {
-	extra := parsed.Annotation()
-	escaped := url.PathEscape(parsed.Query)
-	arg := "open https://github.com/" + parsed.Repo + "/search?utf8=✓&type=Issues&q=" + escaped
-	return &alfred.Item{
-		UID:   "ghis:" + parsed.Repo,
-		Title: "Search issues in " + parsed.Repo + extra + " for " + parsed.Query,
-		Arg:   arg,
-		Valid: true,
-		Icon:  searchIcon,
 	}
 }
 
@@ -787,30 +797,54 @@ func retrieveIssueSearchItems(item *alfred.Item, duration time.Duration, parsed 
 	} else if shouldRetry {
 		item.Subtitle = ellipsis("Searching issues", duration)
 	} else if len(results) > 0 {
-		for _, result := range results {
-			parts := strings.SplitN(result, ":", 5)
-			if len(parts) != 5 {
-				continue
-			}
-			repo, number, kind, state, title := parts[0], parts[1], parts[2], parts[3], parts[4]
-			arg := ""
-			if kind == "Issue" {
-				arg = "open https://github.com/" + repo + "/issues/" + number
-			} else {
-				arg = "open https://github.com/" + repo + "/pull/" + number
-			}
-
-			// no UID so alfred doesn't remember these
-			matches = append(matches, &alfred.Item{
-				Title:    fmt.Sprintf("#%s %s", number, title),
-				Subtitle: fmt.Sprintf("Open %s#%s", repo, number),
-				Valid:    true,
-				Arg:      arg,
-				Icon:     issueStateIcon(kind, state),
-			})
-		}
+		matches = append(matches, issueItemsFromResults(results)...)
 	}
 
+	return
+}
+
+func retrieveIssueList(item *alfred.Item, duration time.Duration, parsed *parser.Result, cfg *config.Config) (shouldRetry bool, matches alfred.Items) {
+	if duration.Seconds() < issueListDelay {
+		shouldRetry = true
+		return
+	}
+
+	retry, results, err := rpcRequest("issuesearch:repo:"+parsed.Repo+" sort:updated-desc", cfg)
+	shouldRetry = retry
+	if err != nil {
+		item.Subtitle = err.Error()
+	} else if shouldRetry {
+		item.Subtitle = ellipsis("Retrieving recent issues", duration)
+	} else if len(results) > 0 {
+		matches = append(matches, issueItemsFromResults(results)...)
+	}
+
+	return
+}
+
+func issueItemsFromResults(results []string) (matches alfred.Items) {
+	for _, result := range results {
+		parts := strings.SplitN(result, ":", 5)
+		if len(parts) != 5 {
+			continue
+		}
+		repo, number, kind, state, title := parts[0], parts[1], parts[2], parts[3], parts[4]
+		arg := ""
+		if kind == "Issue" {
+			arg = "open https://github.com/" + repo + "/issues/" + number
+		} else {
+			arg = "open https://github.com/" + repo + "/pull/" + number
+		}
+
+		// no UID so alfred doesn't remember these
+		matches = append(matches, &alfred.Item{
+			Title:    fmt.Sprintf("#%s %s", number, title),
+			Subtitle: fmt.Sprintf("Open %s#%s", repo, number),
+			Valid:    true,
+			Arg:      arg,
+			Icon:     issueStateIcon(kind, state),
+		})
+	}
 	return
 }
 
