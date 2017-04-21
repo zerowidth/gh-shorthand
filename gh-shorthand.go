@@ -712,6 +712,8 @@ func queryStart(input string, env envVars) time.Time {
 	return time.Now()
 }
 
+// Issue the given query string to the RPC backend.
+// If RPC is not configured, the results will be empty.
 func rpcRequest(query string, cfg *config.Config) (shouldRetry bool, results []string, err error) {
 	if len(cfg.SocketPath) == 0 {
 		return false, results, nil // RPC isn't enabled, don't worry about it
@@ -782,8 +784,6 @@ func retrieveRepoDescription(item *alfred.Item, duration time.Duration, parsed *
 			item.Subtitle = ellipsis("Retrieving description", duration)
 		} else if len(results) > 0 {
 			item.Subtitle = results[0]
-		} else {
-			item.Subtitle = "No description found."
 		}
 	}
 
