@@ -541,6 +541,16 @@ func TestCompleteItems(t *testing.T) {
 			title: "Edit fixtures/projects/project-bar",
 			arg:   "edit " + fixturePath + "/projects/project-bar",
 		},
+		"edit project includes symlinked dir in fixtures": {
+			input: "e linked",
+			uid:   "ghe:fixtures/projects/linked",
+			valid: true,
+			arg:   "edit " + fixturePath + "/projects/linked",
+		},
+		"edit project does not include symlinked file in fixtures": {
+			input:   "e linked",
+			exclude: "ghe:fixtures/projects/linked-file",
+		},
 		"open finder includes fixtures/work/work-foo": {
 			input: "o ",
 			uid:   "gho:fixtures/work/work-foo",
@@ -695,5 +705,26 @@ func TestFinalizeResult(t *testing.T) {
 	finalizeResult(result)
 	if result.Rerun != rerunAfter {
 		t.Errorf("expected result %#v to have Rerun of %f", result, rerunAfter)
+	}
+}
+
+func TestFindProjectDirs(t *testing.T) {
+	fixturePath, _ := filepath.Abs("fixtures/projects")
+	dirList := findProjectDirs(fixturePath)
+	dirs := make(map[string]struct{}, len(dirList))
+	for _, d := range dirList {
+		dirs[d] = struct{}{}
+	}
+
+	if _, ok := dirs["project-bar"]; !ok {
+		t.Errorf("expected normal directory to be found in %+v", dirList)
+	}
+
+	if _, ok := dirs["linked"]; !ok {
+		t.Errorf("expected symlinked directory to be found in %+v", dirList)
+	}
+
+	if _, ok := dirs["linked-file"]; ok {
+		t.Errorf("did not expect symlinked file to be found in %+v", dirList)
 	}
 }

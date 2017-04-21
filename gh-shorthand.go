@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/url"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -669,6 +670,24 @@ func findProjectDirs(root string) (dirs []string) {
 		for _, entry := range entries {
 			if entry.IsDir() {
 				dirs = append(dirs, entry.Name())
+			} else if entry.Mode()&os.ModeSymlink != 0 {
+				full := path.Join(root, entry.Name())
+				if link, err := os.Readlink(full); err != nil {
+					continue
+				} else {
+					if !path.IsAbs(link) {
+						if link, err = filepath.Abs(path.Join(root, link)); err != nil {
+							continue
+						}
+					}
+					if linkInfo, err := os.Stat(link); err != nil {
+						continue
+					} else {
+						if linkInfo.IsDir() {
+							dirs = append(dirs, entry.Name())
+						}
+					}
+				}
 			}
 		}
 	}
