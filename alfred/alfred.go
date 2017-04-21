@@ -67,3 +67,7 @@ type Text struct {
 	Copy      string `json:"copy,omitempty"`
 	LargeType string `json:"largetype,omitempty"`
 }
+
+func (t *Text) String() string {
+	return fmt.Sprintf("%#v", *t)
+}
