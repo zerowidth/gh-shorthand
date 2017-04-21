@@ -123,12 +123,14 @@ func main() {
 	}
 
 	path, _ := homedir.Expand("~/.gh-shorthand.yml")
-	cfg, err := config.LoadFromFile(path)
-	if err != nil {
-		result.AppendItems(errorItem("when loading ~/.gh-shorthand.yml", err.Error()))
-	} else {
-		vars := getEnvironment()
-		appendParsedItems(result, cfg, vars, input)
+	cfg, configErr := config.LoadFromFile(path)
+
+	vars := getEnvironment()
+	appendParsedItems(result, cfg, vars, input)
+
+	// only show the config error when needed (i.e. there's input)
+	if configErr != nil && len(input) > 0 {
+		result.AppendItems(errorItem("Could not load config from ~/.gh-shorthand.yml", configErr.Error()))
 	}
 
 	finalizeResult(result)
@@ -909,7 +911,7 @@ func issueStateIcon(kind, state string) *alfred.Icon {
 
 func errorItem(context, msg string) *alfred.Item {
 	return &alfred.Item{
-		Title:    fmt.Sprintf("Error %s", context),
+		Title:    context,
 		Subtitle: msg,
 		Icon:     octicon("alert"),
 		Valid:    false,
