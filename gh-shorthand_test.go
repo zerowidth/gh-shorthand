@@ -37,6 +37,7 @@ type completeTestCase struct {
 	auto    string         // expected autocomplete arg
 	cfg     *config.Config // config to use instead of the default cfg
 	exclude string         // exclude any item with this UID or title
+	copy    string         // the clipboard copy string, if applicable
 }
 
 func (tc *completeTestCase) testItem(t *testing.T) {
@@ -78,6 +79,10 @@ func (tc *completeTestCase) testItem(t *testing.T) {
 
 		if len(tc.auto) > 0 && item.Autocomplete != tc.auto {
 			t.Errorf("%+v\nexpected Autocomplete %q to be %q", item, item.Autocomplete, tc.auto)
+		}
+
+		if len(tc.copy) > 0 && (item.Text == nil || item.Text.Copy != tc.copy) {
+			t.Errorf("%+v\nexpected Text.Copy %+v to be %q", item, item.Text, tc.copy)
 		}
 	} else {
 		t.Errorf("expected item with uid %q and/or title %q in %+v", tc.uid, tc.title, result.Items)
@@ -302,6 +307,7 @@ func TestCompleteItems(t *testing.T) {
 			valid: true,
 			title: "Insert Markdown link to foo/bar",
 			arg:   "paste [foo/bar](https://github.com/foo/bar)",
+			copy:  "[foo/bar](https://github.com/foo/bar)",
 		},
 		"markdown link with a repo and issue": {
 			input: "m foo/bar 123",
@@ -309,6 +315,7 @@ func TestCompleteItems(t *testing.T) {
 			title: "Insert Markdown link to foo/bar#123",
 			valid: true,
 			arg:   "paste [foo/bar#123](https://github.com/foo/bar/issues/123)",
+			copy:  "[foo/bar#123](https://github.com/foo/bar/issues/123)",
 		},
 		"markdown link with shorthand repo and issue": {
 			input: "m df 123",

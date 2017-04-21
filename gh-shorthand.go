@@ -476,11 +476,13 @@ func markdownLinkItem(parsed *parser.Result) *alfred.Item {
 	}
 
 	title += parsed.Annotation()
+	markdown := fmt.Sprintf("[%s](%s)", desc, link)
 
 	return &alfred.Item{
 		UID:   uid,
 		Title: title,
-		Arg:   fmt.Sprintf("paste [%s](%s)", desc, link),
+		Arg:   "paste " + markdown,
+		Text:  &alfred.Text{Copy: markdown, LargeType: markdown},
 		Valid: true,
 		Icon:  icon,
 	}
