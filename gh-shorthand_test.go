@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/zerowidth/gh-shorthand/alfred"
@@ -642,6 +643,12 @@ func validateItems(t *testing.T, items alfred.Items) {
 				t.Errorf("non-unique UID %#v in %+v", item.UID, items)
 			} else {
 				uids[item.UID] = true
+			}
+		}
+		if len(item.Arg) > 5 && strings.HasPrefix(item.Arg, "open ") {
+			url := item.Arg[5:]
+			if item.Text == nil || item.Text.Copy != url {
+				t.Errorf("expected item text to have url %s in %+v", url, item.Text)
 			}
 		}
 	}

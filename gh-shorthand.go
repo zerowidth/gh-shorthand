@@ -292,6 +292,14 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[
 		result.SetVariable("s", fmt.Sprintf("%d", start.Unix()))
 		result.SetVariable("ns", fmt.Sprintf("%d", start.Nanosecond()))
 	}
+
+	// automatically copy "open <url>" urls to copy/large text
+	for _, item := range result.Items {
+		if item.Text == nil && len(item.Arg) > 5 && strings.HasPrefix(item.Arg, "open ") {
+			url := item.Arg[5:]
+			item.Text = &alfred.Text{Copy: url, LargeType: url}
+		}
+	}
 }
 
 func actionItems(dirs map[string]string, search, uidPrefix, action, desc string, icon *alfred.Icon) (items alfred.Items) {
