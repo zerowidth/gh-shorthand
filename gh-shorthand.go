@@ -324,6 +324,7 @@ func actionItems(dirs map[string]string, search, uidPrefix, action, desc string,
 			UID:   uidPrefix + ":" + short,
 			Title: desc + " " + short,
 			Arg:   action + " " + projects[short],
+			Text:  &alfred.Text{Copy: projects[short], LargeType: projects[short]},
 			Valid: true,
 			Icon:  icon,
 		})

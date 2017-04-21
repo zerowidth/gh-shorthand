@@ -532,6 +532,7 @@ func TestCompleteItems(t *testing.T) {
 			valid: true,
 			title: "Edit fixtures/work/work-foo",
 			arg:   "edit " + fixturePath + "/work/work-foo",
+			copy:  fixturePath + "/work/work-foo",
 		},
 		"edit project includes fixtures/projects/project-bar": {
 			input: "e ",
@@ -546,6 +547,7 @@ func TestCompleteItems(t *testing.T) {
 			valid: true,
 			title: "Open Finder in fixtures/work/work-foo",
 			arg:   "finder " + fixturePath + "/work/work-foo",
+			copy:  fixturePath + "/work/work-foo",
 		},
 		"open finder includes fixtures/projects/project-bar": {
 			input: "o ",
@@ -560,6 +562,7 @@ func TestCompleteItems(t *testing.T) {
 			valid: true,
 			title: "Open terminal in fixtures/work/work-foo",
 			arg:   "term " + fixturePath + "/work/work-foo",
+			copy:  fixturePath + "/work/work-foo",
 		},
 		"open terminal includes fixtures/projects/project-bar": {
 			input: "t ",
