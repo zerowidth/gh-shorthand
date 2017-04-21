@@ -330,6 +330,7 @@ func TestCompleteItems(t *testing.T) {
 			valid: true,
 			title: "Insert issue reference to foo/bar#123",
 			arg:   "paste foo/bar#123",
+			copy:  "foo/bar#123",
 		},
 		"issue reference with shorthand repo and issue": {
 			input: "r df 123",

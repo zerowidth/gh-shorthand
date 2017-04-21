@@ -509,6 +509,7 @@ func issueReferenceItem(parsed *parser.Result) *alfred.Item {
 			Arg:   "paste " + ref,
 			Valid: true,
 			Icon:  issueIcon,
+			Text:  &alfred.Text{Copy: ref, LargeType: ref},
 		}
 
 	}
