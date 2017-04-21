@@ -17,15 +17,13 @@ type Result struct {
 
 // Annotation is a helper for displaying details about a match. Returns a string
 // with a leading space, noting the matched shorthand and issue if applicable.
-func (r *Result) Annotation(usedDefault bool) (ann string) {
+func (r *Result) Annotation() (ann string) {
 	if len(r.Match) > 0 {
 		ann += " (" + r.Match
 		if len(r.Issue) > 0 {
 			ann += "#" + r.Issue
 		}
 		ann += ")"
-	} else if usedDefault {
-		ann += " (default repo)"
 	}
 	return
 }
