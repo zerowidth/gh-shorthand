@@ -95,7 +95,7 @@ var (
 		Icon:         issueIcon,
 	}
 	editProjectDefaultItem = &alfred.Item{
-		Title:        "Edit a local project",
+		Title:        "Edit a project",
 		Autocomplete: "e ",
 		Icon:         editorIcon,
 	}

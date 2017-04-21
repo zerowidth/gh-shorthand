@@ -130,7 +130,7 @@ func TestCompleteItems(t *testing.T) {
 		},
 		"empty input shows edit project default": {
 			input: "",
-			title: "Edit a local project",
+			title: "Edit a project",
 			auto:  "e ",
 		},
 		"empty input shows open finder default": {
