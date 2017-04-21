@@ -292,6 +292,14 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[
 		result.SetVariable("s", fmt.Sprintf("%d", start.Unix()))
 		result.SetVariable("ns", fmt.Sprintf("%d", start.Nanosecond()))
 	}
+
+	// automatically copy "open <url>" urls to copy/large text
+	for _, item := range result.Items {
+		if item.Text == nil && len(item.Arg) > 5 && strings.HasPrefix(item.Arg, "open ") {
+			url := item.Arg[5:]
+			item.Text = &alfred.Text{Copy: url, LargeType: url}
+		}
+	}
 }
 
 func actionItems(dirs map[string]string, search, uidPrefix, action, desc string, icon *alfred.Icon) (items alfred.Items) {
@@ -316,6 +324,7 @@ func actionItems(dirs map[string]string, search, uidPrefix, action, desc string,
 			UID:   uidPrefix + ":" + short,
 			Title: desc + " " + short,
 			Arg:   action + " " + projects[short],
+			Text:  &alfred.Text{Copy: projects[short], LargeType: projects[short]},
 			Valid: true,
 			Icon:  icon,
 		})
@@ -468,11 +477,13 @@ func markdownLinkItem(parsed *parser.Result) *alfred.Item {
 	}
 
 	title += parsed.Annotation()
+	markdown := fmt.Sprintf("[%s](%s)", desc, link)
 
 	return &alfred.Item{
 		UID:   uid,
 		Title: title,
-		Arg:   fmt.Sprintf("paste [%s](%s)", desc, link),
+		Arg:   "paste " + markdown,
+		Text:  &alfred.Text{Copy: markdown, LargeType: markdown},
 		Valid: true,
 		Icon:  icon,
 	}
@@ -499,6 +510,7 @@ func issueReferenceItem(parsed *parser.Result) *alfred.Item {
 			Arg:   "paste " + ref,
 			Valid: true,
 			Icon:  issueIcon,
+			Text:  &alfred.Text{Copy: ref, LargeType: ref},
 		}
 
 	}
