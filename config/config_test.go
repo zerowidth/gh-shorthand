@@ -12,6 +12,8 @@ var (
 	configYaml = `---
 repos:
   df: zerowidth/dotfiles
+users:
+  zw: zerowidth
 default_repo: zerowidth/default
 project_dirs:
   - /foo/foo
@@ -23,6 +25,10 @@ project_dirs:
 	repoMap = map[string]string{
 		"df": "zerowidth/dotfiles",
 	}
+
+	userMap = map[string]string{
+		"zw": "zerowidth",
+	}
 )
 
 func TestLoad(t *testing.T) {
@@ -32,6 +38,10 @@ func TestLoad(t *testing.T) {
 	} else {
 		if !reflect.DeepEqual(config.RepoMap, repoMap) {
 			t.Errorf("expected RepoMap to be %#v, got %#v", repoMap, config.RepoMap)
+		}
+
+		if !reflect.DeepEqual(config.UserMap, userMap) {
+			t.Errorf("expected UserMap to be %#v, got %#v", userMap, config.UserMap)
 		}
 
 		if config.DefaultRepo != "zerowidth/default" {
