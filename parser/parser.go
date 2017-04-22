@@ -9,6 +9,7 @@ import (
 // Result is a Parse result, returning the matched repo, issue, etc. as applicable
 type Result struct {
 	Repo  string // the matched/expanded repo, if applicable
+	User  string // the matched user, if applicable
 	Match string // the matched shorthand value, if applicable
 	Issue string // the matched issue number, if applicable
 	Path  string // the matched path fragment, if applicable
@@ -30,19 +31,25 @@ func (r *Result) Annotation() (ann string) {
 
 // Parse takes a repo mapping and input string and attempts to extract a repo,
 // issue, etc. from the input using the repo map for shorthand expansion.
-func Parse(repoMap map[string]string, input string) *Result {
+func Parse(repoMap, userMap map[string]string, input string) *Result {
 	path := ""
+	user := ""
 	repo, match, query := extractRepo(repoMap, input)
+	if len(repo) == 0 {
+		user, match, query = extractUser(userMap, input)
+	}
 	issue, query := extractIssue(query)
 	if issue == "" {
 		path, query = extractPath(query)
 	}
-	return &Result{repo, match, issue, path, query}
+	return &Result{repo, user, match, issue, path, query}
 }
 
-var userRepoRegexp = regexp.MustCompile(`^[A-Za-z0-9][-A-Za-z0-9]*/[\w\.\-]+\b`) // user/repo
-var issueRegexp = regexp.MustCompile(`^#?([1-9]\d*)$`)
-var pathRegexp = regexp.MustCompile(`^(/\S*)$`)
+var (
+	userRepoRegexp = regexp.MustCompile(`^[A-Za-z0-9][-A-Za-z0-9]*/[\w\.\-]+\b`) // user/repo
+	issueRegexp    = regexp.MustCompile(`^#?([1-9]\d*)$`)
+	pathRegexp     = regexp.MustCompile(`^(/\S*)$`)
+)
 
 func extractRepo(repoMap map[string]string, input string) (repo, match, query string) {
 	var keys []string
@@ -64,6 +71,24 @@ func extractRepo(repoMap map[string]string, input string) (repo, match, query st
 		repo = result[0]
 		return repo, "", strings.TrimLeft(input[len(repo):], " ")
 	}
+	return "", "", input
+}
+
+func extractUser(userMap map[string]string, input string) (user, match, query string) {
+	var keys []string
+	for k := range userMap {
+		keys = append(keys, k)
+	}
+
+	// sort the keys in reverse so the longest is matched first
+	sort.Sort(sort.Reverse(sort.StringSlice(keys)))
+
+	for _, k := range keys {
+		if strings.HasPrefix(input, k) {
+			return userMap[k], k, strings.TrimLeft(input[len(k):], " ")
+		}
+	}
+
 	return "", "", input
 }
 

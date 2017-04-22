@@ -157,7 +157,7 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[
 		input = ""
 	}
 
-	parsed := parser.Parse(cfg.RepoMap, input)
+	parsed := parser.Parse(cfg.RepoMap, cfg.UserMap, input)
 
 	// for RPC calls on idle query input:
 	shouldRetry := false

@@ -10,9 +10,14 @@ var repoMap = map[string]string{
 	"df2": "zerowidth/dotfiles2", // prefix collision
 }
 
+var userMap = map[string]string{
+	"zw": "zerowidth",
+}
+
 type testCase struct {
 	input string // the input
 	repo  string // the expected repo match or expansion
+	user  string // the expected user match or expansion
 	match string // the matched repo shorthand
 	issue string // the expected issue match
 	path  string // the expected path match
@@ -20,9 +25,12 @@ type testCase struct {
 }
 
 func (tc *testCase) assert(t *testing.T) {
-	result := Parse(repoMap, tc.input)
+	result := Parse(repoMap, userMap, tc.input)
 	if result.Repo != tc.repo {
 		t.Errorf("expected Repo %#v, got %#v", tc.repo, result.Repo)
+	}
+	if result.User != tc.user {
+		t.Errorf("expected User %#v, got %#v", tc.user, result.User)
 	}
 	if result.Match != tc.match {
 		t.Errorf("expected Match %#v, got %#v", tc.match, result.Match)
@@ -165,6 +173,17 @@ func TestParse(t *testing.T) {
 		"parses repo, not path": {
 			input: "foo/bar",
 			repo:  "foo/bar",
+		},
+		"expands user": {
+			input: "zw/",
+			user:  "zerowidth",
+			match: "zw",
+			path:  "/",
+		},
+		"does not match non-shorthand user": {
+			input: "foo/",
+			user:  "",
+			query: "foo/",
 		},
 	} {
 		t.Run(fmt.Sprintf("Parse(%#v): %s", tc.input, desc), tc.assert)
