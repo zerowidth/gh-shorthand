@@ -33,25 +33,29 @@ func (r *Result) Annotation() (ann string) {
 // issue, etc. from the input using the repo map for shorthand expansion.
 func Parse(repoMap, userMap map[string]string, input string) *Result {
 	path := ""
-	user := ""
-	repo, match, query := extractRepo(repoMap, input)
-	if len(repo) == 0 {
-		user, match, query = extractUser(userMap, input)
+	repo := ""
+	owner, name, match, query := extractRepo(repoMap, input)
+	if len(name) == 0 {
+		owner, match, query = extractUser(userMap, input)
 	}
 	issue, query := extractIssue(query)
 	if issue == "" {
 		path, query = extractPath(query)
 	}
-	return &Result{repo, user, match, issue, path, query}
+	if len(name) > 0 {
+		repo = owner + "/" + name
+		owner = ""
+	}
+	return &Result{repo, owner, match, issue, path, query}
 }
 
 var (
-	userRepoRegexp = regexp.MustCompile(`^[A-Za-z0-9][-A-Za-z0-9]*/[\w\.\-]+\b`) // user/repo
+	userRepoRegexp = regexp.MustCompile(`^([A-Za-z0-9][-A-Za-z0-9]*)/([\w\.\-]+)\b`) // user/repo
 	issueRegexp    = regexp.MustCompile(`^#?([1-9]\d*)$`)
 	pathRegexp     = regexp.MustCompile(`^(/\S*)$`)
 )
 
-func extractRepo(repoMap map[string]string, input string) (repo, match, query string) {
+func extractRepo(repoMap map[string]string, input string) (owner, name, match, query string) {
 	var keys []string
 	for k := range repoMap {
 		keys = append(keys, k)
@@ -62,16 +66,17 @@ func extractRepo(repoMap map[string]string, input string) (repo, match, query st
 
 	for _, k := range keys {
 		if strings.HasPrefix(input, k) {
-			return repoMap[k], k, strings.TrimLeft(input[len(k):], " ")
+			parts := strings.SplitN(repoMap[k], "/", 2)
+			return parts[0], parts[1], k, strings.TrimLeft(input[len(k):], " ")
 		}
 	}
 
 	result := userRepoRegexp.FindStringSubmatch(input)
 	if len(result) > 0 {
-		repo = result[0]
-		return repo, "", strings.TrimLeft(input[len(repo):], " ")
+		repo, owner, name := result[0], result[1], result[2]
+		return owner, name, "", strings.TrimLeft(input[len(repo):], " ")
 	}
-	return "", "", input
+	return "", "", "", input
 }
 
 func extractUser(userMap map[string]string, input string) (user, match, query string) {
