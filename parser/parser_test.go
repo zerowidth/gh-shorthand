@@ -35,8 +35,8 @@ func (tc *testCase) assert(t *testing.T) {
 	if result.Match != tc.match {
 		t.Errorf("expected Match %#v, got %#v", tc.match, result.Match)
 	}
-	if result.Issue != tc.issue {
-		t.Errorf("expected Issue %#v, got %#v", tc.issue, result.Issue)
+	if result.Issue() != tc.issue {
+		t.Errorf("expected Issue %#v, got %#v", tc.issue, result.Issue())
 	}
 	if result.Path != tc.path {
 		t.Errorf("expected Path %#v, got %#v", tc.path, result.Path)
@@ -72,48 +72,56 @@ func TestParse(t *testing.T) {
 			repo:  "zerowidth/dotfiles",
 			issue: "123",
 			match: "df",
+			query: "123",
 		},
 		"expansion with #": {
 			input: "df#123",
 			repo:  "zerowidth/dotfiles",
 			issue: "123",
 			match: "df",
+			query: "#123",
 		},
 		"space and # both": {
 			input: "df #123",
 			repo:  "zerowidth/dotfiles",
 			issue: "123",
 			match: "df",
+			query: "#123",
 		},
 		"prefix match": {
 			input: "df123",
 			repo:  "zerowidth/dotfiles",
 			issue: "123",
 			match: "df",
+			query: "123",
 		},
 		"single digit issue": {
 			input: "df 1",
 			repo:  "zerowidth/dotfiles",
 			issue: "1",
 			match: "df",
+			query: "1",
 		},
 		"numeric suffix on match": {
 			input: "df2 34",
 			repo:  "zerowidth/dotfiles2",
 			issue: "34",
 			match: "df2",
+			query: "34",
 		},
 		"numerix suffix with no space": {
 			input: "df234",
 			repo:  "zerowidth/dotfiles2",
 			issue: "34",
 			match: "df2",
+			query: "34",
 		},
 		"fully qualified repo": {
 			input: "foo/bar 123",
 			repo:  "foo/bar",
 			issue: "123",
 			match: "",
+			query: "123",
 		},
 		"invalid issue": {
 			input: "df 0123",

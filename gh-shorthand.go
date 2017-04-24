@@ -165,7 +165,8 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[
 	duration := time.Since(start)
 
 	if !parsed.HasRepo() && len(cfg.DefaultRepo) > 0 && len(parsed.Path) == 0 &&
-		((mode == "i" || mode == "n" || mode == "c") || len(parsed.Query) == 0) {
+		((mode == "i" || mode == "n" || mode == "c") ||
+			(parsed.HasIssue() || len(parsed.Query) == 0)) {
 		parsed.SetRepo(cfg.DefaultRepo)
 	}
 
@@ -185,12 +186,12 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[
 
 	case " ": // open repo, issue, and/or path
 		// repo required, no query allowed
-		if parsed.HasRepo() && len(parsed.Query) == 0 {
+		if parsed.HasRepo() && (parsed.HasIssue() || len(parsed.Query) == 0) {
 			item := openRepoItem(parsed)
-			if len(parsed.Issue) == 0 {
-				shouldRetry = retrieveRepoDescription(item, duration, parsed, cfg)
-			} else {
+			if parsed.HasIssue() {
 				shouldRetry = retrieveIssueTitle(item, duration, parsed, cfg)
+			} else {
+				shouldRetry = retrieveRepoDescription(item, duration, parsed, cfg)
 			}
 			result.AppendItems(item)
 		}
@@ -205,10 +206,6 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[
 	case "i":
 		// repo required, no issue or path, query allowed
 		if parsed.HasRepo() && len(parsed.Path) == 0 {
-			if len(parsed.Issue) > 0 {
-				parsed.Query = parsed.Issue
-				parsed.Issue = ""
-			}
 			if len(parsed.Query) == 0 {
 				issuesItem := openIssuesItem(parsed)
 				retry, matches := retrieveIssueList(issuesItem, duration, parsed, cfg)
@@ -230,7 +227,7 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[
 				autocompleteIssueItem, openEndedIssueItem)...)
 	case "n":
 		// repo required, no issue or path, query allowed
-		if parsed.HasRepo() && len(parsed.Issue) == 0 && len(parsed.Path) == 0 {
+		if parsed.HasRepo() && !parsed.HasIssue() && len(parsed.Path) == 0 {
 			result.AppendItems(newIssueItem(parsed))
 		}
 
@@ -240,10 +237,6 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[
 	case "c":
 		// repo required, query must look like a SHA of at least 7 hex digits.
 		if parsed.HasRepo() && len(parsed.Path) == 0 {
-			if len(parsed.Issue) > 0 {
-				parsed.Query = parsed.Issue
-				parsed.Issue = ""
-			}
 			isSHA1 := sha1Regexp.MatchString(parsed.Query)
 			if len(parsed.Query) >= 7 && isSHA1 {
 				searchItem := commitSearchItem(parsed, true)
@@ -261,7 +254,7 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[
 				autocompleteCommitSearchItem, openEndedCommitSearchItem)...)
 	case "m":
 		// repo required, issue optional
-		if parsed.HasRepo() && len(parsed.Path) == 0 && len(parsed.Query) == 0 {
+		if parsed.HasRepo() && len(parsed.Path) == 0 && (parsed.HasIssue() || len(parsed.Query) == 0) {
 			result.AppendItems(markdownLinkItem(parsed))
 		}
 
@@ -270,7 +263,7 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[
 				autocompleteMarkdownLinkItem, openEndedMarkdownLinkItem)...)
 	case "r":
 		// repo required, issue required (issue handled in issueReferenceItem)
-		if parsed.HasRepo() && len(parsed.Path) == 0 && len(parsed.Query) == 0 {
+		if parsed.HasRepo() && len(parsed.Path) == 0 && (parsed.HasIssue() || len(parsed.Query) == 0) {
 			result.AppendItems(issueReferenceItem(parsed))
 		}
 
@@ -342,12 +335,14 @@ func openRepoItem(parsed *parser.Result) *alfred.Item {
 	arg := "open https://github.com/" + parsed.Repo()
 	icon := repoIcon
 
-	if len(parsed.Issue) > 0 {
-		uid += "#" + parsed.Issue
-		title += "#" + parsed.Issue
-		arg += "/issues/" + parsed.Issue
+	if parsed.HasIssue() {
+		uid += "#" + parsed.Issue()
+		title += "#" + parsed.Issue()
+		arg += "/issues/" + parsed.Issue()
 		icon = issueIcon
 	}
+
+	fmt.Fprintf(os.Stderr, "%+v\n", parsed)
 
 	if len(parsed.Path) > 0 {
 		uid += parsed.Path
@@ -471,11 +466,11 @@ func markdownLinkItem(parsed *parser.Result) *alfred.Item {
 	link := "https://github.com/" + parsed.Repo()
 	icon := markdownIcon
 
-	if len(parsed.Issue) > 0 {
-		uid += "#" + parsed.Issue
-		title += "#" + parsed.Issue
-		desc += "#" + parsed.Issue
-		link += "/issues/" + parsed.Issue
+	if parsed.HasIssue() {
+		uid += "#" + parsed.Issue()
+		title += "#" + parsed.Issue()
+		desc += "#" + parsed.Issue()
+		link += "/issues/" + parsed.Issue()
 		icon = issueIcon
 	}
 
@@ -496,16 +491,16 @@ func issueReferenceItem(parsed *parser.Result) *alfred.Item {
 	title := "Insert issue reference to " + parsed.Repo()
 	ref := parsed.Repo()
 
-	if len(parsed.Issue) > 0 {
-		title += "#" + parsed.Issue
-		ref += "#" + parsed.Issue
+	if parsed.HasIssue() {
+		title += "#" + parsed.Issue()
+		ref += "#" + parsed.Issue()
 	} else {
 		title += "#..."
 	}
 
 	title += parsed.Annotation()
 
-	if len(parsed.Issue) > 0 {
+	if parsed.HasIssue() {
 
 		return &alfred.Item{
 			UID:   "ghr:" + ref,
@@ -797,7 +792,7 @@ func retrieveIssueTitle(item *alfred.Item, duration time.Duration, parsed *parse
 		return
 	}
 
-	retry, results, err := rpcRequest("issue:"+parsed.Repo()+"#"+parsed.Issue, cfg)
+	retry, results, err := rpcRequest("issue:"+parsed.Repo()+"#"+parsed.Issue(), cfg)
 	shouldRetry = retry
 	if err != nil {
 		item.Subtitle = err.Error()

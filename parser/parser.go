@@ -8,13 +8,12 @@ import (
 
 // Result is a Parse result, returning the matched repo, issue, etc. as applicable
 type Result struct {
-	User  string // the matched user, if applicable
-	Match string // the matched shorthand value, if applicable
-	Issue string // the matched issue number, if applicable
-	Path  string // the matched path fragment, if applicable
-	Query string // the remainder of the input, if not otherwise parsed
 	owner string
 	name  string
+	Match string // the matched shorthand value, if applicable
+	Query string // the remainder of the input
+	User  string // the matched user, if applicable
+	Path  string // the matched path fragment, if applicable
 }
 
 func (r *Result) HasRepo() bool {
@@ -37,13 +36,25 @@ func (r *Result) Repo() string {
 	return ""
 }
 
+func (r *Result) HasIssue() bool {
+	return issueRegexp.MatchString(r.Query)
+}
+
+func (r *Result) Issue() string {
+	match := issueRegexp.FindStringSubmatch(r.Query)
+	if len(match) > 0 {
+		return match[1]
+	}
+	return ""
+}
+
 // Annotation is a helper for displaying details about a match. Returns a string
 // with a leading space, noting the matched shorthand and issue if applicable.
 func (r *Result) Annotation() (ann string) {
 	if len(r.Match) > 0 {
 		ann += " (" + r.Match
-		if len(r.Issue) > 0 {
-			ann += "#" + r.Issue
+		if r.HasIssue() {
+			ann += "#" + r.Issue()
 		}
 		ann += ")"
 	}
@@ -60,16 +71,12 @@ func Parse(repoMap, userMap map[string]string, input string) *Result {
 		owner, match, query = extractUser(userMap, input)
 		user = owner
 	}
-	issue, query := extractIssue(query)
-	if issue == "" {
-		path, query = extractPath(query)
-	}
+	path, query = extractPath(query)
 	return &Result{
 		owner: owner,
 		name:  name,
 		User:  user,
 		Match: match,
-		Issue: issue,
 		Path:  path,
 		Query: query,
 	}
@@ -123,18 +130,6 @@ func extractUser(userMap map[string]string, input string) (user, match, query st
 	}
 
 	return "", "", input
-}
-
-func extractIssue(query string) (issue, remainder string) {
-	match := issueRegexp.FindStringSubmatch(query)
-	if len(match) > 0 {
-		issue = match[1]
-		remainder = ""
-	} else {
-		issue = ""
-		remainder = query
-	}
-	return
 }
 
 func extractPath(query string) (path, remainder string) {
