@@ -100,6 +100,11 @@ func Parse(repoMap, userMap map[string]string, input string) *Result {
 	owner, name, match, query := extractRepo(repoMap, input)
 	if len(name) == 0 {
 		owner, match, query = extractUser(userMap, input)
+	} else {
+		if expanded, userMatch, _ := extractUser(userMap, owner); len(expanded) > 0 {
+			owner = expanded
+			match = userMatch
+		}
 	}
 	query = strings.Trim(query, " ")
 	return &Result{

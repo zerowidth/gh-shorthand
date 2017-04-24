@@ -191,6 +191,12 @@ func TestParse(t *testing.T) {
 			path:  "/",
 			query: "/",
 		},
+		"expands user in repo declaration": {
+			input: "zw/foo",
+			owner: "zerowidth",
+			repo:  "zerowidth/foo",
+			match: "zw",
+		},
 		"does not match non-shorthand user": {
 			input: "foo/",
 			owner: "",
