@@ -61,6 +61,15 @@ func (r *Result) Annotation() (ann string) {
 	return
 }
 
+// RepoAnnotation is a helper for displaying details about a match, but only
+// for user/repo matches, excluding issue.
+func (r *Result) RepoAnnotation() (ann string) {
+	if len(r.Match) > 0 {
+		ann += " (" + r.Match + ")"
+	}
+	return
+}
+
 // Parse takes a repo mapping and input string and attempts to extract a repo,
 // issue, etc. from the input using the repo map for shorthand expansion.
 func Parse(repoMap, userMap map[string]string, input string) *Result {

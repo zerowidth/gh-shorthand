@@ -432,7 +432,7 @@ func newIssueItem(parsed *parser.Result) *alfred.Item {
 
 func commitSearchItem(parsed *parser.Result, validQuery bool) *alfred.Item {
 	title := "Find commit in " + parsed.Repo()
-	title += parsed.Annotation()
+	title += parsed.RepoAnnotation()
 
 	if validQuery {
 		escaped := url.PathEscape(parsed.Query)
