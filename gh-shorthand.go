@@ -164,7 +164,7 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[
 	start := queryStart(input, env)
 	duration := time.Since(start)
 
-	if !parsed.HasRepo() && len(cfg.DefaultRepo) > 0 && len(parsed.Path) == 0 &&
+	if !parsed.HasRepo() && len(cfg.DefaultRepo) > 0 && !parsed.HasPath() &&
 		((mode == "i" || mode == "n" || mode == "c") ||
 			(parsed.HasIssue() || len(parsed.Query) == 0)) {
 		parsed.SetRepo(cfg.DefaultRepo)
@@ -186,7 +186,8 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[
 
 	case " ": // open repo, issue, and/or path
 		// repo required, no query allowed
-		if parsed.HasRepo() && (parsed.HasIssue() || len(parsed.Query) == 0) {
+		if parsed.HasRepo() &&
+			(parsed.HasIssue() || parsed.HasPath() || len(parsed.Query) == 0) {
 			item := openRepoItem(parsed)
 			if parsed.HasIssue() {
 				shouldRetry = retrieveIssueTitle(item, duration, parsed, cfg)
@@ -196,8 +197,8 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[
 			result.AppendItems(item)
 		}
 
-		if !parsed.HasRepo() && len(parsed.Path) > 0 {
-			result.AppendItems(openPathItem(parsed.Path))
+		if !parsed.HasRepo() && parsed.HasPath() {
+			result.AppendItems(openPathItem(parsed.Path()))
 		}
 
 		result.AppendItems(
@@ -205,7 +206,7 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[
 				autocompleteOpenItem, openEndedOpenItem)...)
 	case "i":
 		// repo required, no issue or path, query allowed
-		if parsed.HasRepo() && len(parsed.Path) == 0 {
+		if parsed.HasRepo() && !parsed.HasPath() {
 			if len(parsed.Query) == 0 {
 				issuesItem := openIssuesItem(parsed)
 				retry, matches := retrieveIssueList(issuesItem, duration, parsed, cfg)
@@ -227,7 +228,7 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[
 				autocompleteIssueItem, openEndedIssueItem)...)
 	case "n":
 		// repo required, no issue or path, query allowed
-		if parsed.HasRepo() && !parsed.HasIssue() && len(parsed.Path) == 0 {
+		if parsed.HasRepo() && !parsed.HasIssue() && !parsed.HasPath() {
 			result.AppendItems(newIssueItem(parsed))
 		}
 
@@ -236,7 +237,7 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[
 				autocompleteNewIssueItem, openEndedNewIssueItem)...)
 	case "c":
 		// repo required, query must look like a SHA of at least 7 hex digits.
-		if parsed.HasRepo() && len(parsed.Path) == 0 {
+		if parsed.HasRepo() && !parsed.HasPath() {
 			isSHA1 := sha1Regexp.MatchString(parsed.Query)
 			if len(parsed.Query) >= 7 && isSHA1 {
 				searchItem := commitSearchItem(parsed, true)
@@ -254,7 +255,7 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[
 				autocompleteCommitSearchItem, openEndedCommitSearchItem)...)
 	case "m":
 		// repo required, issue optional
-		if parsed.HasRepo() && len(parsed.Path) == 0 && (parsed.HasIssue() || len(parsed.Query) == 0) {
+		if parsed.HasRepo() && !parsed.HasPath() && (parsed.HasIssue() || len(parsed.Query) == 0) {
 			result.AppendItems(markdownLinkItem(parsed))
 		}
 
@@ -263,7 +264,7 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[
 				autocompleteMarkdownLinkItem, openEndedMarkdownLinkItem)...)
 	case "r":
 		// repo required, issue required (issue handled in issueReferenceItem)
-		if parsed.HasRepo() && len(parsed.Path) == 0 && (parsed.HasIssue() || len(parsed.Query) == 0) {
+		if parsed.HasRepo() && !parsed.HasPath() && (parsed.HasIssue() || len(parsed.Query) == 0) {
 			result.AppendItems(issueReferenceItem(parsed))
 		}
 
@@ -342,12 +343,10 @@ func openRepoItem(parsed *parser.Result) *alfred.Item {
 		icon = issueIcon
 	}
 
-	fmt.Fprintf(os.Stderr, "%+v\n", parsed)
-
-	if len(parsed.Path) > 0 {
-		uid += parsed.Path
-		title += parsed.Path
-		arg += parsed.Path
+	if parsed.HasPath() {
+		uid += parsed.Path()
+		title += parsed.Path()
+		arg += parsed.Path()
 		icon = pathIcon
 	}
 

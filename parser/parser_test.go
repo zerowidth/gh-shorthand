@@ -27,7 +27,7 @@ type testCase struct {
 func (tc *testCase) assert(t *testing.T) {
 	result := Parse(repoMap, userMap, tc.input)
 	if result.Repo() != tc.repo {
-		t.Errorf("expected Repo %#v, got %#v", tc.repo, result.Repo)
+		t.Errorf("expected Repo %#v, got %#v", tc.repo, result.Repo())
 	}
 	if result.User != tc.user {
 		t.Errorf("expected User %#v, got %#v", tc.user, result.User)
@@ -38,8 +38,8 @@ func (tc *testCase) assert(t *testing.T) {
 	if result.Issue() != tc.issue {
 		t.Errorf("expected Issue %#v, got %#v", tc.issue, result.Issue())
 	}
-	if result.Path != tc.path {
-		t.Errorf("expected Path %#v, got %#v", tc.path, result.Path)
+	if result.Path() != tc.path {
+		t.Errorf("expected Path %#v, got %#v", tc.path, result.Path())
 	}
 	if result.Query != tc.query {
 		t.Errorf("expected Query %#v, got %#v", tc.query, result.Query)
@@ -60,7 +60,7 @@ func TestParse(t *testing.T) {
 			input: " df",
 			repo:  "",
 			match: "",
-			query: " df",
+			query: "df",
 		},
 		"fully qualified repo name": {
 			input: "foo/bar",
@@ -168,11 +168,13 @@ func TestParse(t *testing.T) {
 			repo:  "zerowidth/dotfiles",
 			match: "df",
 			path:  "/foo",
+			query: "/foo",
 		},
 		"extracts path component after repo": {
 			input: "foo/bar /baz",
 			repo:  "foo/bar",
 			path:  "/baz",
+			query: "/baz",
 		},
 		"ignores path after issue number": {
 			input: "123 /foo",
@@ -187,11 +189,16 @@ func TestParse(t *testing.T) {
 			user:  "zerowidth",
 			match: "zw",
 			path:  "/",
+			query: "/",
 		},
 		"does not match non-shorthand user": {
 			input: "foo/",
 			user:  "",
 			query: "foo/",
+		},
+		"strips whitespace from query": {
+			input: " x    ",
+			query: "x",
 		},
 	} {
 		t.Run(fmt.Sprintf("Parse(%#v): %s", tc.input, desc), tc.assert)

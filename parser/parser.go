@@ -54,6 +54,20 @@ func (r *Result) Issue() string {
 	return ""
 }
 
+// HasPath checks to see if the query looks like a path (leading `/` followed by non-whitespace)
+func (r *Result) HasPath() bool {
+	return pathRegexp.MatchString(r.Query)
+}
+
+// Path returns the defined path from the query, if applicable.
+func (r *Result) Path() string {
+	match := pathRegexp.FindStringSubmatch(r.Query)
+	if len(match) > 0 {
+		return match[1]
+	}
+	return ""
+}
+
 // Annotation is a helper for displaying details about a match. Returns a string
 // with a leading space, noting the matched shorthand and issue if applicable.
 func (r *Result) Annotation() (ann string) {
@@ -79,20 +93,18 @@ func (r *Result) RepoAnnotation() (ann string) {
 // Parse takes a repo mapping and input string and attempts to extract a repo,
 // issue, etc. from the input using the repo map for shorthand expansion.
 func Parse(repoMap, userMap map[string]string, input string) *Result {
-	path := ""
 	user := ""
 	owner, name, match, query := extractRepo(repoMap, input)
 	if len(name) == 0 {
 		owner, match, query = extractUser(userMap, input)
 		user = owner
 	}
-	path, query = extractPath(query)
+	query = strings.Trim(query, " ")
 	return &Result{
 		owner: owner,
 		name:  name,
 		User:  user,
 		Match: match,
-		Path:  path,
 		Query: query,
 	}
 }
@@ -145,16 +157,4 @@ func extractUser(userMap map[string]string, input string) (user, match, query st
 	}
 
 	return "", "", input
-}
-
-func extractPath(query string) (path, remainder string) {
-	match := pathRegexp.FindStringSubmatch(query)
-	if len(match) > 0 {
-		path = match[1]
-		remainder = ""
-	} else {
-		path = ""
-		remainder = query
-	}
-	return
 }
