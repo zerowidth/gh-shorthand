@@ -17,7 +17,7 @@ var userMap = map[string]string{
 type testCase struct {
 	input string // the input
 	repo  string // the expected repo match or expansion
-	user  string // the expected user match or expansion
+	owner string // the expected user match or expansion
 	match string // the matched repo shorthand
 	issue string // the expected issue match
 	path  string // the expected path match
@@ -29,8 +29,8 @@ func (tc *testCase) assert(t *testing.T) {
 	if result.Repo() != tc.repo {
 		t.Errorf("expected Repo %#v, got %#v", tc.repo, result.Repo())
 	}
-	if result.User != tc.user {
-		t.Errorf("expected User %#v, got %#v", tc.user, result.User)
+	if len(tc.owner) > 0 && result.Owner != tc.owner {
+		t.Errorf("expected Owner %#v, got %#v", tc.owner, result.Owner)
 	}
 	if result.Match != tc.match {
 		t.Errorf("expected Match %#v, got %#v", tc.match, result.Match)
@@ -186,14 +186,14 @@ func TestParse(t *testing.T) {
 		},
 		"expands user": {
 			input: "zw/",
-			user:  "zerowidth",
+			owner: "zerowidth",
 			match: "zw",
 			path:  "/",
 			query: "/",
 		},
 		"does not match non-shorthand user": {
 			input: "foo/",
-			user:  "",
+			owner: "",
 			query: "foo/",
 		},
 		"strips whitespace from query": {

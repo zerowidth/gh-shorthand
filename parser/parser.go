@@ -8,24 +8,23 @@ import (
 
 // Result is a Parse result, returning the matched repo, issue, etc. as applicable
 type Result struct {
-	owner string
-	name  string
+	Owner string
+	Name  string
 	Match string // the matched shorthand value, if applicable
 	Query string // the remainder of the input
-	User  string // the matched user, if applicable
 }
 
 // HasRepo checks if the result has a repo, either from a matched repo shorthand,
 // or from an explicit owner/name.
 func (r *Result) HasRepo() bool {
-	return len(r.name) > 0
+	return len(r.Name) > 0
 }
 
 // Repo returns the repo defined in the result, either from a matched repo
 // shorthand or from an explicit owner/name.
 func (r *Result) Repo() string {
 	if r.HasRepo() {
-		return r.owner + "/" + r.name
+		return r.Owner + "/" + r.Name
 	}
 	return ""
 }
@@ -34,8 +33,8 @@ func (r *Result) Repo() string {
 func (r *Result) SetRepo(repo string) error {
 	parts := strings.SplitN(repo, "/", 2)
 	if len(parts) > 1 {
-		r.owner = parts[0]
-		r.name = parts[1]
+		r.Owner = parts[0]
+		r.Name = parts[1]
 	}
 	return nil
 }
@@ -98,17 +97,14 @@ func (r *Result) RepoAnnotation() (ann string) {
 // Parse takes a repo mapping and input string and attempts to extract a repo,
 // issue, etc. from the input using the repo map for shorthand expansion.
 func Parse(repoMap, userMap map[string]string, input string) *Result {
-	user := ""
 	owner, name, match, query := extractRepo(repoMap, input)
 	if len(name) == 0 {
 		owner, match, query = extractUser(userMap, input)
-		user = owner
 	}
 	query = strings.Trim(query, " ")
 	return &Result{
-		owner: owner,
-		name:  name,
-		User:  user,
+		Owner: owner,
+		Name:  name,
 		Match: match,
 		Query: query,
 	}
