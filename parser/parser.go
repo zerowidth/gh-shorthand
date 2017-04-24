@@ -8,9 +8,9 @@ import (
 
 // Result is a Parse result, returning the matched repo, issue, etc. as applicable
 type Result struct {
-	Owner string
-	Name  string
-	Match string // the matched shorthand value, if applicable
+	Owner string // the repository owner, if present
+	Name  string // the repository name, if present
+	Match string // the matched shorthand value, if shorthand was expanded
 	Query string // the remainder of the input
 }
 
