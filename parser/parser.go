@@ -81,6 +81,11 @@ func (r *Result) Annotation() (ann string) {
 	return
 }
 
+// EmptyQuery returns true if no query has been provided.
+func (r *Result) EmptyQuery() bool {
+	return len(r.Query) == 0
+}
+
 // RepoAnnotation is a helper for displaying details about a match, but only
 // for user/repo matches, excluding issue.
 func (r *Result) RepoAnnotation() (ann string) {
