@@ -67,7 +67,9 @@ func extractRepo(repoMap map[string]string, input string) (owner, name, match, q
 	for _, k := range keys {
 		if strings.HasPrefix(input, k) {
 			parts := strings.SplitN(repoMap[k], "/", 2)
-			return parts[0], parts[1], k, strings.TrimLeft(input[len(k):], " ")
+			if len(parts) > 1 {
+				return parts[0], parts[1], k, strings.TrimLeft(input[len(k):], " ")
+			}
 		}
 	}
 
