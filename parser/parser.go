@@ -13,13 +13,24 @@ type Result struct {
 	Match string // the matched shorthand value, if applicable
 	Query string // the remainder of the input
 	User  string // the matched user, if applicable
-	Path  string // the matched path fragment, if applicable
 }
 
+// HasRepo checks if the result has a repo, either from a matched repo shorthand,
+// or from an explicit owner/name.
 func (r *Result) HasRepo() bool {
 	return len(r.name) > 0
 }
 
+// Repo returns the repo defined in the result, either from a matched repo
+// shorthand or from an explicit owner/name.
+func (r *Result) Repo() string {
+	if r.HasRepo() {
+		return r.owner + "/" + r.name
+	}
+	return ""
+}
+
+// SetRepo overrides owner and name on the result from an `owner/name` string.
 func (r *Result) SetRepo(repo string) error {
 	parts := strings.SplitN(repo, "/", 2)
 	if len(parts) > 1 {
@@ -29,17 +40,12 @@ func (r *Result) SetRepo(repo string) error {
 	return nil
 }
 
-func (r *Result) Repo() string {
-	if r.HasRepo() {
-		return r.owner + "/" + r.name
-	}
-	return ""
-}
-
+// HasIssue checks to see if the result's query looks like an issue reference.
 func (r *Result) HasIssue() bool {
 	return issueRegexp.MatchString(r.Query)
 }
 
+// Issue returns the issue reference from the query, if applicable.
 func (r *Result) Issue() string {
 	match := issueRegexp.FindStringSubmatch(r.Query)
 	if len(match) > 0 {
