@@ -8,12 +8,33 @@ import (
 
 // Result is a Parse result, returning the matched repo, issue, etc. as applicable
 type Result struct {
-	Repo  string // the matched/expanded repo, if applicable
 	User  string // the matched user, if applicable
 	Match string // the matched shorthand value, if applicable
 	Issue string // the matched issue number, if applicable
 	Path  string // the matched path fragment, if applicable
 	Query string // the remainder of the input, if not otherwise parsed
+	owner string
+	name  string
+}
+
+func (r *Result) HasRepo() bool {
+	return len(r.name) > 0
+}
+
+func (r *Result) SetRepo(repo string) error {
+	parts := strings.SplitN(repo, "/", 2)
+	if len(parts) > 1 {
+		r.owner = parts[0]
+		r.name = parts[1]
+	}
+	return nil
+}
+
+func (r *Result) Repo() string {
+	if r.HasRepo() {
+		return r.owner + "/" + r.name
+	}
+	return ""
 }
 
 // Annotation is a helper for displaying details about a match. Returns a string
@@ -33,20 +54,25 @@ func (r *Result) Annotation() (ann string) {
 // issue, etc. from the input using the repo map for shorthand expansion.
 func Parse(repoMap, userMap map[string]string, input string) *Result {
 	path := ""
-	repo := ""
+	user := ""
 	owner, name, match, query := extractRepo(repoMap, input)
 	if len(name) == 0 {
 		owner, match, query = extractUser(userMap, input)
+		user = owner
 	}
 	issue, query := extractIssue(query)
 	if issue == "" {
 		path, query = extractPath(query)
 	}
-	if len(name) > 0 {
-		repo = owner + "/" + name
-		owner = ""
+	return &Result{
+		owner: owner,
+		name:  name,
+		User:  user,
+		Match: match,
+		Issue: issue,
+		Path:  path,
+		Query: query,
 	}
-	return &Result{repo, owner, match, issue, path, query}
 }
 
 var (

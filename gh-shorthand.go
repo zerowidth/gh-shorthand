@@ -164,9 +164,9 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[
 	start := queryStart(input, env)
 	duration := time.Since(start)
 
-	if len(cfg.DefaultRepo) > 0 && len(parsed.Repo) == 0 && len(parsed.Path) == 0 &&
+	if !parsed.HasRepo() && len(cfg.DefaultRepo) > 0 && len(parsed.Path) == 0 &&
 		((mode == "i" || mode == "n" || mode == "c") || len(parsed.Query) == 0) {
-		parsed.Repo = cfg.DefaultRepo
+		parsed.SetRepo(cfg.DefaultRepo)
 	}
 
 	switch mode {
@@ -185,7 +185,7 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[
 
 	case " ": // open repo, issue, and/or path
 		// repo required, no query allowed
-		if len(parsed.Repo) > 0 && len(parsed.Query) == 0 {
+		if parsed.HasRepo() && len(parsed.Query) == 0 {
 			item := openRepoItem(parsed)
 			if len(parsed.Issue) == 0 {
 				shouldRetry = retrieveRepoDescription(item, duration, parsed, cfg)
@@ -195,7 +195,7 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[
 			result.AppendItems(item)
 		}
 
-		if len(parsed.Repo) == 0 && len(parsed.Path) > 0 {
+		if !parsed.HasRepo() && len(parsed.Path) > 0 {
 			result.AppendItems(openPathItem(parsed.Path))
 		}
 
@@ -204,7 +204,7 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[
 				autocompleteOpenItem, openEndedOpenItem)...)
 	case "i":
 		// repo required, no issue or path, query allowed
-		if len(parsed.Repo) > 0 && len(parsed.Path) == 0 {
+		if parsed.HasRepo() && len(parsed.Path) == 0 {
 			if len(parsed.Issue) > 0 {
 				parsed.Query = parsed.Issue
 				parsed.Issue = ""
@@ -230,7 +230,7 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[
 				autocompleteIssueItem, openEndedIssueItem)...)
 	case "n":
 		// repo required, no issue or path, query allowed
-		if len(parsed.Repo) > 0 && len(parsed.Issue) == 0 && len(parsed.Path) == 0 {
+		if parsed.HasRepo() && len(parsed.Issue) == 0 && len(parsed.Path) == 0 {
 			result.AppendItems(newIssueItem(parsed))
 		}
 
@@ -239,7 +239,7 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[
 				autocompleteNewIssueItem, openEndedNewIssueItem)...)
 	case "c":
 		// repo required, query must look like a SHA of at least 7 hex digits.
-		if len(parsed.Repo) > 0 && len(parsed.Path) == 0 {
+		if parsed.HasRepo() && len(parsed.Path) == 0 {
 			if len(parsed.Issue) > 0 {
 				parsed.Query = parsed.Issue
 				parsed.Issue = ""
@@ -261,7 +261,7 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[
 				autocompleteCommitSearchItem, openEndedCommitSearchItem)...)
 	case "m":
 		// repo required, issue optional
-		if len(parsed.Repo) > 0 && len(parsed.Path) == 0 && len(parsed.Query) == 0 {
+		if parsed.HasRepo() && len(parsed.Path) == 0 && len(parsed.Query) == 0 {
 			result.AppendItems(markdownLinkItem(parsed))
 		}
 
@@ -270,7 +270,7 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[
 				autocompleteMarkdownLinkItem, openEndedMarkdownLinkItem)...)
 	case "r":
 		// repo required, issue required (issue handled in issueReferenceItem)
-		if len(parsed.Repo) > 0 && len(parsed.Path) == 0 && len(parsed.Query) == 0 {
+		if parsed.HasRepo() && len(parsed.Path) == 0 && len(parsed.Query) == 0 {
 			result.AppendItems(issueReferenceItem(parsed))
 		}
 
@@ -337,9 +337,9 @@ func actionItems(dirs map[string]string, search, uidPrefix, action, desc string,
 }
 
 func openRepoItem(parsed *parser.Result) *alfred.Item {
-	uid := "gh:" + parsed.Repo
-	title := "Open " + parsed.Repo
-	arg := "open https://github.com/" + parsed.Repo
+	uid := "gh:" + parsed.Repo()
+	title := "Open " + parsed.Repo()
+	arg := "open https://github.com/" + parsed.Repo()
 	icon := repoIcon
 
 	if len(parsed.Issue) > 0 {
@@ -379,9 +379,9 @@ func openPathItem(path string) *alfred.Item {
 
 func openIssuesItem(parsed *parser.Result) (item *alfred.Item) {
 	return &alfred.Item{
-		UID:   "ghi:" + parsed.Repo,
-		Title: "Open issues for " + parsed.Repo + parsed.Annotation(),
-		Arg:   "open https://github.com/" + parsed.Repo + "/issues",
+		UID:   "ghi:" + parsed.Repo(),
+		Title: "Open issues for " + parsed.Repo() + parsed.Annotation(),
+		Arg:   "open https://github.com/" + parsed.Repo() + "/issues",
 		Valid: true,
 		Icon:  issueListIcon,
 	}
@@ -392,10 +392,10 @@ func searchIssuesItem(parsed *parser.Result, fullInput string) *alfred.Item {
 
 	if len(parsed.Query) > 0 {
 		escaped := url.PathEscape(parsed.Query)
-		arg := "open https://github.com/" + parsed.Repo + "/search?utf8=✓&type=Issues&q=" + escaped
+		arg := "open https://github.com/" + parsed.Repo() + "/search?utf8=✓&type=Issues&q=" + escaped
 		return &alfred.Item{
-			UID:   "ghis:" + parsed.Repo,
-			Title: "Search issues in " + parsed.Repo + extra + " for " + parsed.Query,
+			UID:   "ghis:" + parsed.Repo(),
+			Title: "Search issues in " + parsed.Repo() + extra + " for " + parsed.Query,
 			Arg:   arg,
 			Valid: true,
 			Icon:  searchIcon,
@@ -403,7 +403,7 @@ func searchIssuesItem(parsed *parser.Result, fullInput string) *alfred.Item {
 	}
 
 	return &alfred.Item{
-		Title:        "Search issues in " + parsed.Repo + extra + " for...",
+		Title:        "Search issues in " + parsed.Repo() + extra + " for...",
 		Valid:        false,
 		Icon:         searchIcon,
 		Autocomplete: fullInput + " ",
@@ -411,23 +411,23 @@ func searchIssuesItem(parsed *parser.Result, fullInput string) *alfred.Item {
 }
 
 func newIssueItem(parsed *parser.Result) *alfred.Item {
-	title := "New issue in " + parsed.Repo
+	title := "New issue in " + parsed.Repo()
 	title += parsed.Annotation()
 
 	if len(parsed.Query) == 0 {
 		return &alfred.Item{
-			UID:   "ghn:" + parsed.Repo,
+			UID:   "ghn:" + parsed.Repo(),
 			Title: title,
-			Arg:   "open https://github.com/" + parsed.Repo + "/issues/new",
+			Arg:   "open https://github.com/" + parsed.Repo() + "/issues/new",
 			Valid: true,
 			Icon:  newIssueIcon,
 		}
 	}
 
 	escaped := url.PathEscape(parsed.Query)
-	arg := "open https://github.com/" + parsed.Repo + "/issues/new?title=" + escaped
+	arg := "open https://github.com/" + parsed.Repo() + "/issues/new?title=" + escaped
 	return &alfred.Item{
-		UID:   "ghn:" + parsed.Repo,
+		UID:   "ghn:" + parsed.Repo(),
 		Title: title + ": " + parsed.Query,
 		Arg:   arg,
 		Valid: true,
@@ -436,14 +436,14 @@ func newIssueItem(parsed *parser.Result) *alfred.Item {
 }
 
 func commitSearchItem(parsed *parser.Result, validQuery bool) *alfred.Item {
-	title := "Find commit in " + parsed.Repo
+	title := "Find commit in " + parsed.Repo()
 	title += parsed.Annotation()
 
 	if validQuery {
 		escaped := url.PathEscape(parsed.Query)
-		arg := "open https://github.com/" + parsed.Repo + "/search?utf8=✓&type=Issues&q=" + escaped
+		arg := "open https://github.com/" + parsed.Repo() + "/search?utf8=✓&type=Issues&q=" + escaped
 		return &alfred.Item{
-			UID:   "ghc:" + parsed.Repo,
+			UID:   "ghc:" + parsed.Repo(),
 			Title: title + " with SHA1 " + parsed.Query,
 			Arg:   arg,
 			Valid: true,
@@ -465,10 +465,10 @@ func commitSearchItem(parsed *parser.Result, validQuery bool) *alfred.Item {
 }
 
 func markdownLinkItem(parsed *parser.Result) *alfred.Item {
-	uid := "ghm:" + parsed.Repo
-	title := "Insert Markdown link to " + parsed.Repo
-	desc := parsed.Repo
-	link := "https://github.com/" + parsed.Repo
+	uid := "ghm:" + parsed.Repo()
+	title := "Insert Markdown link to " + parsed.Repo()
+	desc := parsed.Repo()
+	link := "https://github.com/" + parsed.Repo()
 	icon := markdownIcon
 
 	if len(parsed.Issue) > 0 {
@@ -493,8 +493,8 @@ func markdownLinkItem(parsed *parser.Result) *alfred.Item {
 }
 
 func issueReferenceItem(parsed *parser.Result) *alfred.Item {
-	title := "Insert issue reference to " + parsed.Repo
-	ref := parsed.Repo
+	title := "Insert issue reference to " + parsed.Repo()
+	ref := parsed.Repo()
 
 	if len(parsed.Issue) > 0 {
 		title += "#" + parsed.Issue
@@ -518,7 +518,7 @@ func issueReferenceItem(parsed *parser.Result) *alfred.Item {
 
 	}
 
-	auto := "r " + parsed.Repo
+	auto := "r " + parsed.Repo()
 	if len(parsed.Match) > 0 {
 		auto = "r " + parsed.Match
 	}
@@ -655,13 +655,13 @@ func autocompleteItems(cfg *config.Config, input string, parsed *parser.Result,
 
 	if len(input) > 0 {
 		for key, repo := range cfg.RepoMap {
-			if strings.HasPrefix(key, input) && key != parsed.Match && repo != parsed.Repo {
+			if strings.HasPrefix(key, input) && key != parsed.Match && repo != parsed.Repo() {
 				items = append(items, autocompleteItem(key, repo))
 			}
 		}
 	}
 
-	if len(input) == 0 || parsed.Repo != input {
+	if len(input) == 0 || parsed.Repo() != input {
 		items = append(items, openEndedItem(input))
 	}
 	return
@@ -776,7 +776,7 @@ func retrieveRepoDescription(item *alfred.Item, duration time.Duration, parsed *
 	if duration.Seconds() < delay {
 		shouldRetry = true
 	} else {
-		retry, results, err := rpcRequest("repo:"+parsed.Repo, cfg)
+		retry, results, err := rpcRequest("repo:"+parsed.Repo(), cfg)
 		shouldRetry = retry
 		if err != nil {
 			item.Subtitle = err.Error()
@@ -797,7 +797,7 @@ func retrieveIssueTitle(item *alfred.Item, duration time.Duration, parsed *parse
 		return
 	}
 
-	retry, results, err := rpcRequest("issue:"+parsed.Repo+"#"+parsed.Issue, cfg)
+	retry, results, err := rpcRequest("issue:"+parsed.Repo()+"#"+parsed.Issue, cfg)
 	shouldRetry = retry
 	if err != nil {
 		item.Subtitle = err.Error()
@@ -823,7 +823,7 @@ func retrieveIssueSearchItems(item *alfred.Item, duration time.Duration, parsed 
 		return
 	}
 
-	retry, results, err := rpcRequest("issuesearch:repo:"+parsed.Repo+" "+parsed.Query, cfg)
+	retry, results, err := rpcRequest("issuesearch:repo:"+parsed.Repo()+" "+parsed.Query, cfg)
 	shouldRetry = retry
 	if err != nil {
 		item.Subtitle = err.Error()
@@ -842,7 +842,7 @@ func retrieveIssueList(item *alfred.Item, duration time.Duration, parsed *parser
 		return
 	}
 
-	retry, results, err := rpcRequest("issuesearch:repo:"+parsed.Repo+" sort:updated-desc", cfg)
+	retry, results, err := rpcRequest("issuesearch:repo:"+parsed.Repo()+" sort:updated-desc", cfg)
 	shouldRetry = retry
 	if err != nil {
 		item.Subtitle = err.Error()

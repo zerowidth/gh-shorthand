@@ -26,7 +26,7 @@ type testCase struct {
 
 func (tc *testCase) assert(t *testing.T) {
 	result := Parse(repoMap, userMap, tc.input)
-	if result.Repo != tc.repo {
+	if result.Repo() != tc.repo {
 		t.Errorf("expected Repo %#v, got %#v", tc.repo, result.Repo)
 	}
 	if result.User != tc.user {
