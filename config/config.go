@@ -1,8 +1,10 @@
 package config
 
 import (
+	"fmt"
 	"io/ioutil"
 	"path/filepath"
+	"strings"
 
 	homedir "github.com/mitchellh/go-homedir"
 
@@ -12,6 +14,7 @@ import (
 // Config is a shorthand configuration, read from a yaml file
 type Config struct {
 	RepoMap     map[string]string `yaml:"repos"`
+	UserMap     map[string]string `yaml:"users"`
 	DefaultRepo string            `yaml:"default_repo"`
 	ProjectDirs []string          `yaml:"project_dirs"`
 	SocketPath  string            `yaml:"socket_path"`
@@ -34,11 +37,18 @@ func (config Config) ProjectDirMap() (dirs map[string]string) {
 }
 
 // Load a Config from a yaml string.
+// Returns an empty config if an error occurs.
 func Load(yml string) (*Config, error) {
 	var config Config
 
 	if err := yaml.Unmarshal([]byte(yml), &config); err != nil {
-		return nil, err
+		return &config, err
+	}
+
+	for k, v := range config.RepoMap {
+		if !strings.Contains(v, "/") {
+			return &config, fmt.Errorf("repo shorthand %q: %q not in owner/name format", k, v)
+		}
 	}
 
 	return &config, nil

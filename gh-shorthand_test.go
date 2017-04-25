@@ -16,6 +16,9 @@ var cfg = &config.Config{
 		"df":  "zerowidth/dotfiles",
 		"df2": "zerowidth/df2",
 	},
+	UserMap: map[string]string{
+		"zw": "zerowidth",
+	},
 	ProjectDirs: []string{"fixtures/work", "fixtures/projects"},
 }
 
@@ -23,6 +26,15 @@ var defaultInMap = &config.Config{
 	DefaultRepo: "zerowidth/dotfiles",
 	RepoMap: map[string]string{
 		"df": "zerowidth/dotfiles",
+	},
+}
+
+var userRepoCollision = &config.Config{
+	RepoMap: map[string]string{
+		"zw": "zerowidth/dotfiles",
+	},
+	UserMap: map[string]string{
+		"zw": "zerowidth",
 	},
 }
 
@@ -187,6 +199,20 @@ func TestCompleteItems(t *testing.T) {
 			title: "Open foo/bar#123",
 			arg:   "open https://github.com/foo/bar/issues/123",
 		},
+		"open a shorthand user with repo": {
+			input: " zw/foo",
+			uid:   "gh:zerowidth/foo",
+			valid: true,
+			title: "Open zerowidth/foo (zw)",
+			arg:   "open https://github.com/zerowidth/foo",
+		},
+		"open a shorthand user with repo and issue": {
+			input: " zw/foo 123",
+			uid:   "gh:zerowidth/foo#123",
+			valid: true,
+			title: "Open zerowidth/foo#123 (zw)",
+			arg:   "open https://github.com/zerowidth/foo/issues/123",
+		},
 		"no match if any unparsed query remains after shorthand": {
 			input:   " df foo",
 			exclude: "gh:zerowidth/dotfiles",
@@ -218,6 +244,16 @@ func TestCompleteItems(t *testing.T) {
 			valid: true,
 			title: "Open /foo",
 			arg:   "open https://github.com/foo",
+		},
+		"don't open direct path when matching user prefix": {
+			input:   " zw/",
+			exclude: "gh:/",
+		},
+		"prefer repo shorthand to user prefix": {
+			input: " zw/foo",
+			cfg:   userRepoCollision,
+			uid:   "gh:zerowidth/dotfiles/foo",
+			valid: true,
 		},
 
 		// issue index/search
@@ -339,9 +375,19 @@ func TestCompleteItems(t *testing.T) {
 			title: "Insert issue reference to zerowidth/dotfiles#123 (df#123)",
 			arg:   "paste zerowidth/dotfiles#123",
 		},
-		"no bare repos for issue references": {
+		"issue references with no issue has no valid item": {
 			input:   "r df",
 			exclude: "ghr:zerowidth/dotfiles",
+		},
+		"issue references with repo has autocomplete value": {
+			input: "r df",
+			title: "Insert issue reference to zerowidth/dotfiles#... (df)",
+			auto:  "r df ",
+		},
+		"issue reference with user-shorthand repo has autocomplete value": {
+			input: "r zw/foo",
+			title: "Insert issue reference to zerowidth/foo#... (zw)",
+			auto:  "r zw/foo ",
 		},
 
 		// default repo
@@ -437,6 +483,28 @@ func TestCompleteItems(t *testing.T) {
 			arg:   "open https://github.com/zerowidth/df2",
 			auto:  " df2",
 		},
+		"autocomplete 'z', matching user shorthand": {
+			input: " z",
+			title: "Open zerowidth/... (zw)",
+			valid: false,
+			auto:  " zw/",
+		},
+		"autocomplete when user shorthand matches exactly": {
+			input: " zw",
+			title: "Open zerowidth/... (zw)",
+			valid: false,
+			auto:  " zw/",
+		},
+		"autocomplete when user shorthand has trailing slash": {
+			input: " zw/",
+			title: "Open zerowidth/... (zw)",
+			valid: false,
+			auto:  " zw/",
+		},
+		"no autocomplete when user shorthand has text following the slash": {
+			input:   " zw/foo",
+			exclude: "Open zerowidth/... (zw)",
+		},
 		"autocomplete 'd', open-ended": {
 			input: " d",
 			title: "Open d...",
@@ -483,6 +551,11 @@ func TestCompleteItems(t *testing.T) {
 			title: "Open issues for ...",
 			valid: false,
 		},
+		"autocomplete user for issues": {
+			input: "i z",
+			title: "Open issues for zerowidth/... (zw)",
+			auto:  "i zw/",
+		},
 
 		// new issue autocomplete
 		"autocompletes for new issue": {
@@ -492,6 +565,11 @@ func TestCompleteItems(t *testing.T) {
 			title: "New issue in zerowidth/dotfiles (df)",
 			arg:   "open https://github.com/zerowidth/dotfiles/issues/new",
 			auto:  "n df",
+		},
+		"autocomplete user for new issue": {
+			input: "n z",
+			title: "New issue in zerowidth/... (zw)",
+			auto:  "n zw/",
 		},
 		"autocompletes new issue with input so far": {
 			input: "n foo",
@@ -594,6 +672,11 @@ func TestCompleteItems(t *testing.T) {
 			valid: true,
 			arg:   "paste [zerowidth/dotfiles](https://github.com/zerowidth/dotfiles)",
 		},
+		"autocomplete user for markdown link": {
+			input: "m z",
+			title: "Insert Markdown link to zerowidth/... (zw)",
+			auto:  "m zw/",
+		},
 		"autocompletes for issue references with shorthand": {
 			input: "r d",
 			valid: false,
@@ -605,6 +688,11 @@ func TestCompleteItems(t *testing.T) {
 			valid: false,
 			title: "Insert issue reference to foo/bar#...",
 			auto:  "r foo/bar ",
+		},
+		"autocomplete user for issue reference": {
+			input: "r z",
+			title: "Insert issue reference to zerowidth/... (zw)",
+			auto:  "r zw/",
 		},
 		"autocompletes for issue references incomplete input": {
 			input: "r foo",
