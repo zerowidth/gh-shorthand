@@ -360,9 +360,19 @@ func TestCompleteItems(t *testing.T) {
 			title: "Insert issue reference to zerowidth/dotfiles#123 (df#123)",
 			arg:   "paste zerowidth/dotfiles#123",
 		},
-		"no bare repos for issue references": {
+		"issue references with no issue has no valid item": {
 			input:   "r df",
 			exclude: "ghr:zerowidth/dotfiles",
+		},
+		"issue references with repo has autocomplete value": {
+			input: "r df",
+			title: "Insert issue reference to zerowidth/dotfiles#... (df)",
+			auto:  "r df ",
+		},
+		"issue reference with user-shorthand repo has autocomplete value": {
+			input: "r zw/foo",
+			title: "Insert issue reference to zerowidth/foo#... (zw)",
+			auto:  "r zw/foo ",
 		},
 
 		// default repo

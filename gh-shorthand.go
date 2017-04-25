@@ -263,7 +263,7 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[
 	case "r":
 		// repo required, issue required (handled in issueReferenceItem)
 		if parsed.HasRepo() && (parsed.HasIssue() || parsed.EmptyQuery()) {
-			result.AppendItems(issueReferenceItem(parsed))
+			result.AppendItems(issueReferenceItem(parsed, fullInput))
 		}
 
 		result.AppendItems(
@@ -484,7 +484,7 @@ func markdownLinkItem(parsed *parser.Result) *alfred.Item {
 	}
 }
 
-func issueReferenceItem(parsed *parser.Result) *alfred.Item {
+func issueReferenceItem(parsed *parser.Result, fullInput string) *alfred.Item {
 	title := "Insert issue reference to " + parsed.Repo()
 	ref := parsed.Repo()
 
@@ -510,13 +510,9 @@ func issueReferenceItem(parsed *parser.Result) *alfred.Item {
 
 	}
 
-	auto := "r " + parsed.Repo()
-	if len(parsed.RepoMatch) > 0 {
-		auto = "r " + parsed.RepoMatch
-	}
 	return &alfred.Item{
 		Title:        title,
-		Autocomplete: auto + " ",
+		Autocomplete: fullInput + " ",
 		Valid:        false,
 		Icon:         issueIcon,
 	}
