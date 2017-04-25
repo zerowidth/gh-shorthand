@@ -703,7 +703,7 @@ func autocompleteItems(cfg *config.Config, input string, parsed *parser.Result,
 			}
 		}
 		for key, user := range cfg.UserMap {
-			if strings.HasPrefix(key, input) && key != parsed.Match {
+			if (parsed.Match == key && !parsed.HasRepo()) || strings.HasPrefix(key, input) {
 				items = append(items, autocompleteUserItem(key, user))
 			}
 		}
