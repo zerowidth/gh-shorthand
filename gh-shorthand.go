@@ -164,9 +164,7 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[
 	start := queryStart(input, env)
 	duration := time.Since(start)
 
-	if !parsed.HasRepo() && len(cfg.DefaultRepo) > 0 && !parsed.HasPath() &&
-		((mode == "i" || mode == "n" || mode == "c") ||
-			(parsed.HasIssue() || parsed.EmptyQuery())) {
+	if !parsed.HasRepo() && len(cfg.DefaultRepo) > 0 && len(parsed.Owner) == 0 && !parsed.HasPath() {
 		parsed.SetRepo(cfg.DefaultRepo)
 	}
 
@@ -197,16 +195,16 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[
 			result.AppendItems(item)
 		}
 
-		if !parsed.HasRepo() && parsed.HasPath() {
+		if !parsed.HasRepo() && len(parsed.Owner) == 0 && parsed.HasPath() {
 			result.AppendItems(openPathItem(parsed.Path()))
 		}
 
 		result.AppendItems(
 			autocompleteItems(cfg, input, parsed,
-				autocompleteOpenItem, openEndedOpenItem)...)
+				autocompleteOpenItem, autocompleteUserOpenItem, openEndedOpenItem)...)
 	case "i":
-		// repo required, no issue or path, query allowed
-		if parsed.HasRepo() && !parsed.HasPath() {
+		// repo required
+		if parsed.HasRepo() {
 			if parsed.EmptyQuery() {
 				issuesItem := openIssuesItem(parsed)
 				retry, matches := retrieveIssueList(issuesItem, duration, parsed, cfg)
@@ -225,16 +223,16 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[
 
 		result.AppendItems(
 			autocompleteItems(cfg, input, parsed,
-				autocompleteIssueItem, openEndedIssueItem)...)
+				autocompleteIssueItem, autocompleteUserIssueItem, openEndedIssueItem)...)
 	case "n":
-		// repo required, no issue or path, query allowed
-		if parsed.HasRepo() && !parsed.HasIssue() && !parsed.HasPath() {
+		// repo required
+		if parsed.HasRepo() {
 			result.AppendItems(newIssueItem(parsed))
 		}
 
 		result.AppendItems(
 			autocompleteItems(cfg, input, parsed,
-				autocompleteNewIssueItem, openEndedNewIssueItem)...)
+				autocompleteNewIssueItem, autocompleteUserNewIssueItem, openEndedNewIssueItem)...)
 	case "c":
 		// repo required, query must look like a SHA of at least 7 hex digits.
 		if parsed.HasRepo() && !parsed.HasPath() {
@@ -252,7 +250,7 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[
 
 		result.AppendItems(
 			autocompleteItems(cfg, input, parsed,
-				autocompleteCommitSearchItem, openEndedCommitSearchItem)...)
+				autocompleteCommitSearchItem, autocompleteUserCommitSearchItem, openEndedCommitSearchItem)...)
 	case "m":
 		// repo required, issue optional
 		if parsed.HasRepo() && !parsed.HasPath() && (parsed.HasIssue() || parsed.EmptyQuery()) {
@@ -261,7 +259,7 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[
 
 		result.AppendItems(
 			autocompleteItems(cfg, input, parsed,
-				autocompleteMarkdownLinkItem, openEndedMarkdownLinkItem)...)
+				autocompleteMarkdownLinkItem, autocompleteUserMarkdownLinkItem, openEndedMarkdownLinkItem)...)
 	case "r":
 		// repo required, issue required (issue handled in issueReferenceItem)
 		if parsed.HasRepo() && !parsed.HasPath() && (parsed.HasIssue() || parsed.EmptyQuery()) {
@@ -270,7 +268,7 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[
 
 		result.AppendItems(
 			autocompleteItems(cfg, input, parsed,
-				autocompleteIssueReferenceItem, openEndedIssueReferenceItem)...)
+				autocompleteIssueReferenceItem, autocompleteUserIssueReferenceItem, openEndedIssueReferenceItem)...)
 	case "e":
 		result.AppendItems(
 			actionItems(cfg.ProjectDirMap(), input, "ghe", "edit", "Edit", editorIcon)...)
@@ -535,6 +533,14 @@ func autocompleteOpenItem(key, repo string) *alfred.Item {
 	}
 }
 
+func autocompleteUserOpenItem(key, user string) *alfred.Item {
+	return &alfred.Item{
+		Title:        fmt.Sprintf("Open %s/... (%s)", user, key),
+		Autocomplete: " " + key + "/",
+		Icon:         repoIcon,
+	}
+}
+
 func autocompleteIssueItem(key, repo string) *alfred.Item {
 	return &alfred.Item{
 		UID:          "ghi:" + repo,
@@ -542,6 +548,14 @@ func autocompleteIssueItem(key, repo string) *alfred.Item {
 		Arg:          "open https://github.com/" + repo + "/issues",
 		Valid:        true,
 		Autocomplete: "i " + key,
+		Icon:         issueListIcon,
+	}
+}
+
+func autocompleteUserIssueItem(key, repo string) *alfred.Item {
+	return &alfred.Item{
+		Title:        fmt.Sprintf("Open issues for %s/... (%s)", repo, key),
+		Autocomplete: "i " + key + "/",
 		Icon:         issueListIcon,
 	}
 }
@@ -557,11 +571,28 @@ func autocompleteNewIssueItem(key, repo string) *alfred.Item {
 	}
 }
 
+func autocompleteUserNewIssueItem(key, user string) *alfred.Item {
+	return &alfred.Item{
+		Title:        fmt.Sprintf("New issue in %s/... (%s)", user, key),
+		Autocomplete: "n " + key + "/",
+		Icon:         newIssueIcon,
+	}
+}
+
 func autocompleteCommitSearchItem(key, repo string) *alfred.Item {
 	return &alfred.Item{
 		Title:        fmt.Sprintf("Find commit in %s (%s) with SHA1...", repo, key),
 		Valid:        false,
 		Autocomplete: "c " + key + " ",
+		Icon:         commitIcon,
+	}
+}
+
+func autocompleteUserCommitSearchItem(key, user string) *alfred.Item {
+	return &alfred.Item{
+		Title:        fmt.Sprintf("Find commit in %s/... (%s)", user, key),
+		Valid:        false,
+		Autocomplete: "c " + key + "/",
 		Icon:         commitIcon,
 	}
 }
@@ -577,11 +608,28 @@ func autocompleteMarkdownLinkItem(key, repo string) *alfred.Item {
 	}
 }
 
+func autocompleteUserMarkdownLinkItem(key, user string) *alfred.Item {
+	return &alfred.Item{
+		Title:        fmt.Sprintf("Insert Markdown link to %s/... (%s)", user, key),
+		Autocomplete: "m " + key + "/",
+		Icon:         markdownIcon,
+	}
+}
+
 func autocompleteIssueReferenceItem(key, repo string) *alfred.Item {
 	return &alfred.Item{
 		Title:        fmt.Sprintf("Insert issue reference to %s#... (%s#...)", repo, key),
 		Valid:        false,
 		Autocomplete: "r " + key + " ",
+		Icon:         issueIcon,
+	}
+}
+
+func autocompleteUserIssueReferenceItem(key, user string) *alfred.Item {
+	return &alfred.Item{
+		Title:        fmt.Sprintf("Insert issue reference to %s/... (%s)", user, key),
+		Valid:        false,
+		Autocomplete: "r " + key + "/",
 		Icon:         issueIcon,
 	}
 }
@@ -641,7 +689,8 @@ func openEndedIssueReferenceItem(input string) *alfred.Item {
 }
 
 func autocompleteItems(cfg *config.Config, input string, parsed *parser.Result,
-	autocompleteItem func(string, string) *alfred.Item,
+	autocompleteRepoItem func(string, string) *alfred.Item,
+	autocompleteUserItem func(string, string) *alfred.Item,
 	openEndedItem func(string) *alfred.Item) (items alfred.Items) {
 	if strings.Contains(input, " ") {
 		return
@@ -649,8 +698,13 @@ func autocompleteItems(cfg *config.Config, input string, parsed *parser.Result,
 
 	if len(input) > 0 {
 		for key, repo := range cfg.RepoMap {
-			if strings.HasPrefix(key, input) && key != parsed.Match && repo != parsed.Repo() {
-				items = append(items, autocompleteItem(key, repo))
+			if strings.HasPrefix(key, input) && key != parsed.Match {
+				items = append(items, autocompleteRepoItem(key, repo))
+			}
+		}
+		for key, user := range cfg.UserMap {
+			if strings.HasPrefix(key, input) && key != parsed.Match {
+				items = append(items, autocompleteUserItem(key, user))
 			}
 		}
 	}
