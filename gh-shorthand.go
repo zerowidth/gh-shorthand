@@ -80,11 +80,6 @@ var (
 		Autocomplete: "n ",
 		Icon:         newIssueIcon,
 	}
-	commitDefaultItem = &alfred.Item{
-		Title:        "Find a commit in a GitHub repository",
-		Autocomplete: "c ",
-		Icon:         commitIcon,
-	}
 	markdownLinkDefaultItem = &alfred.Item{
 		Title:        "Insert Markdown link to a GitHub repository or issue",
 		Autocomplete: "m ",
@@ -174,7 +169,6 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[
 			repoDefaultItem,
 			issueListDefaultItem,
 			newIssueDefaultItem,
-			commitDefaultItem,
 			markdownLinkDefaultItem,
 			issueReferenceDefaultItem,
 			editProjectDefaultItem,
@@ -233,24 +227,6 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[
 		result.AppendItems(
 			autocompleteItems(cfg, input, parsed,
 				autocompleteNewIssueItem, autocompleteUserNewIssueItem, openEndedNewIssueItem)...)
-	case "c":
-		// repo required, query must look like a SHA of at least 7 hex digits.
-		if parsed.HasRepo() && !parsed.HasPath() {
-			isSHA1 := sha1Regexp.MatchString(parsed.Query)
-			if len(parsed.Query) >= 7 && isSHA1 {
-				searchItem := commitSearchItem(parsed, true)
-				retry, matches := retrieveIssueSearchItems(searchItem, duration, parsed, cfg)
-				shouldRetry = retry
-				result.AppendItems(searchItem)
-				result.AppendItems(matches...)
-			} else if parsed.EmptyQuery() || isSHA1 {
-				result.AppendItems(commitSearchItem(parsed, false))
-			}
-		}
-
-		result.AppendItems(
-			autocompleteItems(cfg, input, parsed,
-				autocompleteCommitSearchItem, autocompleteUserCommitSearchItem, openEndedCommitSearchItem)...)
 	case "m":
 		// repo required, issue optional
 		if parsed.HasRepo() && !parsed.HasPath() && (parsed.HasIssue() || parsed.EmptyQuery()) {
@@ -572,24 +548,6 @@ func autocompleteUserNewIssueItem(key, user string) *alfred.Item {
 		Title:        fmt.Sprintf("New issue in %s/... (%s)", user, key),
 		Autocomplete: "n " + key + "/",
 		Icon:         newIssueIcon,
-	}
-}
-
-func autocompleteCommitSearchItem(key, repo string) *alfred.Item {
-	return &alfred.Item{
-		Title:        fmt.Sprintf("Find commit in %s (%s) with SHA1...", repo, key),
-		Valid:        false,
-		Autocomplete: "c " + key + " ",
-		Icon:         commitIcon,
-	}
-}
-
-func autocompleteUserCommitSearchItem(key, user string) *alfred.Item {
-	return &alfred.Item{
-		Title:        fmt.Sprintf("Find commit in %s/... (%s)", user, key),
-		Valid:        false,
-		Autocomplete: "c " + key + "/",
-		Icon:         commitIcon,
 	}
 }
 
