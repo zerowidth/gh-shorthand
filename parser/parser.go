@@ -139,9 +139,15 @@ func extractRepo(repoMap map[string]string, input string) (owner, name, match, q
 
 	for _, k := range keys {
 		if strings.HasPrefix(input, k) {
-			parts := strings.SplitN(repoMap[k], "/", 2)
-			if len(parts) > 1 {
-				return parts[0], parts[1], k, strings.TrimLeft(input[len(k):], " ")
+			next := ""
+			if len(input) > len(k) {
+				next = input[len(k) : len(k)+1]
+			}
+			if next == "" || next == "/" || next == "#" || next == " " {
+				parts := strings.SplitN(repoMap[k], "/", 2)
+				if len(parts) > 1 {
+					return parts[0], parts[1], k, strings.TrimLeft(input[len(k):], " ")
+				}
 			}
 		}
 	}
@@ -165,7 +171,9 @@ func extractUser(userMap map[string]string, input string) (user, match, query st
 
 	for _, k := range keys {
 		if strings.HasPrefix(input, k) {
-			return userMap[k], k, strings.TrimLeft(input[len(k):], " ")
+			if len(input) == len(k) || input[len(k):len(k)+1] == "/" {
+				return userMap[k], k, strings.TrimLeft(input[len(k):], " ")
+			}
 		}
 	}
 

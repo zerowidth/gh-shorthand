@@ -250,6 +250,18 @@ func TestCompleteItems(t *testing.T) {
 			uid:   "gh:zerowidth/dotfiles/foo",
 			valid: true,
 		},
+		"requires exact prefix for repo shorthand": {
+			input: " dfx/foo",
+			uid:   "gh:dfx/foo",
+			valid: true,
+			title: "Open dfx/foo",
+		},
+		"requires exact prefix for user shorthand": {
+			input: " zwx/foo",
+			uid:   "gh:zwx/foo",
+			valid: true,
+			title: "Open zwx/foo",
+		},
 
 		// issue index/search
 		"open issues index on a shorthand repo": {

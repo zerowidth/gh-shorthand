@@ -92,13 +92,6 @@ func TestParse(t *testing.T) {
 			repo_match: "df",
 			query:      "#123",
 		},
-		"prefix match": {
-			input:      "df123",
-			repo:       "zerowidth/dotfiles",
-			issue:      "123",
-			repo_match: "df",
-			query:      "123",
-		},
 		"single digit issue": {
 			input:      "df 1",
 			repo:       "zerowidth/dotfiles",
@@ -108,13 +101,6 @@ func TestParse(t *testing.T) {
 		},
 		"numeric suffix on match": {
 			input:      "df2 34",
-			repo:       "zerowidth/dotfiles2",
-			issue:      "34",
-			repo_match: "df2",
-			query:      "34",
-		},
-		"numerix suffix with no space": {
-			input:      "df234",
 			repo:       "zerowidth/dotfiles2",
 			issue:      "34",
 			repo_match: "df2",
@@ -209,6 +195,16 @@ func TestParse(t *testing.T) {
 		"strips whitespace from query": {
 			input: " x    ",
 			query: "x",
+		},
+		"requires exact match for repo shorthand expansion": {
+			input: "dfx/foo",
+			owner: "dfx",
+			repo:  "dfx/foo",
+		},
+		"requires exact match for user shorthand expansion": {
+			input: "zwx/foo",
+			owner: "zwx",
+			repo:  "zwx/foo",
 		},
 	} {
 		t.Run(fmt.Sprintf("Parse(%#v): %s", tc.input, desc), tc.assert)
