@@ -29,6 +29,15 @@ var defaultInMap = &config.Config{
 	},
 }
 
+var userRepoCollision = &config.Config{
+	RepoMap: map[string]string{
+		"zw": "zerowidth/dotfiles",
+	},
+	UserMap: map[string]string{
+		"zw": "zerowidth",
+	},
+}
+
 var emptyConfig = &config.Config{}
 
 type completeTestCase struct {
@@ -239,6 +248,12 @@ func TestCompleteItems(t *testing.T) {
 		"don't open direct path when matching user prefix": {
 			input:   " zw/",
 			exclude: "gh:/",
+		},
+		"prefer repo shorthand to user prefix": {
+			input: " zw/foo",
+			cfg:   userRepoCollision,
+			uid:   "gh:zerowidth/dotfiles/foo",
+			valid: true,
 		},
 
 		// issue index/search
