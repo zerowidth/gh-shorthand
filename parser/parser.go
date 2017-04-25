@@ -8,10 +8,11 @@ import (
 
 // Result is a Parse result, returning the matched repo, issue, etc. as applicable
 type Result struct {
-	Owner string // the repository owner, if present
-	Name  string // the repository name, if present
-	Match string // the matched shorthand value, if shorthand was expanded
-	Query string // the remainder of the input
+	Owner     string // the repository owner, if present
+	Name      string // the repository name, if present
+	RepoMatch string // the matched repo shorthand value, if shorthand was expanded
+	UserMatch string // the matched repo shorthand value, if shorthand was expanded
+	Query     string // the remainder of the input
 }
 
 // HasRepo checks if the result has a repo, either from a matched repo shorthand,
@@ -70,12 +71,25 @@ func (r *Result) Path() string {
 // Annotation is a helper for displaying details about a match. Returns a string
 // with a leading space, noting the matched shorthand and issue if applicable.
 func (r *Result) Annotation() (ann string) {
-	if len(r.Match) > 0 {
-		ann += " (" + r.Match
+	if len(r.RepoMatch) > 0 {
+		ann += " (" + r.RepoMatch
 		if r.HasIssue() {
 			ann += "#" + r.Issue()
 		}
 		ann += ")"
+	} else if len(r.UserMatch) > 0 {
+		ann += " (" + r.UserMatch + ")"
+	}
+	return
+}
+
+// RepoAnnotation is a helper for displaying details about a match, but only
+// for user/repo matches, excluding issue.
+func (r *Result) RepoAnnotation() (ann string) {
+	if len(r.RepoMatch) > 0 {
+		ann += " (" + r.RepoMatch + ")"
+	} else if len(r.UserMatch) > 0 {
+		ann += " (" + r.UserMatch + ")"
 	}
 	return
 }
@@ -85,33 +99,26 @@ func (r *Result) EmptyQuery() bool {
 	return len(r.Query) == 0
 }
 
-// RepoAnnotation is a helper for displaying details about a match, but only
-// for user/repo matches, excluding issue.
-func (r *Result) RepoAnnotation() (ann string) {
-	if len(r.Match) > 0 {
-		ann += " (" + r.Match + ")"
-	}
-	return
-}
-
 // Parse takes a repo mapping and input string and attempts to extract a repo,
 // issue, etc. from the input using the repo map for shorthand expansion.
 func Parse(repoMap, userMap map[string]string, input string) *Result {
-	owner, name, match, query := extractRepo(repoMap, input)
+	owner, name, repoMatch, query := extractRepo(repoMap, input)
+	userMatch := ""
 	if len(name) == 0 {
-		owner, match, query = extractUser(userMap, input)
+		owner, userMatch, query = extractUser(userMap, input)
 	} else {
-		if expanded, userMatch, _ := extractUser(userMap, owner); len(expanded) > 0 {
+		if expanded, match, _ := extractUser(userMap, owner); len(expanded) > 0 {
 			owner = expanded
-			match = userMatch
+			userMatch = match
 		}
 	}
 	query = strings.Trim(query, " ")
 	return &Result{
-		Owner: owner,
-		Name:  name,
-		Match: match,
-		Query: query,
+		Owner:     owner,
+		Name:      name,
+		RepoMatch: repoMatch,
+		UserMatch: userMatch,
+		Query:     query,
 	}
 }
 

@@ -197,6 +197,13 @@ func TestCompleteItems(t *testing.T) {
 			title: "Open zerowidth/foo (zw)",
 			arg:   "open https://github.com/zerowidth/foo",
 		},
+		"open a shorthand user with repo and issue": {
+			input: " zw/foo 123",
+			uid:   "gh:zerowidth/foo#123",
+			valid: true,
+			title: "Open zerowidth/foo#123 (zw)",
+			arg:   "open https://github.com/zerowidth/foo/issues/123",
+		},
 		"no match if any unparsed query remains after shorthand": {
 			input:   " df foo",
 			exclude: "gh:zerowidth/dotfiles",

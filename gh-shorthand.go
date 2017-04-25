@@ -261,8 +261,8 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[
 			autocompleteItems(cfg, input, parsed,
 				autocompleteMarkdownLinkItem, autocompleteUserMarkdownLinkItem, openEndedMarkdownLinkItem)...)
 	case "r":
-		// repo required, issue required (issue handled in issueReferenceItem)
-		if parsed.HasRepo() && !parsed.HasPath() && (parsed.HasIssue() || parsed.EmptyQuery()) {
+		// repo required, issue required (handled in issueReferenceItem)
+		if parsed.HasRepo() && (parsed.HasIssue() || parsed.EmptyQuery()) {
 			result.AppendItems(issueReferenceItem(parsed))
 		}
 
@@ -511,8 +511,8 @@ func issueReferenceItem(parsed *parser.Result) *alfred.Item {
 	}
 
 	auto := "r " + parsed.Repo()
-	if len(parsed.Match) > 0 {
-		auto = "r " + parsed.Match
+	if len(parsed.RepoMatch) > 0 {
+		auto = "r " + parsed.RepoMatch
 	}
 	return &alfred.Item{
 		Title:        title,
@@ -698,12 +698,12 @@ func autocompleteItems(cfg *config.Config, input string, parsed *parser.Result,
 
 	if len(input) > 0 {
 		for key, repo := range cfg.RepoMap {
-			if strings.HasPrefix(key, input) && key != parsed.Match {
+			if strings.HasPrefix(key, input) && key != parsed.RepoMatch {
 				items = append(items, autocompleteRepoItem(key, repo))
 			}
 		}
 		for key, user := range cfg.UserMap {
-			if (parsed.Match == key && !parsed.HasRepo()) || strings.HasPrefix(key, input) {
+			if (parsed.UserMatch == key && !parsed.HasRepo()) || strings.HasPrefix(key, input) {
 				items = append(items, autocompleteUserItem(key, user))
 			}
 		}
