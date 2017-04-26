@@ -256,6 +256,8 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[
 	case "t":
 		result.AppendItems(
 			actionItems(cfg.ProjectDirMap(), input, "ght", "term", "Open terminal in", terminalIcon)...)
+	case "s":
+		result.AppendItems(globalIssueSearchItem(input))
 	}
 
 	// if any RPC-decorated items require a re-invocation of the script, save that
@@ -497,6 +499,27 @@ func issueReferenceItem(parsed *parser.Result, fullInput string) *alfred.Item {
 		Autocomplete: fullInput + " ",
 		Valid:        false,
 		Icon:         issueIcon,
+	}
+}
+
+func globalIssueSearchItem(input string) *alfred.Item {
+	if len(input) > 0 {
+		escaped := url.PathEscape(input)
+		arg := "open https://github.com/search?utf8=✓&type=Issues&q=" + escaped
+		return &alfred.Item{
+			UID:   "ghs:",
+			Title: "Search issues for " + input,
+			Arg:   arg,
+			Valid: true,
+			Icon:  searchIcon,
+		}
+	}
+
+	return &alfred.Item{
+		Title:        "Search issues for...",
+		Valid:        false,
+		Icon:         searchIcon,
+		Autocomplete: "s ",
 	}
 }
 

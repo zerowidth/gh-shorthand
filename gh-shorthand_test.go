@@ -377,6 +377,18 @@ func TestCompleteItems(t *testing.T) {
 			title: "Insert issue reference to zerowidth/foo#... (zw)",
 			auto:  "r zw/foo ",
 		},
+		"search issues globally with no query": {
+			input: "s ",
+			title: "Search issues for...",
+			valid: false,
+			auto:  "s ",
+		},
+		"search issues globally with a query": {
+			input: "s foo bar",
+			title: "Search issues for foo bar",
+			valid: true,
+			arg:   "open https://github.com/search?utf8=✓&type=Issues&q=foo%20bar",
+		},
 
 		// default repo
 		"open an issue with the default repo": {
