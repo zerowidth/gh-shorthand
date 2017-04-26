@@ -71,7 +71,7 @@ var (
 		Icon:         repoIcon,
 	}
 	issueListDefaultItem = &alfred.Item{
-		Title:        "List and search issues on GitHub",
+		Title:        "List and search issues in a GitHub repository",
 		Autocomplete: "i ",
 		Icon:         issueListIcon,
 	}
@@ -81,7 +81,7 @@ var (
 		Icon:         searchIcon,
 	}
 	newIssueDefaultItem = &alfred.Item{
-		Title:        "New issue on GitHub",
+		Title:        "New issue in a GitHub repository",
 		Autocomplete: "n ",
 		Icon:         newIssueIcon,
 	}
