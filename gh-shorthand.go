@@ -417,35 +417,6 @@ func newIssueItem(parsed *parser.Result) *alfred.Item {
 	}
 }
 
-func commitSearchItem(parsed *parser.Result, validQuery bool) *alfred.Item {
-	title := "Find commit in " + parsed.Repo()
-	title += parsed.RepoAnnotation()
-
-	if validQuery {
-		escaped := url.PathEscape(parsed.Query)
-		arg := "open https://github.com/" + parsed.Repo() + "/search?utf8=✓&type=Issues&q=" + escaped
-		return &alfred.Item{
-			UID:   "ghc:" + parsed.Repo(),
-			Title: title + " with SHA1 " + parsed.Query,
-			Arg:   arg,
-			Valid: true,
-			Icon:  commitIcon,
-		}
-	}
-
-	space := ""
-	if len(parsed.Query) > 0 {
-		space = " "
-	}
-
-	return &alfred.Item{
-		Title: title + " with SHA1" + space + parsed.Query + "...",
-		Valid: false,
-		Icon:  commitIcon,
-	}
-
-}
-
 func markdownLinkItem(parsed *parser.Result) *alfred.Item {
 	uid := "ghm:" + parsed.Repo()
 	title := "Insert Markdown link to " + parsed.Repo()
