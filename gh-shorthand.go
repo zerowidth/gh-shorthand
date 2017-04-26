@@ -278,11 +278,15 @@ func actionItems(dirs map[string]string, search, uidPrefix, action, desc string,
 	projectNames := []string{}
 
 	for base, expanded := range dirs {
-		for _, dirname := range findProjectDirs(expanded) {
-			short := filepath.Join(base, dirname)
-			full := filepath.Join(expanded, dirname)
-			projects[short] = full
-			projectNames = append(projectNames, short)
+		if dirs, err := findProjectDirs(expanded); err == nil {
+			for _, dirname := range dirs {
+				short := filepath.Join(base, dirname)
+				full := filepath.Join(expanded, dirname)
+				projects[short] = full
+				projectNames = append(projectNames, short)
+			}
+		} else {
+			items = append(items, errorItem("Invalid project directory: "+base, err.Error()))
 		}
 	}
 
@@ -669,7 +673,7 @@ func autocompleteItems(cfg *config.Config, input string, parsed *parser.Result,
 	return
 }
 
-func findProjectDirs(root string) (dirs []string) {
+func findProjectDirs(root string) (dirs []string, err error) {
 	if entries, err := ioutil.ReadDir(root); err == nil {
 		for _, entry := range entries {
 			if entry.IsDir() {
@@ -694,8 +698,10 @@ func findProjectDirs(root string) (dirs []string) {
 				}
 			}
 		}
+	} else {
+		return dirs, err
 	}
-	return
+	return dirs, nil
 }
 
 func queryStart(input string, env envVars) time.Time {

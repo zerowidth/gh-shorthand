@@ -38,6 +38,10 @@ var userRepoCollision = &config.Config{
 	},
 }
 
+var invalidDir = &config.Config{
+	ProjectDirs: []string{"fixtures/nonexistent"},
+}
+
 var emptyConfig = &config.Config{}
 
 type completeTestCase struct {
@@ -593,6 +597,11 @@ func TestCompleteItems(t *testing.T) {
 			input:   "e linked",
 			exclude: "ghe:fixtures/projects/linked-file",
 		},
+		"edit project shows error for invalid directory": {
+			input: "e foo",
+			cfg:   invalidDir,
+			title: "Invalid project directory: fixtures/nonexistent",
+		},
 		"open finder includes fixtures/work/work-foo": {
 			input: "o ",
 			uid:   "gho:fixtures/work/work-foo",
@@ -762,8 +771,11 @@ func TestFinalizeResult(t *testing.T) {
 
 func TestFindProjectDirs(t *testing.T) {
 	fixturePath, _ := filepath.Abs("fixtures/projects")
-	dirList := findProjectDirs(fixturePath)
+	dirList, err := findProjectDirs(fixturePath)
 	dirs := make(map[string]struct{}, len(dirList))
+	if err != nil {
+		t.Errorf("expected no error, got %+v", err)
+	}
 	for _, d := range dirList {
 		dirs[d] = struct{}{}
 	}
