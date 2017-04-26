@@ -211,3 +211,18 @@ func TestParse(t *testing.T) {
 	}
 
 }
+
+func TestSetRepo(t *testing.T) {
+	result := &Result{}
+
+	err := result.SetRepo("foo")
+	if err == nil {
+		t.Errorf("Expected error when setting invalid repo")
+	}
+
+	result.SetRepo("foo/bar")
+	if result.Repo() != "foo/bar" {
+		t.Errorf("Expected result repo to be foo/bar, got %q:\n%+v", result.Repo(), result)
+	}
+
+}

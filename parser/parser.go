@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"fmt"
 	"regexp"
 	"sort"
 	"strings"
@@ -36,6 +37,8 @@ func (r *Result) SetRepo(repo string) error {
 	if len(parts) > 1 {
 		r.Owner = parts[0]
 		r.Name = parts[1]
+	} else {
+		return fmt.Errorf("repo %q does not look like `owner/name`", repo)
 	}
 	return nil
 }
