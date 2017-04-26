@@ -121,12 +121,12 @@ func TestCompleteItems(t *testing.T) {
 		},
 		"empty input shows issue list/search default": {
 			input: "",
-			title: "List and search issues on GitHub",
+			title: "List and search issues in a GitHub repository",
 			auto:  "i ",
 		},
 		"empty input shows new issue default": {
 			input: "",
-			title: "New issue on GitHub",
+			title: "New issue in a GitHub repository",
 			auto:  "n ",
 		},
 		"empty input shows markdown link default": {
@@ -153,6 +153,11 @@ func TestCompleteItems(t *testing.T) {
 			input: "",
 			title: "Open terminal in a project",
 			auto:  "t ",
+		},
+		"empty input shows search issues default": {
+			input: "",
+			title: "Search issues across GitHub",
+			auto:  "s ",
 		},
 		"a mode char by itself shows the default repo": {
 			input: "m",
@@ -376,6 +381,18 @@ func TestCompleteItems(t *testing.T) {
 			input: "r zw/foo",
 			title: "Insert issue reference to zerowidth/foo#... (zw)",
 			auto:  "r zw/foo ",
+		},
+		"search issues globally with no query": {
+			input: "s ",
+			title: "Search issues for...",
+			valid: false,
+			auto:  "s ",
+		},
+		"search issues globally with a query": {
+			input: "s foo bar",
+			title: "Search issues for foo bar",
+			valid: true,
+			arg:   "open https://github.com/search?utf8=✓&type=Issues&q=foo%20bar",
 		},
 
 		// default repo

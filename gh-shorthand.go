@@ -71,12 +71,17 @@ var (
 		Icon:         repoIcon,
 	}
 	issueListDefaultItem = &alfred.Item{
-		Title:        "List and search issues on GitHub",
+		Title:        "List and search issues in a GitHub repository",
 		Autocomplete: "i ",
 		Icon:         issueListIcon,
 	}
+	issueSearchDefaultItem = &alfred.Item{
+		Title:        "Search issues across GitHub",
+		Autocomplete: "s ",
+		Icon:         searchIcon,
+	}
 	newIssueDefaultItem = &alfred.Item{
-		Title:        "New issue on GitHub",
+		Title:        "New issue in a GitHub repository",
 		Autocomplete: "n ",
 		Icon:         newIssueIcon,
 	}
@@ -171,6 +176,7 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[
 			repoDefaultItem,
 			issueListDefaultItem,
 			newIssueDefaultItem,
+			issueSearchDefaultItem,
 			markdownLinkDefaultItem,
 			issueReferenceDefaultItem,
 			editProjectDefaultItem,
@@ -210,7 +216,7 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[
 				result.AppendItems(matches...)
 			} else {
 				searchItem := searchIssuesItem(parsed, fullInput)
-				retry, matches := retrieveIssueSearchItems(searchItem, duration, parsed, cfg)
+				retry, matches := retrieveIssueSearchItems(searchItem, duration, parsed.Repo(), parsed.Query, cfg, false)
 				shouldRetry = retry
 				result.AppendItems(searchItem)
 				result.AppendItems(matches...)
@@ -256,6 +262,12 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[
 	case "t":
 		result.AppendItems(
 			actionItems(cfg.ProjectDirMap(), input, "ght", "term", "Open terminal in", terminalIcon)...)
+	case "s":
+		searchItem := globalIssueSearchItem(input)
+		retry, matches := retrieveIssueSearchItems(searchItem, duration, "", input, cfg, true)
+		shouldRetry = retry
+		result.AppendItems(searchItem)
+		result.AppendItems(matches...)
 	}
 
 	// if any RPC-decorated items require a re-invocation of the script, save that
@@ -409,35 +421,6 @@ func newIssueItem(parsed *parser.Result) *alfred.Item {
 	}
 }
 
-func commitSearchItem(parsed *parser.Result, validQuery bool) *alfred.Item {
-	title := "Find commit in " + parsed.Repo()
-	title += parsed.RepoAnnotation()
-
-	if validQuery {
-		escaped := url.PathEscape(parsed.Query)
-		arg := "open https://github.com/" + parsed.Repo() + "/search?utf8=✓&type=Issues&q=" + escaped
-		return &alfred.Item{
-			UID:   "ghc:" + parsed.Repo(),
-			Title: title + " with SHA1 " + parsed.Query,
-			Arg:   arg,
-			Valid: true,
-			Icon:  commitIcon,
-		}
-	}
-
-	space := ""
-	if len(parsed.Query) > 0 {
-		space = " "
-	}
-
-	return &alfred.Item{
-		Title: title + " with SHA1" + space + parsed.Query + "...",
-		Valid: false,
-		Icon:  commitIcon,
-	}
-
-}
-
 func markdownLinkItem(parsed *parser.Result) *alfred.Item {
 	uid := "ghm:" + parsed.Repo()
 	title := "Insert Markdown link to " + parsed.Repo()
@@ -497,6 +480,27 @@ func issueReferenceItem(parsed *parser.Result, fullInput string) *alfred.Item {
 		Autocomplete: fullInput + " ",
 		Valid:        false,
 		Icon:         issueIcon,
+	}
+}
+
+func globalIssueSearchItem(input string) *alfred.Item {
+	if len(input) > 0 {
+		escaped := url.PathEscape(input)
+		arg := "open https://github.com/search?utf8=✓&type=Issues&q=" + escaped
+		return &alfred.Item{
+			UID:   "ghs:",
+			Title: "Search issues for " + input,
+			Arg:   arg,
+			Valid: true,
+			Icon:  searchIcon,
+		}
+	}
+
+	return &alfred.Item{
+		Title:        "Search issues for...",
+		Valid:        false,
+		Icon:         searchIcon,
+		Autocomplete: "s ",
 	}
 }
 
@@ -827,20 +831,28 @@ func retrieveIssueTitle(item *alfred.Item, duration time.Duration, parsed *parse
 	return
 }
 
-func retrieveIssueSearchItems(item *alfred.Item, duration time.Duration, parsed *parser.Result, cfg *config.Config) (shouldRetry bool, matches alfred.Items) {
+func retrieveIssueSearchItems(item *alfred.Item, duration time.Duration, repo, query string, cfg *config.Config, includeRepo bool) (shouldRetry bool, matches alfred.Items) {
+	if !item.Valid {
+		return
+	}
 	if duration.Seconds() < searchDelay {
 		shouldRetry = true
 		return
 	}
 
-	retry, results, err := rpcRequest("issuesearch:repo:"+parsed.Repo()+" "+parsed.Query, cfg)
+	rpcQuery := "issuesearch:"
+	if len(repo) > 0 {
+		rpcQuery += "repo:" + repo + " "
+	}
+	rpcQuery += query
+	retry, results, err := rpcRequest(rpcQuery, cfg)
 	shouldRetry = retry
 	if err != nil {
 		item.Subtitle = err.Error()
 	} else if shouldRetry {
 		item.Subtitle = ellipsis("Searching issues", duration)
 	} else if len(results) > 0 {
-		matches = append(matches, issueItemsFromResults(results)...)
+		matches = append(matches, issueItemsFromResults(results, includeRepo)...)
 	}
 
 	return
@@ -859,19 +871,23 @@ func retrieveIssueList(item *alfred.Item, duration time.Duration, parsed *parser
 	} else if shouldRetry {
 		item.Subtitle = ellipsis("Retrieving recent issues", duration)
 	} else if len(results) > 0 {
-		matches = append(matches, issueItemsFromResults(results)...)
+		matches = append(matches, issueItemsFromResults(results, false)...)
 	}
 
 	return
 }
 
-func issueItemsFromResults(results []string) (matches alfred.Items) {
+func issueItemsFromResults(results []string, includeRepo bool) (matches alfred.Items) {
 	for _, result := range results {
 		parts := strings.SplitN(result, ":", 5)
 		if len(parts) != 5 {
 			continue
 		}
 		repo, number, kind, state, title := parts[0], parts[1], parts[2], parts[3], parts[4]
+		itemTitle := fmt.Sprintf("#%s %s", number, title)
+		if includeRepo {
+			itemTitle = repo + itemTitle
+		}
 		arg := ""
 		if kind == "Issue" {
 			arg = "open https://github.com/" + repo + "/issues/" + number
@@ -881,7 +897,7 @@ func issueItemsFromResults(results []string) (matches alfred.Items) {
 
 		// no UID so alfred doesn't remember these
 		matches = append(matches, &alfred.Item{
-			Title:    fmt.Sprintf("#%s %s", number, title),
+			Title:    itemTitle,
 			Subtitle: fmt.Sprintf("Open %s#%s", repo, number),
 			Valid:    true,
 			Arg:      arg,
