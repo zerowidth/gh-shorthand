@@ -154,6 +154,11 @@ func TestCompleteItems(t *testing.T) {
 			title: "Open terminal in a project",
 			auto:  "t ",
 		},
+		"empty input shows search issues default": {
+			input: "",
+			title: "Search issues across GitHub",
+			auto:  "s ",
+		},
 		"a mode char by itself shows the default repo": {
 			input: "m",
 			uid:   "ghm:zerowidth/default",
