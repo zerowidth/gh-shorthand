@@ -164,7 +164,7 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[
 	start := queryStart(input, env)
 	duration := time.Since(start)
 
-	if !parsed.HasRepo() && len(cfg.DefaultRepo) > 0 && len(parsed.Owner) == 0 && !parsed.HasPath() {
+	if !parsed.HasRepo() && len(cfg.DefaultRepo) > 0 && !parsed.HasOwner() && !parsed.HasPath() {
 		if err := parsed.SetRepo(cfg.DefaultRepo); err != nil {
 			result.AppendItems(errorItem("Could not set default repo", err.Error()))
 		}

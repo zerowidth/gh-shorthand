@@ -16,6 +16,11 @@ type Result struct {
 	Query     string // the remainder of the input
 }
 
+// HasOwner checks if the result has an owner.
+func (r *Result) HasOwner() bool {
+	return len(r.Owner) > 0
+}
+
 // HasRepo checks if the result has a repo, either from a matched repo shorthand,
 // or from an explicit owner/name.
 func (r *Result) HasRepo() bool {
