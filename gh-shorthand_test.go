@@ -467,6 +467,33 @@ func TestCompleteItems(t *testing.T) {
 			valid: true,
 		},
 
+		// projects
+		"project listing with explicit repo": {
+			input: "p zerowidth/dotfiles",
+			uid:   "ghp:zerowidth/dotfiles",
+			title: "List projects in zerowidth/dotfiles",
+			valid: true,
+			arg:   "open https://github.com/zerowidth/dotfiles/projects",
+		},
+		"specific project with explicit repo": {
+			input: "p zerowidth/dotfiles 10",
+			uid:   "ghp:zerowidth/dotfiles/10",
+			title: "Open project #10 in zerowidth/dotfiles",
+			valid: true,
+			arg:   "open https://github.com/zerowidth/dotfiles/projects/10",
+		},
+		"project listing with shorthand repo": {
+			input: "p df",
+			uid:   "ghp:zerowidth/dotfiles",
+			valid: true,
+		},
+		"specific project with shorthand repo": {
+			input: "p df 10",
+			uid:   "ghp:zerowidth/dotfiles/10",
+			title: "Open project #10 in zerowidth/dotfiles (df#10)",
+			valid: true,
+		},
+
 		// repo autocomplete
 		"no autocomplete for empty input": {
 			input:   " ",

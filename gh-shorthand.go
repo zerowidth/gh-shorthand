@@ -48,6 +48,7 @@ var (
 	issueListIcon   = octicon("list-ordered")
 	pathIcon        = octicon("browser")
 	issueIcon       = octicon("issue-opened")
+	projectsIcon    = octicon("project")
 	newIssueIcon    = octicon("bug")
 	editorIcon      = octicon("file-code")
 	finderIcon      = octicon("file-directory")
@@ -226,6 +227,11 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[
 		result.AppendItems(
 			autocompleteItems(cfg, input, parsed,
 				autocompleteIssueItem, autocompleteUserIssueItem, openEndedIssueItem)...)
+	case "p":
+		if parsed.HasRepo() {
+			projectsItem := repoProjectsItem(parsed)
+			result.AppendItems(projectsItem)
+		}
 	case "n":
 		// repo required
 		if parsed.HasRepo() {
@@ -393,6 +399,25 @@ func searchIssuesItem(parsed *parser.Result, fullInput string) *alfred.Item {
 		Valid:        false,
 		Icon:         searchIcon,
 		Autocomplete: fullInput + " ",
+	}
+}
+
+func repoProjectsItem(parsed *parser.Result) *alfred.Item {
+	if parsed.HasIssue() {
+		return &alfred.Item{
+			UID:   "ghp:" + parsed.Repo() + "/" + parsed.Issue(),
+			Title: "Open project #" + parsed.Issue() + " in " + parsed.Repo() + parsed.Annotation(),
+			Valid: true,
+			Arg:   "open https://github.com/" + parsed.Repo() + "/projects/" + parsed.Issue(),
+			Icon:  projectsIcon,
+		}
+	}
+	return &alfred.Item{
+		UID:   "ghp:" + parsed.Repo(),
+		Title: "List projects in " + parsed.Repo() + parsed.Annotation(),
+		Valid: true,
+		Arg:   "open https://github.com/" + parsed.Repo() + "/projects",
+		Icon:  projectsIcon,
 	}
 }
 
