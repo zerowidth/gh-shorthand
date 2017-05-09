@@ -16,6 +16,7 @@ var userMap = map[string]string{
 
 type testCase struct {
 	input     string // the input
+	bare      bool   // allow bare user
 	repo      string // the expected repo match or expansion
 	owner     string // the expected user match or expansion
 	repoMatch string // the matched repo shorthand
@@ -26,7 +27,7 @@ type testCase struct {
 }
 
 func (tc *testCase) assert(t *testing.T) {
-	result := Parse(repoMap, userMap, tc.input)
+	result := Parse(repoMap, userMap, tc.input, tc.bare)
 	if result.Repo() != tc.repo {
 		t.Errorf("expected Repo %#v, got %#v", tc.repo, result.Repo())
 	}
@@ -205,6 +206,37 @@ func TestParse(t *testing.T) {
 			input: "zwx/foo",
 			owner: "zwx",
 			repo:  "zwx/foo",
+		},
+		"matches bare user when allowed": {
+			input: "foo",
+			bare:  true,
+			owner: "foo",
+		},
+		"matches bare user and leaves the remainder as a query": {
+			input: "foo bar",
+			bare:  true,
+			owner: "foo",
+			query: "bar",
+		},
+		"allows trailing separator on bare user": {
+			input: "foo/",
+			bare:  true,
+			owner: "foo",
+			path:  "/",
+			query: "/",
+		},
+		"expands bare user shorthand": {
+			input:     "zw",
+			bare:      true,
+			owner:     "zerowidth",
+			userMatch: "zw",
+		},
+		"expands bare user with query": {
+			input:     "zw foo",
+			bare:      true,
+			owner:     "zerowidth",
+			userMatch: "zw",
+			query:     "foo",
 		},
 	} {
 		t.Run(fmt.Sprintf("Parse(%#v): %s", tc.input, desc), tc.assert)
