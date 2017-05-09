@@ -230,8 +230,13 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[
 				autocompleteIssueItem, autocompleteUserIssueItem, openEndedIssueItem)...)
 	case "p":
 		if parsed.HasOwner() && (parsed.HasIssue() || parsed.EmptyQuery()) {
-			projectsItem := repoProjectsItem(parsed)
-			result.AppendItems(projectsItem)
+			if parsed.HasRepo() {
+				projectsItem := repoProjectsItem(parsed)
+				result.AppendItems(projectsItem)
+			} else {
+				projectsItem := orgProjectsItem(parsed)
+				result.AppendItems(projectsItem)
+			}
 		}
 	case "n":
 		// repo required
@@ -404,25 +409,25 @@ func searchIssuesItem(parsed *parser.Result, fullInput string) *alfred.Item {
 }
 
 func repoProjectsItem(parsed *parser.Result) *alfred.Item {
-	if parsed.HasRepo() {
-		if parsed.HasIssue() {
-			return &alfred.Item{
-				UID:   "ghp:" + parsed.Repo() + "/" + parsed.Issue(),
-				Title: "Open project #" + parsed.Issue() + " in " + parsed.Repo() + parsed.Annotation(),
-				Valid: true,
-				Arg:   "open https://github.com/" + parsed.Repo() + "/projects/" + parsed.Issue(),
-				Icon:  projectsIcon,
-			}
-		}
+	if parsed.HasIssue() {
 		return &alfred.Item{
-			UID:   "ghp:" + parsed.Repo(),
-			Title: "List projects in " + parsed.Repo() + parsed.Annotation(),
+			UID:   "ghp:" + parsed.Repo() + "/" + parsed.Issue(),
+			Title: "Open project #" + parsed.Issue() + " in " + parsed.Repo() + parsed.Annotation(),
 			Valid: true,
-			Arg:   "open https://github.com/" + parsed.Repo() + "/projects",
+			Arg:   "open https://github.com/" + parsed.Repo() + "/projects/" + parsed.Issue(),
 			Icon:  projectsIcon,
 		}
 	}
+	return &alfred.Item{
+		UID:   "ghp:" + parsed.Repo(),
+		Title: "List projects in " + parsed.Repo() + parsed.Annotation(),
+		Valid: true,
+		Arg:   "open https://github.com/" + parsed.Repo() + "/projects",
+		Icon:  projectsIcon,
+	}
+}
 
+func orgProjectsItem(parsed *parser.Result) *alfred.Item {
 	if parsed.HasIssue() {
 		return &alfred.Item{
 			UID:   "ghp:" + parsed.Owner + "/" + parsed.Issue(),
