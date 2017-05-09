@@ -231,8 +231,11 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[
 	case "p":
 		if parsed.HasOwner() && (parsed.HasIssue() || parsed.EmptyQuery()) {
 			if parsed.HasRepo() {
-				projectsItem := repoProjectsItem(parsed)
-				result.AppendItems(projectsItem)
+				item := repoProjectsItem(parsed)
+				if parsed.HasIssue() {
+					shouldRetry = retrieveRepoProjectName(item, duration, parsed, cfg)
+				}
+				result.AppendItems(item)
 			} else {
 				projectsItem := orgProjectsItem(parsed)
 				result.AppendItems(projectsItem)
@@ -839,19 +842,20 @@ func ellipsis(prefix string, duration time.Duration) string {
 func retrieveRepoDescription(item *alfred.Item, duration time.Duration, parsed *parser.Result, cfg *config.Config) (shouldRetry bool) {
 	if duration.Seconds() < delay {
 		shouldRetry = true
-	} else {
-		retry, results, err := rpcRequest("repo:"+parsed.Repo(), cfg)
-		shouldRetry = retry
-		if err != nil {
-			item.Subtitle = err.Error()
-		} else if shouldRetry {
-			item.Subtitle = ellipsis("Retrieving description", duration)
-		} else if len(results) > 0 {
-			item.Subtitle = results[0]
-		}
+		return
 	}
 
-	return shouldRetry
+	retry, results, err := rpcRequest("repo:"+parsed.Repo(), cfg)
+	shouldRetry = retry
+	if err != nil {
+		item.Subtitle = err.Error()
+	} else if shouldRetry {
+		item.Subtitle = ellipsis("Retrieving description", duration)
+	} else if len(results) > 0 {
+		item.Subtitle = results[0]
+	}
+
+	return
 }
 
 // retrieveIssueTitle adds the title to the "open issue" item using an RPC call
@@ -876,6 +880,26 @@ func retrieveIssueTitle(item *alfred.Item, duration time.Duration, parsed *parse
 		item.Subtitle = item.Title
 		item.Title = title
 		item.Icon = issueStateIcon(kind, state)
+	}
+
+	return
+}
+
+func retrieveRepoProjectName(item *alfred.Item, duration time.Duration, parsed *parser.Result, cfg *config.Config) (shouldRetry bool) {
+	if duration.Seconds() < delay {
+		shouldRetry = true
+		return
+	}
+
+	retry, results, err := rpcRequest("repo_project:"+parsed.Repo()+"/"+parsed.Issue(), cfg)
+	shouldRetry = retry
+	if err != nil {
+		item.Subtitle = err.Error()
+	} else if shouldRetry {
+		item.Subtitle = ellipsis("Retrieving project name", duration)
+	} else if len(results) > 0 {
+		item.Subtitle = item.Title
+		item.Title = results[0]
 	}
 
 	return
