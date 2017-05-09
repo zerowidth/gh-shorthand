@@ -366,7 +366,7 @@ func openPathItem(path string) *alfred.Item {
 func openIssuesItem(parsed *parser.Result) (item *alfred.Item) {
 	return &alfred.Item{
 		UID:   "ghi:" + parsed.Repo(),
-		Title: "Open issues for " + parsed.Repo() + parsed.Annotation(),
+		Title: "List issues for " + parsed.Repo() + parsed.Annotation(),
 		Arg:   "open https://github.com/" + parsed.Repo() + "/issues",
 		Valid: true,
 		Icon:  issueListIcon,
@@ -526,7 +526,7 @@ func autocompleteUserOpenItem(key, user string) *alfred.Item {
 func autocompleteIssueItem(key, repo string) *alfred.Item {
 	return &alfred.Item{
 		UID:          "ghi:" + repo,
-		Title:        fmt.Sprintf("Open issues for %s (%s)", repo, key),
+		Title:        fmt.Sprintf("List issues for %s (%s)", repo, key),
 		Arg:          "open https://github.com/" + repo + "/issues",
 		Valid:        true,
 		Autocomplete: "i " + key,
@@ -536,7 +536,7 @@ func autocompleteIssueItem(key, repo string) *alfred.Item {
 
 func autocompleteUserIssueItem(key, repo string) *alfred.Item {
 	return &alfred.Item{
-		Title:        fmt.Sprintf("Open issues for %s/... (%s)", repo, key),
+		Title:        fmt.Sprintf("List issues for %s/... (%s)", repo, key),
 		Autocomplete: "i " + key + "/",
 		Icon:         issueListIcon,
 	}
@@ -609,7 +609,7 @@ func openEndedOpenItem(input string) *alfred.Item {
 
 func openEndedIssueItem(input string) *alfred.Item {
 	return &alfred.Item{
-		Title:        fmt.Sprintf("Open issues for %s...", input),
+		Title:        fmt.Sprintf("List issues for %s...", input),
 		Autocomplete: "i " + input,
 		Valid:        false,
 		Icon:         issueListIcon,
