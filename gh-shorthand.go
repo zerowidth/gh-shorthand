@@ -158,7 +158,8 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[
 		input = ""
 	}
 
-	parsed := parser.Parse(cfg.RepoMap, cfg.UserMap, input)
+	bareUser := mode == "p"
+	parsed := parser.Parse(cfg.RepoMap, cfg.UserMap, input, bareUser)
 
 	// for RPC calls on idle query input:
 	shouldRetry := false
@@ -228,7 +229,7 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[
 			autocompleteItems(cfg, input, parsed,
 				autocompleteIssueItem, autocompleteUserIssueItem, openEndedIssueItem)...)
 	case "p":
-		if parsed.HasRepo() {
+		if parsed.HasOwner() && (parsed.HasIssue() || parsed.EmptyQuery()) {
 			projectsItem := repoProjectsItem(parsed)
 			result.AppendItems(projectsItem)
 		}
@@ -403,20 +404,39 @@ func searchIssuesItem(parsed *parser.Result, fullInput string) *alfred.Item {
 }
 
 func repoProjectsItem(parsed *parser.Result) *alfred.Item {
+	if parsed.HasRepo() {
+		if parsed.HasIssue() {
+			return &alfred.Item{
+				UID:   "ghp:" + parsed.Repo() + "/" + parsed.Issue(),
+				Title: "Open project #" + parsed.Issue() + " in " + parsed.Repo() + parsed.Annotation(),
+				Valid: true,
+				Arg:   "open https://github.com/" + parsed.Repo() + "/projects/" + parsed.Issue(),
+				Icon:  projectsIcon,
+			}
+		}
+		return &alfred.Item{
+			UID:   "ghp:" + parsed.Repo(),
+			Title: "List projects in " + parsed.Repo() + parsed.Annotation(),
+			Valid: true,
+			Arg:   "open https://github.com/" + parsed.Repo() + "/projects",
+			Icon:  projectsIcon,
+		}
+	}
+
 	if parsed.HasIssue() {
 		return &alfred.Item{
-			UID:   "ghp:" + parsed.Repo() + "/" + parsed.Issue(),
-			Title: "Open project #" + parsed.Issue() + " in " + parsed.Repo() + parsed.Annotation(),
+			UID:   "ghp:" + parsed.Owner + "/" + parsed.Issue(),
+			Title: "Open project #" + parsed.Issue() + " for " + parsed.Owner + parsed.Annotation(),
 			Valid: true,
-			Arg:   "open https://github.com/" + parsed.Repo() + "/projects/" + parsed.Issue(),
+			Arg:   "open https://github.com/orgs/" + parsed.Owner + "/projects/" + parsed.Issue(),
 			Icon:  projectsIcon,
 		}
 	}
 	return &alfred.Item{
-		UID:   "ghp:" + parsed.Repo(),
-		Title: "List projects in " + parsed.Repo() + parsed.Annotation(),
+		UID:   "ghp:" + parsed.Owner,
+		Title: "List projects for " + parsed.Owner + parsed.Annotation(),
 		Valid: true,
-		Arg:   "open https://github.com/" + parsed.Repo() + "/projects",
+		Arg:   "open https://github.com/orgs/" + parsed.Owner + "/projects",
 		Icon:  projectsIcon,
 	}
 }
