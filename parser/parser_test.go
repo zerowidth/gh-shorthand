@@ -15,14 +15,14 @@ var userMap = map[string]string{
 }
 
 type testCase struct {
-	input      string // the input
-	repo       string // the expected repo match or expansion
-	owner      string // the expected user match or expansion
-	repo_match string // the matched repo shorthand
-	user_match string // the matched user shorthand
-	issue      string // the expected issue match
-	path       string // the expected path match
-	query      string // the remaining query text after parsing/expansion
+	input     string // the input
+	repo      string // the expected repo match or expansion
+	owner     string // the expected user match or expansion
+	repoMatch string // the matched repo shorthand
+	userMatch string // the matched user shorthand
+	issue     string // the expected issue match
+	path      string // the expected path match
+	query     string // the remaining query text after parsing/expansion
 }
 
 func (tc *testCase) assert(t *testing.T) {
@@ -33,11 +33,11 @@ func (tc *testCase) assert(t *testing.T) {
 	if len(tc.owner) > 0 && result.Owner != tc.owner {
 		t.Errorf("expected Owner %#v, got %#v", tc.owner, result.Owner)
 	}
-	if result.RepoMatch != tc.repo_match {
-		t.Errorf("expected RepoMatch %#v, got %#v", tc.repo_match, result.RepoMatch)
+	if result.RepoMatch != tc.repoMatch {
+		t.Errorf("expected RepoMatch %#v, got %#v", tc.repoMatch, result.RepoMatch)
 	}
-	if result.UserMatch != tc.user_match {
-		t.Errorf("expected UserMatch %#v, got %#v", tc.user_match, result.UserMatch)
+	if result.UserMatch != tc.userMatch {
+		t.Errorf("expected UserMatch %#v, got %#v", tc.userMatch, result.UserMatch)
 	}
 	if result.Issue() != tc.issue {
 		t.Errorf("expected Issue %#v, got %#v", tc.issue, result.Issue())
@@ -56,82 +56,82 @@ func TestParse(t *testing.T) {
 			input: "",
 		},
 		"shorthand match": {
-			input:      "df",
-			repo:       "zerowidth/dotfiles",
-			repo_match: "df",
+			input:     "df",
+			repo:      "zerowidth/dotfiles",
+			repoMatch: "df",
 		},
 		"no match, leading space": {
-			input:      " df",
-			repo:       "",
-			repo_match: "",
-			query:      "df",
+			input:     " df",
+			repo:      "",
+			repoMatch: "",
+			query:     "df",
 		},
 		"fully qualified repo name": {
-			input:      "foo/bar",
-			repo:       "foo/bar",
-			repo_match: "",
+			input:     "foo/bar",
+			repo:      "foo/bar",
+			repoMatch: "",
 		},
 		"normal expansion": {
-			input:      "df 123",
-			repo:       "zerowidth/dotfiles",
-			issue:      "123",
-			repo_match: "df",
-			query:      "123",
+			input:     "df 123",
+			repo:      "zerowidth/dotfiles",
+			issue:     "123",
+			repoMatch: "df",
+			query:     "123",
 		},
 		"expansion with #": {
-			input:      "df#123",
-			repo:       "zerowidth/dotfiles",
-			issue:      "123",
-			repo_match: "df",
-			query:      "#123",
+			input:     "df#123",
+			repo:      "zerowidth/dotfiles",
+			issue:     "123",
+			repoMatch: "df",
+			query:     "#123",
 		},
 		"space and # both": {
-			input:      "df #123",
-			repo:       "zerowidth/dotfiles",
-			issue:      "123",
-			repo_match: "df",
-			query:      "#123",
+			input:     "df #123",
+			repo:      "zerowidth/dotfiles",
+			issue:     "123",
+			repoMatch: "df",
+			query:     "#123",
 		},
 		"single digit issue": {
-			input:      "df 1",
-			repo:       "zerowidth/dotfiles",
-			issue:      "1",
-			repo_match: "df",
-			query:      "1",
+			input:     "df 1",
+			repo:      "zerowidth/dotfiles",
+			issue:     "1",
+			repoMatch: "df",
+			query:     "1",
 		},
 		"numeric suffix on match": {
-			input:      "df2 34",
-			repo:       "zerowidth/dotfiles2",
-			issue:      "34",
-			repo_match: "df2",
-			query:      "34",
+			input:     "df2 34",
+			repo:      "zerowidth/dotfiles2",
+			issue:     "34",
+			repoMatch: "df2",
+			query:     "34",
 		},
 		"fully qualified repo": {
-			input:      "foo/bar 123",
-			repo:       "foo/bar",
-			issue:      "123",
-			repo_match: "",
-			query:      "123",
+			input:     "foo/bar 123",
+			repo:      "foo/bar",
+			issue:     "123",
+			repoMatch: "",
+			query:     "123",
 		},
 		"invalid issue": {
-			input:      "df 0123",
-			repo:       "zerowidth/dotfiles",
-			issue:      "",
-			repo_match: "df",
-			query:      "0123",
+			input:     "df 0123",
+			repo:      "zerowidth/dotfiles",
+			issue:     "",
+			repoMatch: "df",
+			query:     "0123",
 		},
 		"retrieve query after expansion": {
-			input:      "df foo",
-			repo:       "zerowidth/dotfiles",
-			repo_match: "df",
-			query:      "foo",
+			input:     "df foo",
+			repo:      "zerowidth/dotfiles",
+			repoMatch: "df",
+			query:     "foo",
 		},
 		"treats unparsed issue as query": {
-			input:      "df 123 foo",
-			repo:       "zerowidth/dotfiles",
-			issue:      "",
-			repo_match: "df",
-			query:      "123 foo",
+			input:     "df 123 foo",
+			repo:      "zerowidth/dotfiles",
+			issue:     "",
+			repoMatch: "df",
+			query:     "123 foo",
 		},
 		"treats issue with any other text as a query": {
 			input: "123 foo",
@@ -143,10 +143,10 @@ func TestParse(t *testing.T) {
 			query: "foo bar",
 		},
 		"ignores whitespace after shorthand": {
-			input:      "df ",
-			repo:       "zerowidth/dotfiles",
-			repo_match: "df",
-			query:      "",
+			input:     "df ",
+			repo:      "zerowidth/dotfiles",
+			repoMatch: "df",
+			query:     "",
 		},
 		"ignores whitespace after repo": {
 			input: "foo/bar ",
@@ -154,11 +154,11 @@ func TestParse(t *testing.T) {
 			query: "",
 		},
 		"extracts path component after shorthand": {
-			input:      "df /foo",
-			repo:       "zerowidth/dotfiles",
-			repo_match: "df",
-			path:       "/foo",
-			query:      "/foo",
+			input:     "df /foo",
+			repo:      "zerowidth/dotfiles",
+			repoMatch: "df",
+			path:      "/foo",
+			query:     "/foo",
 		},
 		"extracts path component after repo": {
 			input: "foo/bar /baz",
@@ -175,17 +175,17 @@ func TestParse(t *testing.T) {
 			repo:  "foo/bar",
 		},
 		"expands user": {
-			input:      "zw/",
-			owner:      "zerowidth",
-			user_match: "zw",
-			path:       "/",
-			query:      "/",
+			input:     "zw/",
+			owner:     "zerowidth",
+			userMatch: "zw",
+			path:      "/",
+			query:     "/",
 		},
 		"expands user in repo declaration": {
-			input:      "zw/foo",
-			owner:      "zerowidth",
-			repo:       "zerowidth/foo",
-			user_match: "zw",
+			input:     "zw/foo",
+			owner:     "zerowidth",
+			repo:      "zerowidth/foo",
+			userMatch: "zw",
 		},
 		"does not match non-shorthand user": {
 			input: "foo/",
