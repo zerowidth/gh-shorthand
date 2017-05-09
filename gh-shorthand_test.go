@@ -75,6 +75,10 @@ func (tc *completeTestCase) testItem(t *testing.T) {
 		return
 	}
 
+	if len(tc.uid) == 0 && len(tc.title) == 0 {
+		t.Skip("skipping, uid/title/exclude not specified")
+	}
+
 	item := findMatchingItem(tc.uid, tc.title, result.Items)
 	if item != nil {
 		if len(tc.uid) > 0 && item.UID != tc.uid {
