@@ -70,7 +70,7 @@ func (tc *completeTestCase) testItem(t *testing.T) {
 	if len(tc.exclude) > 0 {
 		item := findMatchingItem(tc.exclude, tc.exclude, result.Items)
 		if item != nil {
-			t.Errorf("%+v\nexpected no item with UID or Title %q", result.Items, tc.exclude)
+			t.Errorf("%s\nexpected no item with UID or Title %q", result.Items, tc.exclude)
 		}
 		return
 	}
@@ -105,7 +105,7 @@ func (tc *completeTestCase) testItem(t *testing.T) {
 			t.Errorf("%+v\nexpected Text.Copy %+v to be %q", item, item.Text, tc.copy)
 		}
 	} else {
-		t.Errorf("expected item with uid %q and/or title %q in %+v", tc.uid, tc.title, result.Items)
+		t.Errorf("expected item with uid %q and/or title %q in %s", tc.uid, tc.title, result.Items)
 	}
 }
 
@@ -806,7 +806,7 @@ func validateItems(t *testing.T, items alfred.Items) {
 		}
 		if len(item.UID) > 0 {
 			if _, ok := uids[item.UID]; ok {
-				t.Errorf("non-unique UID %#v in %+v", item.UID, items)
+				t.Errorf("non-unique UID %#v in %s", item.UID, items)
 			} else {
 				uids[item.UID] = true
 			}
