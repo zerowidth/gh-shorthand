@@ -238,6 +238,13 @@ func TestParse(t *testing.T) {
 			userMatch: "zw",
 			query:     "foo",
 		},
+		"ignores numeric-only username for bare user": {
+			input: "1234",
+			bare:  true,
+			owner: "",
+			issue: "1234",
+			query: "1234",
+		},
 	} {
 		t.Run(fmt.Sprintf("Parse(%#v): %s", tc.input, desc), tc.assert)
 	}

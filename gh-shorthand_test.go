@@ -533,6 +533,11 @@ func TestCompleteItems(t *testing.T) {
 			valid: true,
 			arg:   "open https://github.com/orgs/zerowidth/projects/10",
 		},
+		"specific project with numeric username treated as project": {
+			input: "p 123",
+			uid:   "ghp:zerowidth/default/123",
+			valid: true,
+		},
 
 		// repo autocomplete
 		"no autocomplete for empty input": {

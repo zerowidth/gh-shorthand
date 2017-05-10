@@ -114,11 +114,11 @@ func (r *Result) EmptyQuery() bool {
 func Parse(repoMap, userMap map[string]string, input string, bareUser bool) *Result {
 	owner, name, repoMatch, query := extractRepo(repoMap, input)
 	userMatch := ""
-	if len(name) == 0 {
-		// repo didn't match, check for user directly
+	if len(owner) == 0 {
+		// no repo, check for user directly
 		owner, userMatch, query = expandUser(userMap, input, bareUser)
 	} else {
-		// treat owner as user input and try to expand the user from there
+		// try to expand the user
 		if expanded, match, _ := expandUser(userMap, owner, bareUser); len(expanded) > 0 {
 			owner = expanded
 			userMatch = match
@@ -195,7 +195,9 @@ func expandUser(userMap map[string]string, input string, bareUser bool) (user, m
 		}
 	}
 
-	if bareUser {
+	// ignore issue-like usernames to allow issues to be referenced directly on a
+	// default repository, rather than having numerics presumed to be usernames.
+	if bareUser && !issueRegexp.MatchString(matchedUser) {
 		return matchedUser, "", query
 	}
 	return "", "", input
