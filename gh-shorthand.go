@@ -727,7 +727,7 @@ func openEndedProjectItem(input string) *alfred.Item {
 		Title:        fmt.Sprintf("List projects for %s...", input),
 		Autocomplete: "p " + input,
 		Valid:        false,
-		Icon:         issueListIcon,
+		Icon:         projectIcon,
 	}
 }
 
