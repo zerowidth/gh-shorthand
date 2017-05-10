@@ -918,24 +918,6 @@ func retrieveRepoProjectName(item *alfred.Item, duration time.Duration, parsed *
 	return
 }
 
-func retrieveRepoProjects(item *alfred.Item, duration time.Duration, parsed *parser.Result, cfg *config.Config) (shouldRetry bool, projects alfred.Items) {
-	if duration.Seconds() < delay {
-		shouldRetry = true
-		return
-	}
-
-	retry, results, err := rpcRequest("repo_projects:"+parsed.Repo(), cfg)
-	shouldRetry = retry
-	if err != nil {
-		item.Subtitle = err.Error()
-	} else if shouldRetry {
-		item.Subtitle = ellipsis("Retrieving projects", duration)
-	} else if len(results) > 0 {
-		projects = append(projects, projectItemsFromResults(results, "in "+parsed.Repo())...)
-	}
-	return
-}
-
 func retrieveOrgProjectName(item *alfred.Item, duration time.Duration, parsed *parser.Result, cfg *config.Config) (shouldRetry bool) {
 	if duration.Seconds() < delay {
 		shouldRetry = true
@@ -970,6 +952,24 @@ func retrieveOrgProjects(item *alfred.Item, duration time.Duration, parsed *pars
 		item.Subtitle = ellipsis("Retrieving projects", duration)
 	} else if len(results) > 0 {
 		projects = append(projects, projectItemsFromResults(results, "for "+parsed.Owner)...)
+	}
+	return
+}
+
+func retrieveRepoProjects(item *alfred.Item, duration time.Duration, parsed *parser.Result, cfg *config.Config) (shouldRetry bool, projects alfred.Items) {
+	if duration.Seconds() < delay {
+		shouldRetry = true
+		return
+	}
+
+	retry, results, err := rpcRequest("repo_projects:"+parsed.Repo(), cfg)
+	shouldRetry = retry
+	if err != nil {
+		item.Subtitle = err.Error()
+	} else if shouldRetry {
+		item.Subtitle = ellipsis("Retrieving projects", duration)
+	} else if len(results) > 0 {
+		projects = append(projects, projectItemsFromResults(results, "in "+parsed.Repo())...)
 	}
 	return
 }
