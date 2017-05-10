@@ -62,6 +62,8 @@ var (
 	pullRequestIconOpen   = octicon("git-pull-request_open")
 	pullRequestIconClosed = octicon("git-pull-request_closed")
 	pullRequestIconMerged = octicon("git-merge_merged")
+	projectIconOpen       = octicon("project_open")
+	projectIconClosed     = octicon("project_closed")
 
 	// the minimum length of 7 is enforced elsewhere
 	sha1Regexp = regexp.MustCompile(`[0-9a-f]{1,40}$`)
@@ -911,8 +913,14 @@ func retrieveRepoProjectName(item *alfred.Item, duration time.Duration, parsed *
 	} else if shouldRetry {
 		item.Subtitle = ellipsis("Retrieving project name", duration)
 	} else if len(results) > 0 {
+		parts := strings.SplitN(results[0], ":", 2)
+		if len(parts) != 2 {
+			return
+		}
+		state, name := parts[0], parts[1]
 		item.Subtitle = item.Title
-		item.Title = results[0]
+		item.Title = name
+		item.Icon = projectStateIcon(state)
 	}
 
 	return
@@ -931,8 +939,14 @@ func retrieveOrgProjectName(item *alfred.Item, duration time.Duration, parsed *p
 	} else if shouldRetry {
 		item.Subtitle = ellipsis("Retrieving project name", duration)
 	} else if len(results) > 0 {
+		parts := strings.SplitN(results[0], ":", 2)
+		if len(parts) != 2 {
+			return
+		}
+		state, name := parts[0], parts[1]
 		item.Subtitle = item.Title
-		item.Title = results[0]
+		item.Title = name
+		item.Icon = projectStateIcon(state)
 	}
 
 	return
@@ -976,11 +990,11 @@ func retrieveRepoProjects(item *alfred.Item, duration time.Duration, parsed *par
 
 func projectItemsFromResults(results []string, desc string) (items alfred.Items) {
 	for _, result := range results {
-		parts := strings.SplitN(result, "#", 3)
-		if len(parts) != 3 {
+		parts := strings.SplitN(result, "#", 4)
+		if len(parts) != 4 {
 			continue
 		}
-		number, url, name := parts[0], parts[1], parts[2]
+		number, state, url, name := parts[0], parts[1], parts[2], parts[3]
 
 		// no UID so alfred doesn't remember these
 		items = append(items, &alfred.Item{
@@ -988,7 +1002,7 @@ func projectItemsFromResults(results []string, desc string) (items alfred.Items)
 			Subtitle: fmt.Sprintf("Open project #%s %s", number, desc),
 			Valid:    true,
 			Arg:      "open " + url,
-			Icon:     projectIcon,
+			Icon:     projectStateIcon(state),
 		})
 	}
 	return
@@ -1096,6 +1110,13 @@ func issueStateIcon(kind, state string) *alfred.Icon {
 		}
 	}
 	return issueIcon // sane default
+}
+
+func projectStateIcon(state string) *alfred.Icon {
+	if state == "OPEN" {
+		return projectIconOpen
+	}
+	return projectIconClosed
 }
 
 func errorItem(context, msg string) *alfred.Item {
