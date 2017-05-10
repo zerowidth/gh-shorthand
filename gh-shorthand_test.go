@@ -538,6 +538,12 @@ func TestCompleteItems(t *testing.T) {
 			uid:   "ghp:zerowidth/default/123",
 			valid: true,
 		},
+		"specific project with numeric username but default repo treated as user": {
+			input: "p 123",
+			cfg:   emptyConfig,
+			uid:   "ghp:123",
+			valid: true,
+		},
 
 		// repo autocomplete
 		"no autocomplete for empty input": {

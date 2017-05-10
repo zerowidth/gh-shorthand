@@ -111,15 +111,17 @@ func (r *Result) EmptyQuery() bool {
 // issue, etc. from the input using the repo map for shorthand expansion.
 //
 // bareUser determines whether or not a bare username is allowed as input.
-func Parse(repoMap, userMap map[string]string, input string, bareUser bool) *Result {
+// ignoreNumeric determines whether or not to ignore a bare user if it's
+// entirely numeric.
+func Parse(repoMap, userMap map[string]string, input string, bareUser, ignoreNumeric bool) *Result {
 	owner, name, repoMatch, query := extractRepo(repoMap, input)
 	userMatch := ""
 	if len(owner) == 0 {
 		// no repo, check for user directly
-		owner, userMatch, query = expandUser(userMap, input, bareUser)
+		owner, userMatch, query = expandUser(userMap, input, bareUser, ignoreNumeric)
 	} else {
 		// try to expand the user
-		if expanded, match, _ := expandUser(userMap, owner, bareUser); len(expanded) > 0 {
+		if expanded, match, _ := expandUser(userMap, owner, bareUser, ignoreNumeric); len(expanded) > 0 {
 			owner = expanded
 			userMatch = match
 		}
@@ -173,7 +175,7 @@ func extractRepo(repoMap map[string]string, input string) (owner, name, match, q
 	return "", "", "", input
 }
 
-func expandUser(userMap map[string]string, input string, bareUser bool) (user, match, query string) {
+func expandUser(userMap map[string]string, input string, bareUser, ignoreNumeric bool) (user, match, query string) {
 	var keys []string
 	for k := range userMap {
 		keys = append(keys, k)
@@ -197,7 +199,7 @@ func expandUser(userMap map[string]string, input string, bareUser bool) (user, m
 
 	// ignore issue-like usernames to allow issues to be referenced directly on a
 	// default repository, rather than having numerics presumed to be usernames.
-	if bareUser && !issueRegexp.MatchString(matchedUser) {
+	if bareUser && (!ignoreNumeric || !issueRegexp.MatchString(matchedUser)) {
 		return matchedUser, "", query
 	}
 	return "", "", input

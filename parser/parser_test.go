@@ -15,19 +15,20 @@ var userMap = map[string]string{
 }
 
 type testCase struct {
-	input     string // the input
-	bare      bool   // allow bare user
-	repo      string // the expected repo match or expansion
-	owner     string // the expected user match or expansion
-	repoMatch string // the matched repo shorthand
-	userMatch string // the matched user shorthand
-	issue     string // the expected issue match
-	path      string // the expected path match
-	query     string // the remaining query text after parsing/expansion
+	input         string // the input
+	bare          bool   // allow bare user
+	ignoreNumeric bool   // whether or not to ignore numeric bare usernames
+	repo          string // the expected repo match or expansion
+	owner         string // the expected user match or expansion
+	repoMatch     string // the matched repo shorthand
+	userMatch     string // the matched user shorthand
+	issue         string // the expected issue match
+	path          string // the expected path match
+	query         string // the remaining query text after parsing/expansion
 }
 
 func (tc *testCase) assert(t *testing.T) {
-	result := Parse(repoMap, userMap, tc.input, tc.bare)
+	result := Parse(repoMap, userMap, tc.input, tc.bare, tc.ignoreNumeric)
 	if result.Repo() != tc.repo {
 		t.Errorf("expected Repo %#v, got %#v", tc.repo, result.Repo())
 	}
@@ -238,12 +239,13 @@ func TestParse(t *testing.T) {
 			userMatch: "zw",
 			query:     "foo",
 		},
-		"ignores numeric-only username for bare user": {
-			input: "1234",
-			bare:  true,
-			owner: "",
-			issue: "1234",
-			query: "1234",
+		"can ignore numeric-only username for bare user": {
+			input:         "1234",
+			bare:          true,
+			ignoreNumeric: true,
+			owner:         "",
+			issue:         "1234",
+			query:         "1234",
 		},
 	} {
 		t.Run(fmt.Sprintf("Parse(%#v): %s", tc.input, desc), tc.assert)
