@@ -207,7 +207,7 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[
 			result.AppendItems(item)
 		}
 
-		if !parsed.HasRepo() && len(parsed.Owner) == 0 && parsed.HasPath() {
+		if !parsed.HasRepo() && !parsed.HasOwner() && parsed.HasPath() {
 			result.AppendItems(openPathItem(parsed.Path()))
 		}
 
@@ -260,6 +260,16 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[
 					result.AppendItems(item)
 					result.AppendItems(projects...)
 				}
+			}
+		}
+
+		if !strings.Contains(input, " ") {
+			result.AppendItems(
+				autocompleteRepoItems(cfg, input, autocompleteProjectItem)...)
+			result.AppendItems(
+				autocompleteUserItems(cfg, input, parsed, false, autocompleteOrgProjectItem)...)
+			if len(input) == 0 || parsed.Repo() != input {
+				result.AppendItems(openEndedProjectItem(input))
 			}
 		}
 	case "n":
@@ -616,6 +626,28 @@ func autocompleteUserIssueItem(key, repo string) *alfred.Item {
 	}
 }
 
+func autocompleteProjectItem(key, repo string) *alfred.Item {
+	return &alfred.Item{
+		UID:          "ghp:" + repo,
+		Title:        fmt.Sprintf("List projects in %s (%s)", repo, key),
+		Arg:          "open https://github.com/" + repo + "/projects",
+		Valid:        true,
+		Autocomplete: "p " + key,
+		Icon:         projectIcon,
+	}
+}
+
+func autocompleteOrgProjectItem(key, user string) *alfred.Item {
+	return &alfred.Item{
+		UID:          "ghp:" + user,
+		Title:        fmt.Sprintf("List projects for %s (%s)", user, key),
+		Arg:          "open https://github.com/orgs/" + user + "/projects",
+		Valid:        true,
+		Autocomplete: "p " + key,
+		Icon:         projectIcon,
+	}
+}
+
 func autocompleteNewIssueItem(key, repo string) *alfred.Item {
 	return &alfred.Item{
 		UID:          "ghn:" + repo,
@@ -690,6 +722,15 @@ func openEndedIssueItem(input string) *alfred.Item {
 	}
 }
 
+func openEndedProjectItem(input string) *alfred.Item {
+	return &alfred.Item{
+		Title:        fmt.Sprintf("List projects for %s...", input),
+		Autocomplete: "p " + input,
+		Valid:        false,
+		Icon:         issueListIcon,
+	}
+}
+
 func openEndedNewIssueItem(input string) *alfred.Item {
 	return &alfred.Item{
 		Title:        fmt.Sprintf("New issue in %s...", input),
@@ -730,25 +771,45 @@ func autocompleteItems(cfg *config.Config, input string, parsed *parser.Result,
 	autocompleteRepoItem func(string, string) *alfred.Item,
 	autocompleteUserItem func(string, string) *alfred.Item,
 	openEndedItem func(string) *alfred.Item) (items alfred.Items) {
+
 	if strings.Contains(input, " ") {
 		return
 	}
 
-	if len(input) > 0 {
-		for key, repo := range cfg.RepoMap {
-			if strings.HasPrefix(key, input) && key != parsed.RepoMatch {
-				items = append(items, autocompleteRepoItem(key, repo))
-			}
-		}
-		for key, user := range cfg.UserMap {
-			if (parsed.UserMatch == key && !parsed.HasRepo()) || strings.HasPrefix(key, input) {
-				items = append(items, autocompleteUserItem(key, user))
-			}
-		}
-	}
+	items = append(items,
+		autocompleteRepoItems(cfg, input, autocompleteRepoItem)...)
+	items = append(items,
+		autocompleteUserItems(cfg, input, parsed, true, autocompleteUserItem)...)
 
 	if len(input) == 0 || parsed.Repo() != input {
 		items = append(items, openEndedItem(input))
+	}
+	return
+}
+
+func autocompleteRepoItems(cfg *config.Config, input string,
+	autocompleteRepoItem func(string, string) *alfred.Item) (items alfred.Items) {
+	if len(input) > 0 {
+		for key, repo := range cfg.RepoMap {
+			if strings.HasPrefix(key, input) && len(key) > len(input) {
+				items = append(items, autocompleteRepoItem(key, repo))
+			}
+		}
+	}
+	return
+}
+
+func autocompleteUserItems(cfg *config.Config, input string,
+	parsed *parser.Result, includeMatchedUser bool,
+	autocompleteUserItem func(string, string) *alfred.Item) (items alfred.Items) {
+	if len(input) > 0 {
+		for key, user := range cfg.UserMap {
+			prefixed := strings.HasPrefix(key, input) && len(key) > len(input)
+			matched := includeMatchedUser && key == parsed.UserMatch && !parsed.HasRepo()
+			if prefixed || matched {
+				items = append(items, autocompleteUserItem(key, user))
+			}
+		}
 	}
 	return
 }

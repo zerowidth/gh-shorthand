@@ -629,6 +629,33 @@ func TestCompleteItems(t *testing.T) {
 			auto:  "i zw/",
 		},
 
+		// project autocomplete
+		"autocompletes for repo projects": {
+			input: "p d",
+			uid:   "ghp:zerowidth/dotfiles",
+			valid: true,
+			title: "List projects in zerowidth/dotfiles (df)",
+			auto:  "p df",
+		},
+		"autocompletes user projects": {
+			input: "p z",
+			uid:   "ghp:zerowidth",
+			valid: true,
+			title: "List projects for zerowidth (zw)",
+			auto:  "p zw",
+		},
+		"autocompletes projects with input so far": {
+			input: "p foo",
+			title: "List projects for foo...",
+			valid: false,
+		},
+		"autocomplete open-ended projects when no default": {
+			input: "p ",
+			cfg:   emptyConfig,
+			title: "List projects for ...",
+			valid: false,
+		},
+
 		// new issue autocomplete
 		"autocompletes for new issue": {
 			input: "n d",
