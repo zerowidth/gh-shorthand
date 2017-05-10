@@ -48,7 +48,7 @@ var (
 	issueListIcon   = octicon("list-ordered")
 	pathIcon        = octicon("browser")
 	issueIcon       = octicon("issue-opened")
-	projectsIcon    = octicon("project")
+	projectIcon     = octicon("project")
 	newIssueIcon    = octicon("bug")
 	editorIcon      = octicon("file-code")
 	finderIcon      = octicon("file-directory")
@@ -234,16 +234,24 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[
 				item := repoProjectsItem(parsed)
 				if parsed.HasIssue() {
 					shouldRetry = retrieveRepoProjectName(item, duration, parsed, cfg)
+					result.AppendItems(item)
 				} else {
-					// rpc to list recent projects
+					retry, projects := retrieveRepoProjects(item, duration, parsed, cfg)
+					shouldRetry = retry
+					result.AppendItems(item)
+					result.AppendItems(projects...)
 				}
-				result.AppendItems(item)
 			} else {
 				item := orgProjectsItem(parsed)
 				if parsed.HasIssue() {
 					shouldRetry = retrieveOrgProjectName(item, duration, parsed, cfg)
+					result.AppendItems(item)
+				} else {
+					retry, projects := retrieveOrgProjects(item, duration, parsed, cfg)
+					shouldRetry = retry
+					result.AppendItems(item)
+					result.AppendItems(projects...)
 				}
-				result.AppendItems(item)
 			}
 		}
 	case "n":
@@ -423,7 +431,7 @@ func repoProjectsItem(parsed *parser.Result) *alfred.Item {
 			Title: "Open project #" + parsed.Issue() + " in " + parsed.Repo() + parsed.Annotation(),
 			Valid: true,
 			Arg:   "open https://github.com/" + parsed.Repo() + "/projects/" + parsed.Issue(),
-			Icon:  projectsIcon,
+			Icon:  projectIcon,
 		}
 	}
 	return &alfred.Item{
@@ -431,7 +439,7 @@ func repoProjectsItem(parsed *parser.Result) *alfred.Item {
 		Title: "List projects in " + parsed.Repo() + parsed.Annotation(),
 		Valid: true,
 		Arg:   "open https://github.com/" + parsed.Repo() + "/projects",
-		Icon:  projectsIcon,
+		Icon:  projectIcon,
 	}
 }
 
@@ -442,7 +450,7 @@ func orgProjectsItem(parsed *parser.Result) *alfred.Item {
 			Title: "Open project #" + parsed.Issue() + " for " + parsed.Owner + parsed.Annotation(),
 			Valid: true,
 			Arg:   "open https://github.com/orgs/" + parsed.Owner + "/projects/" + parsed.Issue(),
-			Icon:  projectsIcon,
+			Icon:  projectIcon,
 		}
 	}
 	return &alfred.Item{
@@ -450,7 +458,7 @@ func orgProjectsItem(parsed *parser.Result) *alfred.Item {
 		Title: "List projects for " + parsed.Owner + parsed.Annotation(),
 		Valid: true,
 		Arg:   "open https://github.com/orgs/" + parsed.Owner + "/projects",
-		Icon:  projectsIcon,
+		Icon:  projectIcon,
 	}
 }
 
@@ -910,6 +918,24 @@ func retrieveRepoProjectName(item *alfred.Item, duration time.Duration, parsed *
 	return
 }
 
+func retrieveRepoProjects(item *alfred.Item, duration time.Duration, parsed *parser.Result, cfg *config.Config) (shouldRetry bool, projects alfred.Items) {
+	if duration.Seconds() < delay {
+		shouldRetry = true
+		return
+	}
+
+	retry, results, err := rpcRequest("repo_projects:"+parsed.Repo(), cfg)
+	shouldRetry = retry
+	if err != nil {
+		item.Subtitle = err.Error()
+	} else if shouldRetry {
+		item.Subtitle = ellipsis("Retrieving projects", duration)
+	} else if len(results) > 0 {
+		projects = append(projects, projectItemsFromResults(results, "in "+parsed.Repo())...)
+	}
+	return
+}
+
 func retrieveOrgProjectName(item *alfred.Item, duration time.Duration, parsed *parser.Result, cfg *config.Config) (shouldRetry bool) {
 	if duration.Seconds() < delay {
 		shouldRetry = true
@@ -927,6 +953,44 @@ func retrieveOrgProjectName(item *alfred.Item, duration time.Duration, parsed *p
 		item.Title = results[0]
 	}
 
+	return
+}
+
+func retrieveOrgProjects(item *alfred.Item, duration time.Duration, parsed *parser.Result, cfg *config.Config) (shouldRetry bool, projects alfred.Items) {
+	if duration.Seconds() < delay {
+		shouldRetry = true
+		return
+	}
+
+	retry, results, err := rpcRequest("org_projects:"+parsed.Owner, cfg)
+	shouldRetry = retry
+	if err != nil {
+		item.Subtitle = err.Error()
+	} else if shouldRetry {
+		item.Subtitle = ellipsis("Retrieving projects", duration)
+	} else if len(results) > 0 {
+		projects = append(projects, projectItemsFromResults(results, "for "+parsed.Owner)...)
+	}
+	return
+}
+
+func projectItemsFromResults(results []string, desc string) (items alfred.Items) {
+	for _, result := range results {
+		parts := strings.SplitN(result, "#", 3)
+		if len(parts) != 3 {
+			continue
+		}
+		number, url, name := parts[0], parts[1], parts[2]
+
+		// no UID so alfred doesn't remember these
+		items = append(items, &alfred.Item{
+			Title:    name,
+			Subtitle: fmt.Sprintf("Open project #%s %s", number, desc),
+			Valid:    true,
+			Arg:      "open " + url,
+			Icon:     projectIcon,
+		})
+	}
 	return
 }
 
