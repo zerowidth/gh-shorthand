@@ -128,6 +128,11 @@ func TestCompleteItems(t *testing.T) {
 			title: "List and search issues in a GitHub repository",
 			auto:  "i ",
 		},
+		"empty input shows project list/search default": {
+			input: "",
+			title: "List and open projects on GitHub repositories or organizations",
+			auto:  "p ",
+		},
 		"empty input shows new issue default": {
 			input: "",
 			title: "New issue in a GitHub repository",

@@ -78,6 +78,11 @@ var (
 		Autocomplete: "i ",
 		Icon:         issueListIcon,
 	}
+	projectListDefaultItem = &alfred.Item{
+		Title:        "List and open projects on GitHub repositories or organizations",
+		Autocomplete: "p ",
+		Icon:         projectIcon,
+	}
 	issueSearchDefaultItem = &alfred.Item{
 		Title:        "Search issues across GitHub",
 		Autocomplete: "s ",
@@ -179,6 +184,7 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[
 		result.AppendItems(
 			repoDefaultItem,
 			issueListDefaultItem,
+			projectListDefaultItem,
 			newIssueDefaultItem,
 			issueSearchDefaultItem,
 			markdownLinkDefaultItem,
