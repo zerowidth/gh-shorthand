@@ -16,6 +16,11 @@ type Result struct {
 	Query     string // the remainder of the input
 }
 
+// HasOwner checks if the result has an owner.
+func (r *Result) HasOwner() bool {
+	return len(r.Owner) > 0
+}
+
 // HasRepo checks if the result has a repo, either from a matched repo shorthand,
 // or from an explicit owner/name.
 func (r *Result) HasRepo() bool {
@@ -104,13 +109,19 @@ func (r *Result) EmptyQuery() bool {
 
 // Parse takes a repo mapping and input string and attempts to extract a repo,
 // issue, etc. from the input using the repo map for shorthand expansion.
-func Parse(repoMap, userMap map[string]string, input string) *Result {
+//
+// bareUser determines whether or not a bare username is allowed as input.
+// ignoreNumeric determines whether or not to ignore a bare user if it's
+// entirely numeric.
+func Parse(repoMap, userMap map[string]string, input string, bareUser, ignoreNumeric bool) *Result {
 	owner, name, repoMatch, query := extractRepo(repoMap, input)
 	userMatch := ""
-	if len(name) == 0 {
-		owner, userMatch, query = extractUser(userMap, input)
+	if len(owner) == 0 {
+		// no repo, check for user directly
+		owner, userMatch, query = expandUser(userMap, input, bareUser, ignoreNumeric)
 	} else {
-		if expanded, match, _ := extractUser(userMap, owner); len(expanded) > 0 {
+		// try to expand the user
+		if expanded, match, _ := expandUser(userMap, owner, bareUser, ignoreNumeric); len(expanded) > 0 {
 			owner = expanded
 			userMatch = match
 		}
@@ -127,6 +138,7 @@ func Parse(repoMap, userMap map[string]string, input string) *Result {
 
 var (
 	userRepoRegexp = regexp.MustCompile(`^([A-Za-z0-9][-A-Za-z0-9]*)/([\w\.\-]+)\b`) // user/repo
+	userRegexp     = regexp.MustCompile(`^([A-Za-z0-9][-A-Za-z0-9]*)\b`)             // user
 	issueRegexp    = regexp.MustCompile(`^#?([1-9]\d*)$`)
 	pathRegexp     = regexp.MustCompile(`^(/\S*)$`)
 )
@@ -163,7 +175,7 @@ func extractRepo(repoMap map[string]string, input string) (owner, name, match, q
 	return "", "", "", input
 }
 
-func extractUser(userMap map[string]string, input string) (user, match, query string) {
+func expandUser(userMap map[string]string, input string, bareUser, ignoreNumeric bool) (user, match, query string) {
 	var keys []string
 	for k := range userMap {
 		keys = append(keys, k)
@@ -172,13 +184,23 @@ func extractUser(userMap map[string]string, input string) (user, match, query st
 	// sort the keys in reverse so the longest is matched first
 	sort.Sort(sort.Reverse(sort.StringSlice(keys)))
 
+	result := userRegexp.FindStringSubmatch(input)
+	if len(result) == 0 {
+		return "", "", input
+	}
+	matchedUser := result[1]
+	query = strings.TrimLeft(input[len(matchedUser):], " ")
+
 	for _, k := range keys {
-		if strings.HasPrefix(input, k) {
-			if len(input) == len(k) || input[len(k):len(k)+1] == "/" {
-				return userMap[k], k, strings.TrimLeft(input[len(k):], " ")
-			}
+		if matchedUser == k {
+			return userMap[k], k, query
 		}
 	}
 
+	// ignore issue-like usernames to allow issues to be referenced directly on a
+	// default repository, rather than having numerics presumed to be usernames.
+	if bareUser && (!ignoreNumeric || !issueRegexp.MatchString(matchedUser)) {
+		return matchedUser, "", query
+	}
 	return "", "", input
 }

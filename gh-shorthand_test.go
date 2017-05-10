@@ -70,9 +70,13 @@ func (tc *completeTestCase) testItem(t *testing.T) {
 	if len(tc.exclude) > 0 {
 		item := findMatchingItem(tc.exclude, tc.exclude, result.Items)
 		if item != nil {
-			t.Errorf("%+v\nexpected no item with UID or Title %q", result.Items, tc.exclude)
+			t.Errorf("%s\nexpected no item with UID or Title %q", result.Items, tc.exclude)
 		}
 		return
+	}
+
+	if len(tc.uid) == 0 && len(tc.title) == 0 {
+		t.Skip("skipping, uid/title/exclude not specified")
 	}
 
 	item := findMatchingItem(tc.uid, tc.title, result.Items)
@@ -101,7 +105,7 @@ func (tc *completeTestCase) testItem(t *testing.T) {
 			t.Errorf("%+v\nexpected Text.Copy %+v to be %q", item, item.Text, tc.copy)
 		}
 	} else {
-		t.Errorf("expected item with uid %q and/or title %q in %+v", tc.uid, tc.title, result.Items)
+		t.Errorf("expected item with uid %q and/or title %q in %s", tc.uid, tc.title, result.Items)
 	}
 }
 
@@ -123,6 +127,11 @@ func TestCompleteItems(t *testing.T) {
 			input: "",
 			title: "List and search issues in a GitHub repository",
 			auto:  "i ",
+		},
+		"empty input shows project list/search default": {
+			input: "",
+			title: "List and open projects on GitHub repositories or organizations",
+			auto:  "p ",
 		},
 		"empty input shows new issue default": {
 			input: "",
@@ -277,14 +286,14 @@ func TestCompleteItems(t *testing.T) {
 			input: "i df",
 			uid:   "ghi:zerowidth/dotfiles",
 			valid: true,
-			title: "Open issues for zerowidth/dotfiles (df)",
+			title: "List issues for zerowidth/dotfiles (df)",
 			arg:   "open https://github.com/zerowidth/dotfiles/issues",
 		},
 		"open issues index on a repo": {
 			input: "i foo/bar",
 			uid:   "ghi:foo/bar",
 			valid: true,
-			title: "Open issues for foo/bar",
+			title: "List issues for foo/bar",
 			arg:   "open https://github.com/foo/bar/issues",
 		},
 		"search issues on a repo": {
@@ -423,7 +432,7 @@ func TestCompleteItems(t *testing.T) {
 			input: "i ",
 			uid:   "ghi:zerowidth/default",
 			valid: true,
-			title: "Open issues for zerowidth/default",
+			title: "List issues for zerowidth/default",
 		},
 		"search issues with a query in the default repo": {
 			input: "i foo",
@@ -464,6 +473,75 @@ func TestCompleteItems(t *testing.T) {
 			input: "r 123",
 			uid:   "ghr:zerowidth/default#123",
 			title: "Insert issue reference to zerowidth/default#123",
+			valid: true,
+		},
+
+		// projects
+		"project listing with explicit repo": {
+			input: "p zerowidth/dotfiles",
+			uid:   "ghp:zerowidth/dotfiles",
+			title: "List projects in zerowidth/dotfiles",
+			valid: true,
+			arg:   "open https://github.com/zerowidth/dotfiles/projects",
+		},
+		"specific project with explicit repo": {
+			input: "p zerowidth/dotfiles 10",
+			uid:   "ghp:zerowidth/dotfiles/10",
+			title: "Open project #10 in zerowidth/dotfiles",
+			valid: true,
+			arg:   "open https://github.com/zerowidth/dotfiles/projects/10",
+		},
+		"project listing with shorthand repo": {
+			input: "p df",
+			uid:   "ghp:zerowidth/dotfiles",
+			title: "List projects in zerowidth/dotfiles (df)",
+			valid: true,
+			arg:   "open https://github.com/zerowidth/dotfiles/projects",
+		},
+		"specific project with shorthand repo": {
+			input: "p df 10",
+			uid:   "ghp:zerowidth/dotfiles/10",
+			title: "Open project #10 in zerowidth/dotfiles (df#10)",
+			valid: true,
+			arg:   "open https://github.com/zerowidth/dotfiles/projects/10",
+		},
+		"project listing with org": {
+			input: "p zerowidth",
+			uid:   "ghp:zerowidth",
+			title: "List projects for zerowidth",
+			valid: true,
+			arg:   "open https://github.com/orgs/zerowidth/projects",
+		},
+		"specific project with org": {
+			input: "p zerowidth 10",
+			uid:   "ghp:zerowidth/10",
+			title: "Open project #10 for zerowidth",
+			valid: true,
+			arg:   "open https://github.com/orgs/zerowidth/projects/10",
+		},
+		"project listing with user shorthand": {
+			input: "p zw",
+			uid:   "ghp:zerowidth",
+			title: "List projects for zerowidth (zw)",
+			valid: true,
+			arg:   "open https://github.com/orgs/zerowidth/projects",
+		},
+		"specific project with user shorthand": {
+			input: "p zw 10",
+			uid:   "ghp:zerowidth/10",
+			title: "Open project #10 for zerowidth (zw)",
+			valid: true,
+			arg:   "open https://github.com/orgs/zerowidth/projects/10",
+		},
+		"specific project with numeric username treated as project": {
+			input: "p 123",
+			uid:   "ghp:zerowidth/default/123",
+			valid: true,
+		},
+		"specific project with numeric username but default repo treated as user": {
+			input: "p 123",
+			cfg:   emptyConfig,
+			uid:   "ghp:123",
 			valid: true,
 		},
 
@@ -540,26 +618,53 @@ func TestCompleteItems(t *testing.T) {
 			input: "i d",
 			uid:   "ghi:zerowidth/dotfiles",
 			valid: true,
-			title: "Open issues for zerowidth/dotfiles (df)",
+			title: "List issues for zerowidth/dotfiles (df)",
 			arg:   "open https://github.com/zerowidth/dotfiles/issues",
 			auto:  "i df",
 		},
 		"autocompletes issue index with input so far": {
 			input: "i foo",
 			valid: false,
-			title: "Open issues for foo...",
+			title: "List issues for foo...",
 			auto:  "i foo",
 		},
 		"autocomplete issues open-ended when no default": {
 			cfg:   emptyConfig,
 			input: "i ",
-			title: "Open issues for ...",
+			title: "List issues for ...",
 			valid: false,
 		},
 		"autocomplete user for issues": {
 			input: "i z",
-			title: "Open issues for zerowidth/... (zw)",
+			title: "List issues for zerowidth/... (zw)",
 			auto:  "i zw/",
+		},
+
+		// project autocomplete
+		"autocompletes for repo projects": {
+			input: "p d",
+			uid:   "ghp:zerowidth/dotfiles",
+			valid: true,
+			title: "List projects in zerowidth/dotfiles (df)",
+			auto:  "p df",
+		},
+		"autocompletes user projects": {
+			input: "p z",
+			uid:   "ghp:zerowidth",
+			valid: true,
+			title: "List projects for zerowidth (zw)",
+			auto:  "p zw",
+		},
+		"autocompletes projects with input so far": {
+			input: "p foo",
+			title: "List projects for foo...",
+			valid: false,
+		},
+		"autocomplete open-ended projects when no default": {
+			input: "p ",
+			cfg:   emptyConfig,
+			title: "List projects for ...",
+			valid: false,
 		},
 
 		// new issue autocomplete
@@ -739,7 +844,7 @@ func validateItems(t *testing.T, items alfred.Items) {
 		}
 		if len(item.UID) > 0 {
 			if _, ok := uids[item.UID]; ok {
-				t.Errorf("non-unique UID %#v in %+v", item.UID, items)
+				t.Errorf("non-unique UID %#v in %s", item.UID, items)
 			} else {
 				uids[item.UID] = true
 			}

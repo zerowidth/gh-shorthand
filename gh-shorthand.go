@@ -48,6 +48,7 @@ var (
 	issueListIcon   = octicon("list-ordered")
 	pathIcon        = octicon("browser")
 	issueIcon       = octicon("issue-opened")
+	projectIcon     = octicon("project")
 	newIssueIcon    = octicon("bug")
 	editorIcon      = octicon("file-code")
 	finderIcon      = octicon("file-directory")
@@ -61,6 +62,8 @@ var (
 	pullRequestIconOpen   = octicon("git-pull-request_open")
 	pullRequestIconClosed = octicon("git-pull-request_closed")
 	pullRequestIconMerged = octicon("git-merge_merged")
+	projectIconOpen       = octicon("project_open")
+	projectIconClosed     = octicon("project_closed")
 
 	// the minimum length of 7 is enforced elsewhere
 	sha1Regexp = regexp.MustCompile(`[0-9a-f]{1,40}$`)
@@ -74,6 +77,11 @@ var (
 		Title:        "List and search issues in a GitHub repository",
 		Autocomplete: "i ",
 		Icon:         issueListIcon,
+	}
+	projectListDefaultItem = &alfred.Item{
+		Title:        "List and open projects on GitHub repositories or organizations",
+		Autocomplete: "p ",
+		Icon:         projectIcon,
 	}
 	issueSearchDefaultItem = &alfred.Item{
 		Title:        "Search issues across GitHub",
@@ -157,14 +165,16 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[
 		input = ""
 	}
 
-	parsed := parser.Parse(cfg.RepoMap, cfg.UserMap, input)
+	bareUser := mode == "p"
+	ignoreNumeric := len(cfg.DefaultRepo) > 0
+	parsed := parser.Parse(cfg.RepoMap, cfg.UserMap, input, bareUser, ignoreNumeric)
 
 	// for RPC calls on idle query input:
 	shouldRetry := false
 	start := queryStart(input, env)
 	duration := time.Since(start)
 
-	if !parsed.HasRepo() && len(cfg.DefaultRepo) > 0 && len(parsed.Owner) == 0 && !parsed.HasPath() {
+	if !parsed.HasRepo() && len(cfg.DefaultRepo) > 0 && !parsed.HasOwner() && !parsed.HasPath() {
 		if err := parsed.SetRepo(cfg.DefaultRepo); err != nil {
 			result.AppendItems(errorItem("Could not set default repo", err.Error()))
 		}
@@ -175,6 +185,7 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[
 		result.AppendItems(
 			repoDefaultItem,
 			issueListDefaultItem,
+			projectListDefaultItem,
 			newIssueDefaultItem,
 			issueSearchDefaultItem,
 			markdownLinkDefaultItem,
@@ -197,7 +208,7 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[
 			result.AppendItems(item)
 		}
 
-		if !parsed.HasRepo() && len(parsed.Owner) == 0 && parsed.HasPath() {
+		if !parsed.HasRepo() && !parsed.HasOwner() && parsed.HasPath() {
 			result.AppendItems(openPathItem(parsed.Path()))
 		}
 
@@ -226,6 +237,42 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[
 		result.AppendItems(
 			autocompleteItems(cfg, input, parsed,
 				autocompleteIssueItem, autocompleteUserIssueItem, openEndedIssueItem)...)
+	case "p":
+		if parsed.HasOwner() && (parsed.HasIssue() || parsed.EmptyQuery()) {
+			if parsed.HasRepo() {
+				item := repoProjectsItem(parsed)
+				if parsed.HasIssue() {
+					shouldRetry = retrieveRepoProjectName(item, duration, parsed, cfg)
+					result.AppendItems(item)
+				} else {
+					retry, projects := retrieveRepoProjects(item, duration, parsed, cfg)
+					shouldRetry = retry
+					result.AppendItems(item)
+					result.AppendItems(projects...)
+				}
+			} else {
+				item := orgProjectsItem(parsed)
+				if parsed.HasIssue() {
+					shouldRetry = retrieveOrgProjectName(item, duration, parsed, cfg)
+					result.AppendItems(item)
+				} else {
+					retry, projects := retrieveOrgProjects(item, duration, parsed, cfg)
+					shouldRetry = retry
+					result.AppendItems(item)
+					result.AppendItems(projects...)
+				}
+			}
+		}
+
+		if !strings.Contains(input, " ") {
+			result.AppendItems(
+				autocompleteRepoItems(cfg, input, autocompleteProjectItem)...)
+			result.AppendItems(
+				autocompleteUserItems(cfg, input, parsed, false, autocompleteOrgProjectItem)...)
+			if len(input) == 0 || parsed.Repo() != input {
+				result.AppendItems(openEndedProjectItem(input))
+			}
+		}
 	case "n":
 		// repo required
 		if parsed.HasRepo() {
@@ -366,7 +413,7 @@ func openPathItem(path string) *alfred.Item {
 func openIssuesItem(parsed *parser.Result) (item *alfred.Item) {
 	return &alfred.Item{
 		UID:   "ghi:" + parsed.Repo(),
-		Title: "Open issues for " + parsed.Repo() + parsed.Annotation(),
+		Title: "List issues for " + parsed.Repo() + parsed.Annotation(),
 		Arg:   "open https://github.com/" + parsed.Repo() + "/issues",
 		Valid: true,
 		Icon:  issueListIcon,
@@ -393,6 +440,44 @@ func searchIssuesItem(parsed *parser.Result, fullInput string) *alfred.Item {
 		Valid:        false,
 		Icon:         searchIcon,
 		Autocomplete: fullInput + " ",
+	}
+}
+
+func repoProjectsItem(parsed *parser.Result) *alfred.Item {
+	if parsed.HasIssue() {
+		return &alfred.Item{
+			UID:   "ghp:" + parsed.Repo() + "/" + parsed.Issue(),
+			Title: "Open project #" + parsed.Issue() + " in " + parsed.Repo() + parsed.Annotation(),
+			Valid: true,
+			Arg:   "open https://github.com/" + parsed.Repo() + "/projects/" + parsed.Issue(),
+			Icon:  projectIcon,
+		}
+	}
+	return &alfred.Item{
+		UID:   "ghp:" + parsed.Repo(),
+		Title: "List projects in " + parsed.Repo() + parsed.Annotation(),
+		Valid: true,
+		Arg:   "open https://github.com/" + parsed.Repo() + "/projects",
+		Icon:  projectIcon,
+	}
+}
+
+func orgProjectsItem(parsed *parser.Result) *alfred.Item {
+	if parsed.HasIssue() {
+		return &alfred.Item{
+			UID:   "ghp:" + parsed.Owner + "/" + parsed.Issue(),
+			Title: "Open project #" + parsed.Issue() + " for " + parsed.Owner + parsed.Annotation(),
+			Valid: true,
+			Arg:   "open https://github.com/orgs/" + parsed.Owner + "/projects/" + parsed.Issue(),
+			Icon:  projectIcon,
+		}
+	}
+	return &alfred.Item{
+		UID:   "ghp:" + parsed.Owner,
+		Title: "List projects for " + parsed.Owner + parsed.Annotation(),
+		Valid: true,
+		Arg:   "open https://github.com/orgs/" + parsed.Owner + "/projects",
+		Icon:  projectIcon,
 	}
 }
 
@@ -526,7 +611,7 @@ func autocompleteUserOpenItem(key, user string) *alfred.Item {
 func autocompleteIssueItem(key, repo string) *alfred.Item {
 	return &alfred.Item{
 		UID:          "ghi:" + repo,
-		Title:        fmt.Sprintf("Open issues for %s (%s)", repo, key),
+		Title:        fmt.Sprintf("List issues for %s (%s)", repo, key),
 		Arg:          "open https://github.com/" + repo + "/issues",
 		Valid:        true,
 		Autocomplete: "i " + key,
@@ -536,9 +621,31 @@ func autocompleteIssueItem(key, repo string) *alfred.Item {
 
 func autocompleteUserIssueItem(key, repo string) *alfred.Item {
 	return &alfred.Item{
-		Title:        fmt.Sprintf("Open issues for %s/... (%s)", repo, key),
+		Title:        fmt.Sprintf("List issues for %s/... (%s)", repo, key),
 		Autocomplete: "i " + key + "/",
 		Icon:         issueListIcon,
+	}
+}
+
+func autocompleteProjectItem(key, repo string) *alfred.Item {
+	return &alfred.Item{
+		UID:          "ghp:" + repo,
+		Title:        fmt.Sprintf("List projects in %s (%s)", repo, key),
+		Arg:          "open https://github.com/" + repo + "/projects",
+		Valid:        true,
+		Autocomplete: "p " + key,
+		Icon:         projectIcon,
+	}
+}
+
+func autocompleteOrgProjectItem(key, user string) *alfred.Item {
+	return &alfred.Item{
+		UID:          "ghp:" + user,
+		Title:        fmt.Sprintf("List projects for %s (%s)", user, key),
+		Arg:          "open https://github.com/orgs/" + user + "/projects",
+		Valid:        true,
+		Autocomplete: "p " + key,
+		Icon:         projectIcon,
 	}
 }
 
@@ -609,10 +716,19 @@ func openEndedOpenItem(input string) *alfred.Item {
 
 func openEndedIssueItem(input string) *alfred.Item {
 	return &alfred.Item{
-		Title:        fmt.Sprintf("Open issues for %s...", input),
+		Title:        fmt.Sprintf("List issues for %s...", input),
 		Autocomplete: "i " + input,
 		Valid:        false,
 		Icon:         issueListIcon,
+	}
+}
+
+func openEndedProjectItem(input string) *alfred.Item {
+	return &alfred.Item{
+		Title:        fmt.Sprintf("List projects for %s...", input),
+		Autocomplete: "p " + input,
+		Valid:        false,
+		Icon:         projectIcon,
 	}
 }
 
@@ -656,25 +772,45 @@ func autocompleteItems(cfg *config.Config, input string, parsed *parser.Result,
 	autocompleteRepoItem func(string, string) *alfred.Item,
 	autocompleteUserItem func(string, string) *alfred.Item,
 	openEndedItem func(string) *alfred.Item) (items alfred.Items) {
+
 	if strings.Contains(input, " ") {
 		return
 	}
 
-	if len(input) > 0 {
-		for key, repo := range cfg.RepoMap {
-			if strings.HasPrefix(key, input) && key != parsed.RepoMatch {
-				items = append(items, autocompleteRepoItem(key, repo))
-			}
-		}
-		for key, user := range cfg.UserMap {
-			if (parsed.UserMatch == key && !parsed.HasRepo()) || strings.HasPrefix(key, input) {
-				items = append(items, autocompleteUserItem(key, user))
-			}
-		}
-	}
+	items = append(items,
+		autocompleteRepoItems(cfg, input, autocompleteRepoItem)...)
+	items = append(items,
+		autocompleteUserItems(cfg, input, parsed, true, autocompleteUserItem)...)
 
 	if len(input) == 0 || parsed.Repo() != input {
 		items = append(items, openEndedItem(input))
+	}
+	return
+}
+
+func autocompleteRepoItems(cfg *config.Config, input string,
+	autocompleteRepoItem func(string, string) *alfred.Item) (items alfred.Items) {
+	if len(input) > 0 {
+		for key, repo := range cfg.RepoMap {
+			if strings.HasPrefix(key, input) && len(key) > len(input) {
+				items = append(items, autocompleteRepoItem(key, repo))
+			}
+		}
+	}
+	return
+}
+
+func autocompleteUserItems(cfg *config.Config, input string,
+	parsed *parser.Result, includeMatchedUser bool,
+	autocompleteUserItem func(string, string) *alfred.Item) (items alfred.Items) {
+	if len(input) > 0 {
+		for key, user := range cfg.UserMap {
+			prefixed := strings.HasPrefix(key, input) && len(key) > len(input)
+			matched := includeMatchedUser && key == parsed.UserMatch && !parsed.HasRepo()
+			if prefixed || matched {
+				items = append(items, autocompleteUserItem(key, user))
+			}
+		}
 	}
 	return
 }
@@ -789,19 +925,20 @@ func ellipsis(prefix string, duration time.Duration) string {
 func retrieveRepoDescription(item *alfred.Item, duration time.Duration, parsed *parser.Result, cfg *config.Config) (shouldRetry bool) {
 	if duration.Seconds() < delay {
 		shouldRetry = true
-	} else {
-		retry, results, err := rpcRequest("repo:"+parsed.Repo(), cfg)
-		shouldRetry = retry
-		if err != nil {
-			item.Subtitle = err.Error()
-		} else if shouldRetry {
-			item.Subtitle = ellipsis("Retrieving description", duration)
-		} else if len(results) > 0 {
-			item.Subtitle = results[0]
-		}
+		return
 	}
 
-	return shouldRetry
+	retry, results, err := rpcRequest("repo:"+parsed.Repo(), cfg)
+	shouldRetry = retry
+	if err != nil {
+		item.Subtitle = err.Error()
+	} else if shouldRetry {
+		item.Subtitle = ellipsis("Retrieving description", duration)
+	} else if len(results) > 0 {
+		item.Subtitle = results[0]
+	}
+
+	return
 }
 
 // retrieveIssueTitle adds the title to the "open issue" item using an RPC call
@@ -828,6 +965,114 @@ func retrieveIssueTitle(item *alfred.Item, duration time.Duration, parsed *parse
 		item.Icon = issueStateIcon(kind, state)
 	}
 
+	return
+}
+
+func retrieveRepoProjectName(item *alfred.Item, duration time.Duration, parsed *parser.Result, cfg *config.Config) (shouldRetry bool) {
+	if duration.Seconds() < delay {
+		shouldRetry = true
+		return
+	}
+
+	retry, results, err := rpcRequest("repo_project:"+parsed.Repo()+"/"+parsed.Issue(), cfg)
+	shouldRetry = retry
+	if err != nil {
+		item.Subtitle = err.Error()
+	} else if shouldRetry {
+		item.Subtitle = ellipsis("Retrieving project name", duration)
+	} else if len(results) > 0 {
+		parts := strings.SplitN(results[0], ":", 2)
+		if len(parts) != 2 {
+			return
+		}
+		state, name := parts[0], parts[1]
+		item.Subtitle = item.Title
+		item.Title = name
+		item.Icon = projectStateIcon(state)
+	}
+
+	return
+}
+
+func retrieveOrgProjectName(item *alfred.Item, duration time.Duration, parsed *parser.Result, cfg *config.Config) (shouldRetry bool) {
+	if duration.Seconds() < delay {
+		shouldRetry = true
+		return
+	}
+
+	retry, results, err := rpcRequest("org_project:"+parsed.Owner+"/"+parsed.Issue(), cfg)
+	shouldRetry = retry
+	if err != nil {
+		item.Subtitle = err.Error()
+	} else if shouldRetry {
+		item.Subtitle = ellipsis("Retrieving project name", duration)
+	} else if len(results) > 0 {
+		parts := strings.SplitN(results[0], ":", 2)
+		if len(parts) != 2 {
+			return
+		}
+		state, name := parts[0], parts[1]
+		item.Subtitle = item.Title
+		item.Title = name
+		item.Icon = projectStateIcon(state)
+	}
+
+	return
+}
+
+func retrieveOrgProjects(item *alfred.Item, duration time.Duration, parsed *parser.Result, cfg *config.Config) (shouldRetry bool, projects alfred.Items) {
+	if duration.Seconds() < delay {
+		shouldRetry = true
+		return
+	}
+
+	retry, results, err := rpcRequest("org_projects:"+parsed.Owner, cfg)
+	shouldRetry = retry
+	if err != nil {
+		item.Subtitle = err.Error()
+	} else if shouldRetry {
+		item.Subtitle = ellipsis("Retrieving projects", duration)
+	} else if len(results) > 0 {
+		projects = append(projects, projectItemsFromResults(results, "for "+parsed.Owner)...)
+	}
+	return
+}
+
+func retrieveRepoProjects(item *alfred.Item, duration time.Duration, parsed *parser.Result, cfg *config.Config) (shouldRetry bool, projects alfred.Items) {
+	if duration.Seconds() < delay {
+		shouldRetry = true
+		return
+	}
+
+	retry, results, err := rpcRequest("repo_projects:"+parsed.Repo(), cfg)
+	shouldRetry = retry
+	if err != nil {
+		item.Subtitle = err.Error()
+	} else if shouldRetry {
+		item.Subtitle = ellipsis("Retrieving projects", duration)
+	} else if len(results) > 0 {
+		projects = append(projects, projectItemsFromResults(results, "in "+parsed.Repo())...)
+	}
+	return
+}
+
+func projectItemsFromResults(results []string, desc string) (items alfred.Items) {
+	for _, result := range results {
+		parts := strings.SplitN(result, "#", 4)
+		if len(parts) != 4 {
+			continue
+		}
+		number, state, url, name := parts[0], parts[1], parts[2], parts[3]
+
+		// no UID so alfred doesn't remember these
+		items = append(items, &alfred.Item{
+			Title:    name,
+			Subtitle: fmt.Sprintf("Open project #%s %s", number, desc),
+			Valid:    true,
+			Arg:      "open " + url,
+			Icon:     projectStateIcon(state),
+		})
+	}
 	return
 }
 
@@ -933,6 +1178,13 @@ func issueStateIcon(kind, state string) *alfred.Icon {
 		}
 	}
 	return issueIcon // sane default
+}
+
+func projectStateIcon(state string) *alfred.Icon {
+	if state == "OPEN" {
+		return projectIconOpen
+	}
+	return projectIconClosed
 }
 
 func errorItem(context, msg string) *alfred.Item {

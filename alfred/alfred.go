@@ -19,6 +19,15 @@ func NewFilterResult() *FilterResult {
 // Items is a list of Item pointers.
 type Items []*Item
 
+func (is Items) String() string {
+	s := "[\n"
+	for _, i := range is {
+		s += fmt.Sprintf("%#v\n", i)
+	}
+	s += "]\n"
+	return s
+}
+
 // Variables is a map of string to string variables for alfred to pass on to a
 // subsquent iteration of a script filter
 type Variables map[string]string
@@ -36,10 +45,6 @@ type Item struct {
 	// Mod Modifier // optional modifier keys object
 	Text *Text `json:"text,omitempty"` // optional text if copied to clipboard or displayed as large text
 	// Quicklook string // optional url for quicklook
-}
-
-func (i *Item) String() string {
-	return fmt.Sprintf("%#v", *i)
 }
 
 // AppendItems is shorthand for adding more items to a FilterResult's Items list
