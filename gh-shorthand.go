@@ -234,11 +234,16 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[
 				item := repoProjectsItem(parsed)
 				if parsed.HasIssue() {
 					shouldRetry = retrieveRepoProjectName(item, duration, parsed, cfg)
+				} else {
+					// rpc to list recent projects
 				}
 				result.AppendItems(item)
 			} else {
-				projectsItem := orgProjectsItem(parsed)
-				result.AppendItems(projectsItem)
+				item := orgProjectsItem(parsed)
+				if parsed.HasIssue() {
+					shouldRetry = retrieveOrgProjectName(item, duration, parsed, cfg)
+				}
+				result.AppendItems(item)
 			}
 		}
 	case "n":
@@ -892,6 +897,26 @@ func retrieveRepoProjectName(item *alfred.Item, duration time.Duration, parsed *
 	}
 
 	retry, results, err := rpcRequest("repo_project:"+parsed.Repo()+"/"+parsed.Issue(), cfg)
+	shouldRetry = retry
+	if err != nil {
+		item.Subtitle = err.Error()
+	} else if shouldRetry {
+		item.Subtitle = ellipsis("Retrieving project name", duration)
+	} else if len(results) > 0 {
+		item.Subtitle = item.Title
+		item.Title = results[0]
+	}
+
+	return
+}
+
+func retrieveOrgProjectName(item *alfred.Item, duration time.Duration, parsed *parser.Result, cfg *config.Config) (shouldRetry bool) {
+	if duration.Seconds() < delay {
+		shouldRetry = true
+		return
+	}
+
+	retry, results, err := rpcRequest("org_project:"+parsed.Owner+"/"+parsed.Issue(), cfg)
 	shouldRetry = retry
 	if err != nil {
 		item.Subtitle = err.Error()
