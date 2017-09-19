@@ -1,6 +1,6 @@
 # gh-shorthand
 
-A go program to generate Alfred autocomplete items from shorthand input.
+A go program to generate Alfred autocomplete items from shorthand input, used by [`gh-shorthand.alfredworkflow`](https://github.com/zerowidth/gh-shorthand.alfredworkflow).
 
 ## Installation
 
