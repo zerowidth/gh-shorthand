@@ -374,12 +374,14 @@ func openRepoItem(parsed *parser.Result) *alfred.Item {
 	title := "Open " + parsed.Repo()
 	arg := "open https://github.com/" + parsed.Repo()
 	icon := repoIcon
+	var mods *alfred.Mods
 
 	if parsed.HasIssue() {
 		uid += "#" + parsed.Issue()
 		title += "#" + parsed.Issue()
 		arg += "/issues/" + parsed.Issue()
 		icon = issueIcon
+		mods = issueMods(parsed.Repo(), parsed.Issue())
 	}
 
 	if parsed.HasPath() {
@@ -387,6 +389,10 @@ func openRepoItem(parsed *parser.Result) *alfred.Item {
 		title += parsed.Path()
 		arg += parsed.Path()
 		icon = pathIcon
+	}
+
+	if !parsed.HasIssue() && !parsed.HasPath() {
+		mods = repoMods(parsed.Repo())
 	}
 
 	title += parsed.Annotation()
@@ -397,6 +403,7 @@ func openRepoItem(parsed *parser.Result) *alfred.Item {
 		Arg:   arg,
 		Valid: true,
 		Icon:  icon,
+		Mods:  mods,
 	}
 }
 
@@ -1147,9 +1154,38 @@ func issueItemsFromResults(results []string, includeRepo bool) (matches alfred.I
 			Valid:    true,
 			Arg:      arg,
 			Icon:     issueStateIcon(kind, state),
+			Mods:     issueMods(repo, number),
 		})
 	}
 	return
+}
+
+func repoMods(repo string) *alfred.Mods {
+	return &alfred.Mods{
+		Cmd: &alfred.ModItem{
+			Valid:    true,
+			Arg:      fmt.Sprintf("paste [%s](https://github.com/%s)", repo, repo),
+			Subtitle: fmt.Sprintf("Insert Markdown link to %s", repo),
+			Icon:     markdownIcon,
+		},
+	}
+}
+
+func issueMods(repo, number string) *alfred.Mods {
+	return &alfred.Mods{
+		Cmd: &alfred.ModItem{
+			Valid:    true,
+			Arg:      fmt.Sprintf("paste [%s#%s](https://github.com/%s/issues/%s)", repo, number, repo, number),
+			Subtitle: fmt.Sprintf("Insert Markdown link to %s#%s", repo, number),
+			Icon:     markdownIcon,
+		},
+		Alt: &alfred.ModItem{
+			Valid:    true,
+			Arg:      fmt.Sprintf("paste %s#%s", repo, number),
+			Subtitle: fmt.Sprintf("Insert issue reference to %s#%s", repo, number),
+			Icon:     issueIcon,
+		},
+	}
 }
 
 // octicon is relative to the alfred workflow, so this tells alfred to retrieve
