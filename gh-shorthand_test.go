@@ -54,6 +54,8 @@ type completeTestCase struct {
 	cfg     *config.Config // config to use instead of the default cfg
 	exclude string         // exclude any item with this UID or title
 	copy    string         // the clipboard copy string, if applicable
+	cmdMod  string         // cmd modifier action, if applicable
+	altMod  string         // alt modifier action, if applicable
 }
 
 func (tc *completeTestCase) testItem(t *testing.T) {
@@ -104,6 +106,34 @@ func (tc *completeTestCase) testItem(t *testing.T) {
 		if len(tc.copy) > 0 && (item.Text == nil || item.Text.Copy != tc.copy) {
 			t.Errorf("%+v\nexpected Text.Copy %+v to be %q", item, item.Text, tc.copy)
 		}
+
+		if len(tc.cmdMod) > 0 || len(tc.altMod) > 0 {
+			if item.Mods == nil {
+				t.Errorf("%+v\nexpected Mods to be have a value", item)
+			} else {
+
+				if len(tc.cmdMod) > 0 {
+					if item.Mods.Cmd == nil {
+						t.Errorf("%+v\nexpected Mods.Cmd to have a value", item)
+					} else {
+						if tc.cmdMod != item.Mods.Cmd.Arg {
+							t.Errorf("%+v\nexpected Mods.Cmd.Arg to be %s, was %+v", item, tc.cmdMod, item.Mods.Cmd.Arg)
+						}
+					}
+				}
+
+				if len(tc.altMod) > 0 {
+					if item.Mods.Alt == nil {
+						t.Errorf("%+v\nexpected Mods.Alt to have a value", item)
+					} else {
+						if tc.altMod != item.Mods.Alt.Arg {
+							t.Errorf("%+v\nexpected Mods.Alt.Arg to be %s, was %+v", item, tc.altMod, item.Mods.Alt.Arg)
+						}
+					}
+				}
+			}
+		}
+
 	} else {
 		t.Errorf("expected item with uid %q and/or title %q in %s", tc.uid, tc.title, result.Items)
 	}
@@ -185,18 +215,21 @@ func TestCompleteItems(t *testing.T) {
 
 		// basic parsing tests
 		"open a shorthand repo": {
-			input: " df",
-			uid:   "gh:zerowidth/dotfiles",
-			valid: true,
-			title: "Open zerowidth/dotfiles (df)",
-			arg:   "open https://github.com/zerowidth/dotfiles",
+			input:  " df",
+			uid:    "gh:zerowidth/dotfiles",
+			valid:  true,
+			title:  "Open zerowidth/dotfiles (df)",
+			arg:    "open https://github.com/zerowidth/dotfiles",
+			cmdMod: "paste [zerowidth/dotfiles](https://github.com/zerowidth/dotfiles)",
 		},
 		"open a shorthand repo and issue": {
-			input: " df 123",
-			uid:   "gh:zerowidth/dotfiles#123",
-			valid: true,
-			title: "Open zerowidth/dotfiles#123 (df#123)",
-			arg:   "open https://github.com/zerowidth/dotfiles/issues/123",
+			input:  " df 123",
+			uid:    "gh:zerowidth/dotfiles#123",
+			valid:  true,
+			title:  "Open zerowidth/dotfiles#123 (df#123)",
+			arg:    "open https://github.com/zerowidth/dotfiles/issues/123",
+			altMod: "paste zerowidth/dotfiles#123",
+			cmdMod: "paste [zerowidth/dotfiles#123](https://github.com/zerowidth/dotfiles/issues/123)",
 		},
 		"open a fully qualified repo": {
 			input: " foo/bar",
@@ -206,11 +239,13 @@ func TestCompleteItems(t *testing.T) {
 			arg:   "open https://github.com/foo/bar",
 		},
 		"open a fully qualified repo and issue": {
-			input: " foo/bar 123",
-			uid:   "gh:foo/bar#123",
-			valid: true,
-			title: "Open foo/bar#123",
-			arg:   "open https://github.com/foo/bar/issues/123",
+			input:  " foo/bar 123",
+			uid:    "gh:foo/bar#123",
+			valid:  true,
+			title:  "Open foo/bar#123",
+			arg:    "open https://github.com/foo/bar/issues/123",
+			altMod: "paste foo/bar#123",
+			cmdMod: "paste [foo/bar#123](https://github.com/foo/bar/issues/123)",
 		},
 		"open a shorthand user with repo": {
 			input: " zw/foo",

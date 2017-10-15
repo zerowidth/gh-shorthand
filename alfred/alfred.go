@@ -42,7 +42,7 @@ type Item struct {
 	Valid        bool   `json:"valid"`                  // valid means "actionable", false means "populate autocomplete text"
 	Autocomplete string `json:"autocomplete,omitempty"` // recommended string to autocomplete with tab key
 	// Type string // "default", "file", "file:skipcheck" to treat the result as a file
-	// Mod Modifier // optional modifier keys object
+	Mods *Mods `json:"mods,omitempty"` // optional modifier keys arguments
 	Text *Text `json:"text,omitempty"` // optional text if copied to clipboard or displayed as large text
 	// Quicklook string // optional url for quicklook
 }
@@ -73,6 +73,28 @@ type Text struct {
 	LargeType string `json:"largetype,omitempty"`
 }
 
+// ModItem defines an alternate action for an item
+type ModItem struct {
+	Valid    bool   `json:"valid"`
+	Arg      string `json:"arg,omitempty"`
+	Subtitle string `json:"subtitle,omitempty"`
+	Icon     *Icon  `json:"icon,omitempty"`
+}
+
+// Mods define alternate actions for an item, with alt or cmd held down
+type Mods struct {
+	Alt *ModItem `json:"alt,omitempty"`
+	Cmd *ModItem `json:"cmd,omitempty"`
+}
+
 func (t *Text) String() string {
 	return fmt.Sprintf("%#v", *t)
+}
+
+func (m *Mods) String() string {
+	return fmt.Sprintf("%#v", *m)
+}
+
+func (m *ModItem) String() string {
+	return fmt.Sprintf("%#v", *m)
 }
