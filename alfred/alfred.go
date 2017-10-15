@@ -78,6 +78,7 @@ type ModItem struct {
 	Valid    bool   `json:"valid"`
 	Arg      string `json:"arg,omitempty"`
 	Subtitle string `json:"subtitle,omitempty"`
+	Icon     *Icon  `json:"icon,omitempty"`
 }
 
 // Mods define alternate actions for an item, with alt or cmd held down
