@@ -89,3 +89,11 @@ type Mods struct {
 func (t *Text) String() string {
 	return fmt.Sprintf("%#v", *t)
 }
+
+func (m *Mods) String() string {
+	return fmt.Sprintf("%#v", *m)
+}
+
+func (m *ModItem) String() string {
+	return fmt.Sprintf("%#v", *m)
+}
