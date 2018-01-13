@@ -17,7 +17,7 @@ import (
 
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/pkg/errors"
-	"github.com/renstrom/fuzzysearch/fuzzy"
+	"github.com/sahilm/fuzzy"
 	"github.com/zerowidth/gh-shorthand/alfred"
 	"github.com/zerowidth/gh-shorthand/config"
 	"github.com/zerowidth/gh-shorthand/parser"
@@ -352,7 +352,11 @@ func actionItems(dirs map[string]string, search, uidPrefix, action, desc string,
 	}
 
 	if len(search) > 0 {
-		projectNames = fuzzy.Find(search, projectNames)
+		sorted := fuzzy.Find(search, projectNames)
+		projectNames = []string{}
+		for _, result := range sorted {
+			projectNames = append(projectNames, result.Str)
+		}
 	}
 
 	for _, short := range projectNames {
