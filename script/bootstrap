@@ -1,9 +1,0 @@
-#!/bin/sh
-set -e
-
-which -s trash || {
-  echo 'go get -u github.com/rancher/trash'
-  exit 1
-}
-
-trash
