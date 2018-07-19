@@ -1,3 +1,12 @@
-#!/bin/sh
+#!/bin/bash
 
-go test $(go list ./... | grep -v vendor) "$@"
+# Allow specific suites to be provided and automatically prefix
+# with ./ for convenience, but don't stomp on -args
+suite="./..."
+if [ $# -gt 0 ]; then
+  if [[ ${1:0:1} != '-' ]]; then
+    suite="./$@"
+  fi
+fi
+
+make test TESTSUITE="$suite"
