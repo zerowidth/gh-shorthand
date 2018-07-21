@@ -18,10 +18,10 @@ $(BASE): | $(GOPATH)
 	$Q mkdir -p $(dir $@)
 	$Q ln -s $(CURDIR) $@
 
-$(APP): $(GOSRC) | $(BASE)
+$(APP): $(GOSRC) | $(BASE); $(info building gh-shorthand...)
 	$Q cd $(BASE) && GOPATH=$(GOPATH) go build -o $(APP) ./cmd
 
-build: $(APP); $(info building gh-shorthand...)
+build: $(APP)
 
 lint: | $(GOLINT) $(BASE); $(info running linters...)
 	$Q cd $(BASE) && GOPATH=$(GOPATH) $(GOLINT) run \
