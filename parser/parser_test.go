@@ -261,7 +261,10 @@ func TestSetRepo(t *testing.T) {
 		t.Errorf("Expected error when setting invalid repo")
 	}
 
-	result.SetRepo("foo/bar")
+	err = result.SetRepo("foo/bar")
+	if err != nil {
+		t.Errorf("Expected no error")
+	}
 	if result.Repo() != "foo/bar" {
 		t.Errorf("Expected result repo to be foo/bar, got %q:\n%+v", result.Repo(), result)
 	}

@@ -10,7 +10,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -42,20 +41,20 @@ const (
 )
 
 var (
-	githubIcon      = octicon("mark-github")
-	repoIcon        = octicon("repo")
-	pullRequestIcon = octicon("git-pull-request")
-	issueListIcon   = octicon("list-ordered")
-	pathIcon        = octicon("browser")
-	issueIcon       = octicon("issue-opened")
-	projectIcon     = octicon("project")
-	newIssueIcon    = octicon("bug")
-	editorIcon      = octicon("file-code")
-	finderIcon      = octicon("file-directory")
-	terminalIcon    = octicon("terminal")
-	markdownIcon    = octicon("markdown")
-	searchIcon      = octicon("search")
-	commitIcon      = octicon("git-commit")
+	// githubIcon      = octicon("mark-github")
+	repoIcon = octicon("repo")
+	// pullRequestIcon = octicon("git-pull-request")
+	issueListIcon = octicon("list-ordered")
+	pathIcon      = octicon("browser")
+	issueIcon     = octicon("issue-opened")
+	projectIcon   = octicon("project")
+	newIssueIcon  = octicon("bug")
+	editorIcon    = octicon("file-code")
+	finderIcon    = octicon("file-directory")
+	terminalIcon  = octicon("terminal")
+	markdownIcon  = octicon("markdown")
+	searchIcon    = octicon("search")
+	// commitIcon    = octicon("git-commit")
 
 	issueIconOpen         = octicon("issue-opened_open")
 	issueIconClosed       = octicon("issue-closed_closed")
@@ -66,7 +65,7 @@ var (
 	projectIconClosed     = octicon("project_closed")
 
 	// the minimum length of 7 is enforced elsewhere
-	sha1Regexp = regexp.MustCompile(`[0-9a-f]{1,40}$`)
+	// sha1Regexp = regexp.MustCompile(`[0-9a-f]{1,40}$`)
 
 	repoDefaultItem = &alfred.Item{
 		Title:        "Open repositories and issues on GitHub",
@@ -752,14 +751,14 @@ func openEndedNewIssueItem(input string) *alfred.Item {
 	}
 }
 
-func openEndedCommitSearchItem(input string) *alfred.Item {
-	return &alfred.Item{
-		Title:        fmt.Sprintf("Find commit in %s...", input),
-		Autocomplete: "c " + input,
-		Valid:        false,
-		Icon:         commitIcon,
-	}
-}
+// func openEndedCommitSearchItem(input string) *alfred.Item {
+//   return &alfred.Item{
+//     Title:        fmt.Sprintf("Find commit in %s...", input),
+//     Autocomplete: "c " + input,
+//     Valid:        false,
+//     Icon:         commitIcon,
+//   }
+// }
 
 func openEndedMarkdownLinkItem(input string) *alfred.Item {
 	return &alfred.Item{
