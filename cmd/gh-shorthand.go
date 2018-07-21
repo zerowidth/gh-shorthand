@@ -17,9 +17,9 @@ import (
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/pkg/errors"
 	"github.com/sahilm/fuzzy"
-	"github.com/zerowidth/gh-shorthand/alfred"
-	"github.com/zerowidth/gh-shorthand/config"
-	"github.com/zerowidth/gh-shorthand/parser"
+	"github.com/zerowidth/gh-shorthand/internal/pkg/config"
+	"github.com/zerowidth/gh-shorthand/internal/pkg/parser"
+	"github.com/zerowidth/gh-shorthand/pkg/alfred"
 )
 
 type envVars map[string]string

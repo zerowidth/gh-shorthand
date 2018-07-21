@@ -19,7 +19,7 @@ $(BASE): | $(GOPATH)
 	$Q ln -s $(CURDIR) $@
 
 $(APP): $(GOSRC) | $(BASE)
-	$Q cd $(BASE) && GOPATH=$(GOPATH) go build -o $(APP)
+	$Q cd $(BASE) && GOPATH=$(GOPATH) go build -o $(APP) ./cmd
 
 build: $(APP); $(info building gh-shorthand...)
 
@@ -32,6 +32,7 @@ lint: | $(GOLINT) $(BASE); $(info running linters...)
 
 TESTFLAGS = -race
 TESTSUITE = ./...
+.PHONY: test
 test: | $(BASE); $(info running tests...)
 	$Q cd $(BASE) && GOPATH=$(GOPATH) go test $(TESTFLAGS) $(TESTSUITE)
 
