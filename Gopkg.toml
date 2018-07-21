@@ -40,3 +40,7 @@
 [[constraint]]
   name = "github.com/sahilm/fuzzy"
   branch = "master"
+
+[[constraint]]
+  name = "github.com/spf13/cobra"
+  branch = "master"

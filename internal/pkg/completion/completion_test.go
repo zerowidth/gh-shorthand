@@ -1,4 +1,4 @@
-package main
+package completion
 
 import (
 	"fmt"
@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/zerowidth/gh-shorthand/alfred"
-	"github.com/zerowidth/gh-shorthand/config"
+	"github.com/zerowidth/gh-shorthand/internal/pkg/config"
+	"github.com/zerowidth/gh-shorthand/pkg/alfred"
 )
 
 var cfg = &config.Config{
@@ -19,7 +19,7 @@ var cfg = &config.Config{
 	UserMap: map[string]string{
 		"zw": "zerowidth",
 	},
-	ProjectDirs: []string{"fixtures/work", "fixtures/projects"},
+	ProjectDirs: []string{"../../../test/fixtures/work", "../../../test/fixtures/projects"},
 }
 
 var defaultInMap = &config.Config{
@@ -39,7 +39,7 @@ var userRepoCollision = &config.Config{
 }
 
 var invalidDir = &config.Config{
-	ProjectDirs: []string{"fixtures/nonexistent"},
+	ProjectDirs: []string{"../../../test/fixtures/nonexistent"},
 }
 
 var emptyConfig = &config.Config{}
@@ -140,7 +140,7 @@ func (tc *completeTestCase) testItem(t *testing.T) {
 }
 
 func TestCompleteItems(t *testing.T) {
-	fixturePath, _ := filepath.Abs("fixtures")
+	fixturePath, _ := filepath.Abs("../../../test/fixtures")
 
 	// Based on input, the resulting items must include one that matches either
 	// the given UID or title. All items are also validated for correctness and
@@ -731,67 +731,67 @@ func TestCompleteItems(t *testing.T) {
 
 		"edit project includes fixtures/work/work-foo": {
 			input: "e ",
-			uid:   "ghe:fixtures/work/work-foo",
+			uid:   "ghe:../../../test/fixtures/work/work-foo",
 			valid: true,
-			title: "Edit fixtures/work/work-foo",
+			title: "Edit ../../../test/fixtures/work/work-foo",
 			arg:   "edit " + fixturePath + "/work/work-foo",
 			copy:  fixturePath + "/work/work-foo",
 		},
 		"edit project includes fixtures/projects/project-bar": {
 			input: "e ",
-			uid:   "ghe:fixtures/projects/project-bar",
+			uid:   "ghe:../../../test/fixtures/projects/project-bar",
 			valid: true,
-			title: "Edit fixtures/projects/project-bar",
+			title: "Edit ../../../test/fixtures/projects/project-bar",
 			arg:   "edit " + fixturePath + "/projects/project-bar",
 		},
 		"edit project includes symlinked dir in fixtures": {
 			input: "e linked",
-			uid:   "ghe:fixtures/projects/linked",
+			uid:   "ghe:../../../test/fixtures/projects/linked",
 			valid: true,
 			arg:   "edit " + fixturePath + "/projects/linked",
 		},
 		"edit project does not include symlinked file in fixtures": {
 			input:   "e linked",
-			exclude: "ghe:fixtures/projects/linked-file",
+			exclude: "ghe:../../../test/fixtures/projects/linked-file",
 		},
 		"edit project shows error for invalid directory": {
 			input: "e foo",
 			cfg:   invalidDir,
-			title: "Invalid project directory: fixtures/nonexistent",
+			title: "Invalid project directory: ../../../test/fixtures/nonexistent",
 		},
 		"open finder includes fixtures/work/work-foo": {
 			input: "o ",
-			uid:   "gho:fixtures/work/work-foo",
+			uid:   "gho:../../../test/fixtures/work/work-foo",
 			valid: true,
-			title: "Open Finder in fixtures/work/work-foo",
+			title: "Open Finder in ../../../test/fixtures/work/work-foo",
 			arg:   "finder " + fixturePath + "/work/work-foo",
 			copy:  fixturePath + "/work/work-foo",
 		},
 		"open finder includes fixtures/projects/project-bar": {
 			input: "o ",
-			uid:   "gho:fixtures/projects/project-bar",
+			uid:   "gho:../../../test/fixtures/projects/project-bar",
 			valid: true,
-			title: "Open Finder in fixtures/projects/project-bar",
+			title: "Open Finder in ../../../test/fixtures/projects/project-bar",
 			arg:   "finder " + fixturePath + "/projects/project-bar",
 		},
 		"open terminal includes fixtures/work/work-foo": {
 			input: "t ",
-			uid:   "ght:fixtures/work/work-foo",
+			uid:   "ght:../../../test/fixtures/work/work-foo",
 			valid: true,
-			title: "Open terminal in fixtures/work/work-foo",
+			title: "Open terminal in ../../../test/fixtures/work/work-foo",
 			arg:   "term " + fixturePath + "/work/work-foo",
 			copy:  fixturePath + "/work/work-foo",
 		},
 		"open terminal includes fixtures/projects/project-bar": {
 			input: "t ",
-			uid:   "ght:fixtures/projects/project-bar",
+			uid:   "ght:../../../test/fixtures/projects/project-bar",
 			valid: true,
-			title: "Open terminal in fixtures/projects/project-bar",
+			title: "Open terminal in ../../../test/fixtures/projects/project-bar",
 			arg:   "term " + fixturePath + "/projects/project-bar",
 		},
 		"edit project excludes files (listing only directories)": {
 			input:   "e ",
-			exclude: "ghe:fixtures/work/ignored-file",
+			exclude: "ghe:../../../test/fixtures/work/ignored-file",
 		},
 
 		// issue reference / markdown link autocomplete
@@ -838,21 +838,21 @@ func TestCompleteItems(t *testing.T) {
 		// edit/open/auto filtering
 		"edit project with input matches directories": {
 			input: "e work-foo",
-			uid:   "ghe:fixtures/work/work-foo",
+			uid:   "ghe:../../../test/fixtures/work/work-foo",
 			valid: true,
 		},
 		"edit project with input excludes non-matches": {
 			input:   "e work-foo",
-			exclude: "ghe:fixtures/projects/project-bar",
+			exclude: "ghe:../../../test/fixtures/projects/project-bar",
 		},
 		"edit project with input fuzzy-matches directories": {
 			input: "e wf",
-			uid:   "ghe:fixtures/work/work-foo",
+			uid:   "ghe:../../../test/fixtures/work/work-foo",
 			valid: true,
 		},
 		"edit project with input excludes non-fuzzy matches": {
 			input:   "e wf",
-			exclude: "ghe:fixtures/projects/project-bar",
+			exclude: "ghe:../../../test/fixtures/projects/project-bar",
 		},
 	} {
 		t.Run(fmt.Sprintf("appendParsedItems(%#v): %s", tc.input, desc), tc.testItem)
@@ -927,7 +927,7 @@ func TestFinalizeResult(t *testing.T) {
 }
 
 func TestFindProjectDirs(t *testing.T) {
-	fixturePath, _ := filepath.Abs("fixtures/projects")
+	fixturePath, _ := filepath.Abs("../../../test/fixtures/projects")
 	dirList, err := findProjectDirs(fixturePath)
 	dirs := make(map[string]struct{}, len(dirList))
 	if err != nil {

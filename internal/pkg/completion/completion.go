@@ -1,8 +1,7 @@
-package main
+package completion
 
 import (
 	"bufio"
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net"
@@ -17,9 +16,9 @@ import (
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/pkg/errors"
 	"github.com/sahilm/fuzzy"
-	"github.com/zerowidth/gh-shorthand/alfred"
-	"github.com/zerowidth/gh-shorthand/config"
-	"github.com/zerowidth/gh-shorthand/parser"
+	"github.com/zerowidth/gh-shorthand/internal/pkg/config"
+	"github.com/zerowidth/gh-shorthand/internal/pkg/parser"
+	"github.com/zerowidth/gh-shorthand/pkg/alfred"
 )
 
 type envVars map[string]string
@@ -119,15 +118,9 @@ var (
 	}
 )
 
-func main() {
-	var input string
-	var result = alfred.NewFilterResult()
-
-	if len(os.Args) == 1 {
-		input = ""
-	} else {
-		input = strings.Join(os.Args[1:], " ")
-	}
+// Complete runs the main completion code
+func Complete(input string) *alfred.FilterResult {
+	result := alfred.NewFilterResult()
 
 	path, _ := homedir.Expand("~/.gh-shorthand.yml")
 	cfg, configErr := config.LoadFromFile(path)
@@ -141,7 +134,7 @@ func main() {
 	}
 
 	finalizeResult(result)
-	printResult(result)
+	return result
 }
 
 func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[string]string, input string) {
@@ -1248,11 +1241,5 @@ func getEnvironment() envVars {
 func finalizeResult(result *alfred.FilterResult) {
 	if result.Variables != nil && len(*result.Variables) > 0 {
 		result.Rerun = rerunAfter
-	}
-}
-
-func printResult(result *alfred.FilterResult) {
-	if err := json.NewEncoder(os.Stdout).Encode(result); err != nil {
-		panic(err.Error())
 	}
 }

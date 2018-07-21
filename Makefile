@@ -18,10 +18,10 @@ $(BASE): | $(GOPATH)
 	$Q mkdir -p $(dir $@)
 	$Q ln -s $(CURDIR) $@
 
-$(APP): $(GOSRC) | $(BASE)
-	$Q cd $(BASE) && GOPATH=$(GOPATH) go build -o $(APP)
+$(APP): $(GOSRC) | $(BASE); $(info building gh-shorthand...)
+	$Q cd $(BASE) && GOPATH=$(GOPATH) go build -o $(APP) ./cmd
 
-build: $(APP); $(info building gh-shorthand...)
+build: $(APP)
 
 lint: | $(GOLINT) $(BASE); $(info running linters...)
 	$Q cd $(BASE) && GOPATH=$(GOPATH) $(GOLINT) run \
@@ -32,6 +32,7 @@ lint: | $(GOLINT) $(BASE); $(info running linters...)
 
 TESTFLAGS = -race
 TESTSUITE = ./...
+.PHONY: test
 test: | $(BASE); $(info running tests...)
 	$Q cd $(BASE) && GOPATH=$(GOPATH) go test $(TESTFLAGS) $(TESTSUITE)
 

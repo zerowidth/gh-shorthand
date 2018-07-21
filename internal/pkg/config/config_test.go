@@ -103,7 +103,7 @@ func TestProjectDirMap(t *testing.T) {
 }
 
 func TestLoadFromFile(t *testing.T) {
-	config, _ := LoadFromFile("../fixtures/config.yml")
+	config, _ := LoadFromFile("../../../test/fixtures/config.yml")
 	if !reflect.DeepEqual(config.RepoMap, repoMap) {
 		t.Errorf("expected repo map to be %#v, got %#v", repoMap, config.RepoMap)
 	}
@@ -112,7 +112,7 @@ func TestLoadFromFile(t *testing.T) {
 		t.Errorf("expected DefaultRepo to be %q, got %q", "zerowidth/default", config.DefaultRepo)
 	}
 
-	if cfg, err := LoadFromFile("../fixtures/nonexistent.yml"); err == nil {
+	if cfg, err := LoadFromFile("../../../test/fixtures/nonexistent.yml"); err == nil {
 		t.Error("expected missing yaml file to error, but no error occurred")
 	} else if cfg == nil {
 		t.Error("expected LoadFromFile with error to return empty config")
