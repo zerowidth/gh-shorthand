@@ -3,31 +3,44 @@
 
 [[projects]]
   branch = "master"
+  digest = "1:b62c4f18ad6eb454ac5253e7791ded3d7867330015ca4b37b6336e57f514585e"
   name = "github.com/mitchellh/go-homedir"
   packages = ["."]
+  pruneopts = "NUT"
   revision = "b8bc1bf767474819792c23f32d8286a45736f1c6"
 
 [[projects]]
+  branch = "master"
+  digest = "1:89fa4c7ac713710640c83ec0461b78fc21c2eda6deca064fe461eef1b8bca303"
   name = "github.com/pkg/errors"
   packages = ["."]
-  revision = "645ef00459ed84a119197bfb8d8205042c6df63d"
-  version = "v0.8.0"
+  pruneopts = "NUT"
+  revision = "816c9085562cd7ee03e7f8188a1cfd942858cded"
 
 [[projects]]
+  branch = "master"
+  digest = "1:baac2372176c200a1e861eff089dca33513d064c2ee4cb840a7321134e51dfd4"
   name = "github.com/sahilm/fuzzy"
   packages = ["."]
-  revision = "0e1c4a4e1f632f936a5c0fa6176076eea01c054b"
-  version = "v0.0.3"
+  pruneopts = "NUT"
+  revision = "df93d96a0fd86b97655b90f63c70802b4e793afb"
 
 [[projects]]
-  branch = "v2"
+  digest = "1:7c95b35057a0ff2e19f707173cc1a947fa43a6eb5c4d300d196ece0334046082"
   name = "gopkg.in/yaml.v2"
   packages = ["."]
-  revision = "eb3733d160e74a9c7e442f435eb3bea458e1d19f"
+  pruneopts = "NUT"
+  revision = "5420a8b6744d3b0345ab293f6fcba19c978f1183"
+  version = "v2.2.1"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "d0008a630d054915ce212f9ce2915dc9d77a50530b584de1b6f72e6c02730adf"
+  input-imports = [
+    "github.com/mitchellh/go-homedir",
+    "github.com/pkg/errors",
+    "github.com/sahilm/fuzzy",
+    "gopkg.in/yaml.v2",
+  ]
   solver-name = "gps-cdcl"
   solver-version = 1
