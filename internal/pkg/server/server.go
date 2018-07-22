@@ -38,14 +38,8 @@ func Run() {
 		WriteTimeout: time.Second,
 	}
 
-	sigs := make(chan os.Signal, 1)
-	done := make(chan interface{})
-	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
-
-	go func() {
-		<-sigs
-		close(done)
-	}()
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
 
 	sock, err := net.Listen("unix", cfg.SocketPath)
 	if err != nil {
@@ -62,9 +56,9 @@ func Run() {
 		}
 	}()
 
-	<-done
+	<-sig
 
-	log.Printf("shutting down server...")
+	log.Printf("shutting down server")
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 
