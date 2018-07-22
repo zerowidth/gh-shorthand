@@ -2,6 +2,14 @@
 
 
 [[projects]]
+  branch = "master"
+  digest = "1:141b7d476fa3ff292a7aea51df9b4e73f79212c80e51c7da78327cfdd69e121d"
+  name = "github.com/go-chi/chi"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "0c5e7abb4e562fa14dd2548cb57b28f979a7dcd9"
+
+[[projects]]
   digest = "1:406338ad39ab2e37b7f4452906442a3dbf0eb3379dd1f06aafb5c07e769a5fbb"
   name = "github.com/inconshreveable/mousetrap"
   packages = ["."]
@@ -61,6 +69,7 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
+    "github.com/go-chi/chi",
     "github.com/mitchellh/go-homedir",
     "github.com/pkg/errors",
     "github.com/sahilm/fuzzy",

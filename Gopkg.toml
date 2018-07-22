@@ -44,3 +44,7 @@
 [[constraint]]
   name = "github.com/spf13/cobra"
   branch = "master"
+
+[[constraint]]
+  name = "github.com/go-chi/chi"
+  branch = "master"
