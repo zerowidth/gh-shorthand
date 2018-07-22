@@ -39,85 +39,6 @@ const (
 	socketTimeout = 100 * time.Millisecond
 )
 
-var (
-	// githubIcon      = octicon("mark-github")
-	repoIcon = octicon("repo")
-	// pullRequestIcon = octicon("git-pull-request")
-	issueListIcon = octicon("list-ordered")
-	pathIcon      = octicon("browser")
-	issueIcon     = octicon("issue-opened")
-	projectIcon   = octicon("project")
-	newIssueIcon  = octicon("bug")
-	editorIcon    = octicon("file-code")
-	finderIcon    = octicon("file-directory")
-	terminalIcon  = octicon("terminal")
-	markdownIcon  = octicon("markdown")
-	searchIcon    = octicon("search")
-	// commitIcon    = octicon("git-commit")
-
-	issueIconOpen         = octicon("issue-opened_open")
-	issueIconClosed       = octicon("issue-closed_closed")
-	pullRequestIconOpen   = octicon("git-pull-request_open")
-	pullRequestIconClosed = octicon("git-pull-request_closed")
-	pullRequestIconMerged = octicon("git-merge_merged")
-	projectIconOpen       = octicon("project_open")
-	projectIconClosed     = octicon("project_closed")
-
-	// the minimum length of 7 is enforced elsewhere
-	// sha1Regexp = regexp.MustCompile(`[0-9a-f]{1,40}$`)
-
-	repoDefaultItem = &alfred.Item{
-		Title:        "Open repositories and issues on GitHub",
-		Autocomplete: " ",
-		Icon:         repoIcon,
-	}
-	issueListDefaultItem = &alfred.Item{
-		Title:        "List and search issues in a GitHub repository",
-		Autocomplete: "i ",
-		Icon:         issueListIcon,
-	}
-	projectListDefaultItem = &alfred.Item{
-		Title:        "List and open projects on GitHub repositories or organizations",
-		Autocomplete: "p ",
-		Icon:         projectIcon,
-	}
-	issueSearchDefaultItem = &alfred.Item{
-		Title:        "Search issues across GitHub",
-		Autocomplete: "s ",
-		Icon:         searchIcon,
-	}
-	newIssueDefaultItem = &alfred.Item{
-		Title:        "New issue in a GitHub repository",
-		Autocomplete: "n ",
-		Icon:         newIssueIcon,
-	}
-	markdownLinkDefaultItem = &alfred.Item{
-		Title:        "Insert Markdown link to a GitHub repository or issue",
-		Autocomplete: "m ",
-		Icon:         markdownIcon,
-	}
-	issueReferenceDefaultItem = &alfred.Item{
-		Title:        "Insert issue reference shorthand for a GitHub repository or issue",
-		Autocomplete: "r ",
-		Icon:         issueIcon,
-	}
-	editProjectDefaultItem = &alfred.Item{
-		Title:        "Edit a project",
-		Autocomplete: "e ",
-		Icon:         editorIcon,
-	}
-	openFinderDefaultItem = &alfred.Item{
-		Title:        "Open a project directory in Finder",
-		Autocomplete: "o ",
-		Icon:         finderIcon,
-	}
-	openTerminalDefaultItem = &alfred.Item{
-		Title:        "Open terminal in a project",
-		Autocomplete: "t ",
-		Icon:         terminalIcon,
-	}
-)
-
 // Complete runs the main completion code
 func Complete(input string) *alfred.FilterResult {
 	result := alfred.NewFilterResult()
@@ -1182,41 +1103,6 @@ func issueMods(repo, number string) *alfred.Mods {
 			Icon:     issueIcon,
 		},
 	}
-}
-
-// octicon is relative to the alfred workflow, so this tells alfred to retrieve
-// icons from there rather than relative to this go binary.
-func octicon(name string) *alfred.Icon {
-	return &alfred.Icon{
-		Path: fmt.Sprintf("octicons-%s.png", name),
-	}
-}
-
-func issueStateIcon(kind, state string) *alfred.Icon {
-	switch kind {
-	case "Issue":
-		if state == "OPEN" {
-			return issueIconOpen
-		}
-		return issueIconClosed
-	case "PullRequest":
-		switch state {
-		case "OPEN":
-			return pullRequestIconOpen
-		case "CLOSED":
-			return pullRequestIconClosed
-		case "MERGED":
-			return pullRequestIconMerged
-		}
-	}
-	return issueIcon // sane default
-}
-
-func projectStateIcon(state string) *alfred.Icon {
-	if state == "OPEN" {
-		return projectIconOpen
-	}
-	return projectIconClosed
 }
 
 func errorItem(context, msg string) *alfred.Item {
