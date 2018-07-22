@@ -28,16 +28,6 @@ var (
 		Autocomplete: "n ",
 		Icon:         newIssueIcon,
 	}
-	markdownLinkDefaultItem = &alfred.Item{
-		Title:        "Insert Markdown link to a GitHub repository or issue",
-		Autocomplete: "m ",
-		Icon:         markdownIcon,
-	}
-	issueReferenceDefaultItem = &alfred.Item{
-		Title:        "Insert issue reference shorthand for a GitHub repository or issue",
-		Autocomplete: "r ",
-		Icon:         issueIcon,
-	}
 	editProjectDefaultItem = &alfred.Item{
 		Title:        "Edit a project",
 		Autocomplete: "e ",

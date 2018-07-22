@@ -172,16 +172,6 @@ func TestCompleteItems(t *testing.T) {
 			title: "New issue in a GitHub repository",
 			auto:  "n ",
 		},
-		"empty input shows markdown link default": {
-			input: "",
-			title: "Insert Markdown link to a GitHub repository or issue",
-			auto:  "m ",
-		},
-		"empty input shows issue reference default": {
-			input: "",
-			title: "Insert issue reference shorthand for a GitHub repository or issue",
-			auto:  "r ",
-		},
 		"empty input shows edit project default": {
 			input: "",
 			title: "Edit a project",
@@ -203,18 +193,18 @@ func TestCompleteItems(t *testing.T) {
 			auto:  "s ",
 		},
 		"a mode char by itself shows the default repo": {
-			input: "m",
-			uid:   "ghm:zerowidth/default",
+			input: "i",
+			uid:   "ghi:zerowidth/default",
 			valid: true,
 		},
 		"a mode char followed by a space shows the default repo": {
-			input: "m ",
-			uid:   "ghm:zerowidth/default",
+			input: "i ",
+			uid:   "ghi:zerowidth/default",
 			valid: true,
 		},
 		"a mode char followed by a non-space shows nothing": {
-			input:   "mx",
-			exclude: "ghm:zerowidth/default",
+			input:   "ix",
+			exclude: "ghi:zerowidth/default",
 		},
 
 		// basic parsing tests
@@ -378,58 +368,6 @@ func TestCompleteItems(t *testing.T) {
 			title: "New issue in zerowidth/dotfiles (df): foo bar",
 			arg:   "open https://github.com/zerowidth/dotfiles/issues/new?title=foo%20bar",
 		},
-		"markdown link with a repo": {
-			input: "m foo/bar",
-			uid:   "ghm:foo/bar",
-			valid: true,
-			title: "Insert Markdown link to foo/bar",
-			arg:   "paste [foo/bar](https://github.com/foo/bar)",
-			copy:  "[foo/bar](https://github.com/foo/bar)",
-		},
-		"markdown link with a repo and issue": {
-			input: "m foo/bar 123",
-			uid:   "ghm:foo/bar#123",
-			title: "Insert Markdown link to foo/bar#123",
-			valid: true,
-			arg:   "paste [foo/bar#123](https://github.com/foo/bar/issues/123)",
-			copy:  "[foo/bar#123](https://github.com/foo/bar/issues/123)",
-		},
-		"markdown link with shorthand repo and issue": {
-			input: "m df 123",
-			uid:   "ghm:zerowidth/dotfiles#123",
-			title: "Insert Markdown link to zerowidth/dotfiles#123 (df#123)",
-			valid: true,
-			arg:   "paste [zerowidth/dotfiles#123](https://github.com/zerowidth/dotfiles/issues/123)",
-		},
-		"issue reference with a repo and issue": {
-			input: "r foo/bar 123",
-			uid:   "ghr:foo/bar#123",
-			valid: true,
-			title: "Insert issue reference to foo/bar#123",
-			arg:   "paste foo/bar#123",
-			copy:  "foo/bar#123",
-		},
-		"issue reference with shorthand repo and issue": {
-			input: "r df 123",
-			uid:   "ghr:zerowidth/dotfiles#123",
-			valid: true,
-			title: "Insert issue reference to zerowidth/dotfiles#123 (df#123)",
-			arg:   "paste zerowidth/dotfiles#123",
-		},
-		"issue references with no issue has no valid item": {
-			input:   "r df",
-			exclude: "ghr:zerowidth/dotfiles",
-		},
-		"issue references with repo has autocomplete value": {
-			input: "r df",
-			title: "Insert issue reference to zerowidth/dotfiles#... (df)",
-			auto:  "r df ",
-		},
-		"issue reference with user-shorthand repo has autocomplete value": {
-			input: "r zw/foo",
-			title: "Insert issue reference to zerowidth/foo#... (zw)",
-			auto:  "r zw/foo ",
-		},
 		"search issues globally with no query": {
 			input: "s ",
 			title: "Search issues for...",
@@ -490,29 +428,6 @@ func TestCompleteItems(t *testing.T) {
 			uid:   "ghn:zerowidth/default",
 			valid: true,
 			title: "New issue in zerowidth/default: foo",
-		},
-		"markdown link with default repo": {
-			input: "m ",
-			uid:   "ghm:zerowidth/default",
-			valid: true,
-			title: "Insert Markdown link to zerowidth/default",
-		},
-		"markdown link with default repo and issue": {
-			input: "m 123",
-			uid:   "ghm:zerowidth/default#123",
-			valid: true,
-			title: "Insert Markdown link to zerowidth/default#123",
-		},
-		"issue reference with no issue, using default repo": {
-			input: "r ",
-			title: "Insert issue reference to zerowidth/default#...",
-			valid: false,
-		},
-		"issue reference with issue, using default repo": {
-			input: "r 123",
-			uid:   "ghr:zerowidth/default#123",
-			title: "Insert issue reference to zerowidth/default#123",
-			valid: true,
 		},
 
 		// projects
@@ -796,47 +711,6 @@ func TestCompleteItems(t *testing.T) {
 		"edit project excludes files (listing only directories)": {
 			input:   "e ",
 			exclude: "ghe:../../../test/fixtures/work/ignored-file",
-		},
-
-		// issue reference / markdown link autocomplete
-		"autocompletes for markdown links": {
-			input: "m d",
-			uid:   "ghm:zerowidth/dotfiles",
-			title: "Insert Markdown link to zerowidth/dotfiles (df)",
-			valid: true,
-			arg:   "paste [zerowidth/dotfiles](https://github.com/zerowidth/dotfiles)",
-		},
-		"autocomplete user for markdown link": {
-			input: "m z",
-			title: "Insert Markdown link to zerowidth/... (zw)",
-			auto:  "m zw/",
-		},
-		"autocompletes for issue references with shorthand": {
-			input: "r d",
-			valid: false,
-			title: "Insert issue reference to zerowidth/dotfiles#... (df#...)",
-			auto:  "r df ",
-		},
-		"autocompletes for issue references with repos alone": {
-			input: "r foo/bar",
-			valid: false,
-			title: "Insert issue reference to foo/bar#...",
-			auto:  "r foo/bar ",
-		},
-		"autocomplete user for issue reference": {
-			input: "r z",
-			title: "Insert issue reference to zerowidth/... (zw)",
-			auto:  "r zw/",
-		},
-		"autocompletes for issue references incomplete input": {
-			input: "r foo",
-			valid: false,
-			title: "Insert issue reference to foo...",
-			auto:  "r foo",
-		},
-		"does not autocomplete with open-ended when a repo is present": {
-			input:   "r foo/bar ",
-			exclude: "Insert issue reference to foo/bar...",
 		},
 
 		// edit/open/auto filtering
