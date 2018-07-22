@@ -21,7 +21,8 @@ var completeCommand = &cobra.Command{
 	Use: "complete 'input string'",
 	Run: func(cmd *cobra.Command, args []string) {
 		input := strings.Join(args, " ")
-		result := completion.Complete(input)
+		env := completion.AlfredEnvironment(input)
+		result := completion.Complete(env)
 		if err := json.NewEncoder(os.Stdout).Encode(result); err != nil {
 			fmt.Fprintf(os.Stderr, "could not generate JSON: %s", err)
 		}

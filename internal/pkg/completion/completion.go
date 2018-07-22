@@ -21,8 +21,6 @@ import (
 	"github.com/zerowidth/gh-shorthand/pkg/alfred"
 )
 
-type envVars map[string]string
-
 const (
 	// rerunAfter defines how soon the alfred filter is invoked again.
 	// This number is an ideal, so true delay must be measured externally.
@@ -39,97 +37,17 @@ const (
 	socketTimeout = 100 * time.Millisecond
 )
 
-var (
-	// githubIcon      = octicon("mark-github")
-	repoIcon = octicon("repo")
-	// pullRequestIcon = octicon("git-pull-request")
-	issueListIcon = octicon("list-ordered")
-	pathIcon      = octicon("browser")
-	issueIcon     = octicon("issue-opened")
-	projectIcon   = octicon("project")
-	newIssueIcon  = octicon("bug")
-	editorIcon    = octicon("file-code")
-	finderIcon    = octicon("file-directory")
-	terminalIcon  = octicon("terminal")
-	markdownIcon  = octicon("markdown")
-	searchIcon    = octicon("search")
-	// commitIcon    = octicon("git-commit")
-
-	issueIconOpen         = octicon("issue-opened_open")
-	issueIconClosed       = octicon("issue-closed_closed")
-	pullRequestIconOpen   = octicon("git-pull-request_open")
-	pullRequestIconClosed = octicon("git-pull-request_closed")
-	pullRequestIconMerged = octicon("git-merge_merged")
-	projectIconOpen       = octicon("project_open")
-	projectIconClosed     = octicon("project_closed")
-
-	// the minimum length of 7 is enforced elsewhere
-	// sha1Regexp = regexp.MustCompile(`[0-9a-f]{1,40}$`)
-
-	repoDefaultItem = &alfred.Item{
-		Title:        "Open repositories and issues on GitHub",
-		Autocomplete: " ",
-		Icon:         repoIcon,
-	}
-	issueListDefaultItem = &alfred.Item{
-		Title:        "List and search issues in a GitHub repository",
-		Autocomplete: "i ",
-		Icon:         issueListIcon,
-	}
-	projectListDefaultItem = &alfred.Item{
-		Title:        "List and open projects on GitHub repositories or organizations",
-		Autocomplete: "p ",
-		Icon:         projectIcon,
-	}
-	issueSearchDefaultItem = &alfred.Item{
-		Title:        "Search issues across GitHub",
-		Autocomplete: "s ",
-		Icon:         searchIcon,
-	}
-	newIssueDefaultItem = &alfred.Item{
-		Title:        "New issue in a GitHub repository",
-		Autocomplete: "n ",
-		Icon:         newIssueIcon,
-	}
-	markdownLinkDefaultItem = &alfred.Item{
-		Title:        "Insert Markdown link to a GitHub repository or issue",
-		Autocomplete: "m ",
-		Icon:         markdownIcon,
-	}
-	issueReferenceDefaultItem = &alfred.Item{
-		Title:        "Insert issue reference shorthand for a GitHub repository or issue",
-		Autocomplete: "r ",
-		Icon:         issueIcon,
-	}
-	editProjectDefaultItem = &alfred.Item{
-		Title:        "Edit a project",
-		Autocomplete: "e ",
-		Icon:         editorIcon,
-	}
-	openFinderDefaultItem = &alfred.Item{
-		Title:        "Open a project directory in Finder",
-		Autocomplete: "o ",
-		Icon:         finderIcon,
-	}
-	openTerminalDefaultItem = &alfred.Item{
-		Title:        "Open terminal in a project",
-		Autocomplete: "t ",
-		Icon:         terminalIcon,
-	}
-)
-
 // Complete runs the main completion code
-func Complete(input string) *alfred.FilterResult {
+func Complete(env Environment) *alfred.FilterResult {
 	result := alfred.NewFilterResult()
 
 	path, _ := homedir.Expand("~/.gh-shorthand.yml")
 	cfg, configErr := config.LoadFromFile(path)
 
-	vars := getEnvironment()
-	appendParsedItems(result, cfg, vars, input)
+	appendParsedItems(result, cfg, env)
 
 	// only show the config error when needed (i.e. there's input)
-	if configErr != nil && len(input) > 0 {
+	if configErr != nil && len(env.Query) > 0 {
 		result.AppendItems(errorItem("Could not load config from ~/.gh-shorthand.yml", configErr.Error()))
 	}
 
@@ -137,8 +55,38 @@ func Complete(input string) *alfred.FilterResult {
 	return result
 }
 
-func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[string]string, input string) {
-	fullInput := input
+// Environment represents the runtime environment from Alfred's invocation of
+// this binary.
+type Environment struct {
+	Query string
+	Start time.Time
+}
+
+// AlfredEnvironment extracts the runtime environment from the OS environment
+func AlfredEnvironment(input string) Environment {
+	e := Environment{
+		Query: input,
+		Start: time.Now(),
+	}
+
+	if query, ok := os.LookupEnv("query"); ok && query == input {
+		if sStr, ok := os.LookupEnv("s"); ok {
+			if nsStr, ok := os.LookupEnv("ns"); ok {
+				if s, err := strconv.ParseInt(sStr, 10, 64); err == nil {
+					if ns, err := strconv.ParseInt(nsStr, 10, 64); err == nil {
+						e.Start = time.Unix(s, ns)
+					}
+				}
+			}
+		}
+	}
+
+	return e
+}
+
+func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env Environment) {
+	fullInput := env.Query
+	input := env.Query
 
 	// input includes leading space or leading mode char followed by a space
 	var mode string
@@ -163,8 +111,7 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[
 
 	// for RPC calls on idle query input:
 	shouldRetry := false
-	start := queryStart(input, env)
-	duration := time.Since(start)
+	duration := time.Since(env.Start)
 
 	if !parsed.HasRepo() && len(cfg.DefaultRepo) > 0 && !parsed.HasOwner() && !parsed.HasPath() {
 		if err := parsed.SetRepo(cfg.DefaultRepo); err != nil {
@@ -180,8 +127,6 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[
 			projectListDefaultItem,
 			newIssueDefaultItem,
 			issueSearchDefaultItem,
-			markdownLinkDefaultItem,
-			issueReferenceDefaultItem,
 			editProjectDefaultItem,
 			openFinderDefaultItem,
 			openTerminalDefaultItem,
@@ -274,24 +219,6 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[
 		result.AppendItems(
 			autocompleteItems(cfg, input, parsed,
 				autocompleteNewIssueItem, autocompleteUserNewIssueItem, openEndedNewIssueItem)...)
-	case "m":
-		// repo required, issue optional
-		if parsed.HasRepo() && !parsed.HasPath() && (parsed.HasIssue() || parsed.EmptyQuery()) {
-			result.AppendItems(markdownLinkItem(parsed))
-		}
-
-		result.AppendItems(
-			autocompleteItems(cfg, input, parsed,
-				autocompleteMarkdownLinkItem, autocompleteUserMarkdownLinkItem, openEndedMarkdownLinkItem)...)
-	case "r":
-		// repo required, issue required (handled in issueReferenceItem)
-		if parsed.HasRepo() && (parsed.HasIssue() || parsed.EmptyQuery()) {
-			result.AppendItems(issueReferenceItem(parsed, fullInput))
-		}
-
-		result.AppendItems(
-			autocompleteItems(cfg, input, parsed,
-				autocompleteIssueReferenceItem, autocompleteUserIssueReferenceItem, openEndedIssueReferenceItem)...)
 	case "e":
 		result.AppendItems(
 			actionItems(cfg.ProjectDirMap(), input, "ghe", "edit", "Edit", editorIcon)...)
@@ -312,9 +239,9 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[
 	// if any RPC-decorated items require a re-invocation of the script, save that
 	// information in the environment for the next time
 	if shouldRetry {
-		result.SetVariable("query", input)
-		result.SetVariable("s", fmt.Sprintf("%d", start.Unix()))
-		result.SetVariable("ns", fmt.Sprintf("%d", start.Nanosecond()))
+		result.SetVariable("query", fullInput)
+		result.SetVariable("s", fmt.Sprintf("%d", env.Start.Unix()))
+		result.SetVariable("ns", fmt.Sprintf("%d", env.Start.Nanosecond()))
 	}
 
 	// automatically copy "open <url>" urls to copy/large text
@@ -509,68 +436,6 @@ func newIssueItem(parsed *parser.Result) *alfred.Item {
 	}
 }
 
-func markdownLinkItem(parsed *parser.Result) *alfred.Item {
-	uid := "ghm:" + parsed.Repo()
-	title := "Insert Markdown link to " + parsed.Repo()
-	desc := parsed.Repo()
-	link := "https://github.com/" + parsed.Repo()
-	icon := markdownIcon
-
-	if parsed.HasIssue() {
-		uid += "#" + parsed.Issue()
-		title += "#" + parsed.Issue()
-		desc += "#" + parsed.Issue()
-		link += "/issues/" + parsed.Issue()
-		icon = issueIcon
-	}
-
-	title += parsed.Annotation()
-	markdown := fmt.Sprintf("[%s](%s)", desc, link)
-
-	return &alfred.Item{
-		UID:   uid,
-		Title: title,
-		Arg:   "paste " + markdown,
-		Text:  &alfred.Text{Copy: markdown, LargeType: markdown},
-		Valid: true,
-		Icon:  icon,
-	}
-}
-
-func issueReferenceItem(parsed *parser.Result, fullInput string) *alfred.Item {
-	title := "Insert issue reference to " + parsed.Repo()
-	ref := parsed.Repo()
-
-	if parsed.HasIssue() {
-		title += "#" + parsed.Issue()
-		ref += "#" + parsed.Issue()
-	} else {
-		title += "#..."
-	}
-
-	title += parsed.Annotation()
-
-	if parsed.HasIssue() {
-
-		return &alfred.Item{
-			UID:   "ghr:" + ref,
-			Title: title,
-			Arg:   "paste " + ref,
-			Valid: true,
-			Icon:  issueIcon,
-			Text:  &alfred.Text{Copy: ref, LargeType: ref},
-		}
-
-	}
-
-	return &alfred.Item{
-		Title:        title,
-		Autocomplete: fullInput + " ",
-		Valid:        false,
-		Icon:         issueIcon,
-	}
-}
-
 func globalIssueSearchItem(input string) *alfred.Item {
 	if len(input) > 0 {
 		escaped := url.PathEscape(input)
@@ -671,43 +536,6 @@ func autocompleteUserNewIssueItem(key, user string) *alfred.Item {
 	}
 }
 
-func autocompleteMarkdownLinkItem(key, repo string) *alfred.Item {
-	return &alfred.Item{
-		UID:          "ghm:" + repo,
-		Title:        fmt.Sprintf("Insert Markdown link to %s (%s)", repo, key),
-		Valid:        true,
-		Arg:          fmt.Sprintf("paste [%s](https://github.com/%s)", repo, repo),
-		Autocomplete: "m " + key,
-		Icon:         markdownIcon,
-	}
-}
-
-func autocompleteUserMarkdownLinkItem(key, user string) *alfred.Item {
-	return &alfred.Item{
-		Title:        fmt.Sprintf("Insert Markdown link to %s/... (%s)", user, key),
-		Autocomplete: "m " + key + "/",
-		Icon:         markdownIcon,
-	}
-}
-
-func autocompleteIssueReferenceItem(key, repo string) *alfred.Item {
-	return &alfred.Item{
-		Title:        fmt.Sprintf("Insert issue reference to %s#... (%s#...)", repo, key),
-		Valid:        false,
-		Autocomplete: "r " + key + " ",
-		Icon:         issueIcon,
-	}
-}
-
-func autocompleteUserIssueReferenceItem(key, user string) *alfred.Item {
-	return &alfred.Item{
-		Title:        fmt.Sprintf("Insert issue reference to %s/... (%s)", user, key),
-		Valid:        false,
-		Autocomplete: "r " + key + "/",
-		Icon:         issueIcon,
-	}
-}
-
 func openEndedOpenItem(input string) *alfred.Item {
 	return &alfred.Item{
 		Title:        fmt.Sprintf("Open %s...", input),
@@ -741,33 +569,6 @@ func openEndedNewIssueItem(input string) *alfred.Item {
 		Autocomplete: "n " + input,
 		Valid:        false,
 		Icon:         newIssueIcon,
-	}
-}
-
-// func openEndedCommitSearchItem(input string) *alfred.Item {
-//   return &alfred.Item{
-//     Title:        fmt.Sprintf("Find commit in %s...", input),
-//     Autocomplete: "c " + input,
-//     Valid:        false,
-//     Icon:         commitIcon,
-//   }
-// }
-
-func openEndedMarkdownLinkItem(input string) *alfred.Item {
-	return &alfred.Item{
-		Title:        fmt.Sprintf("Insert Markdown link to %s...", input),
-		Autocomplete: "m " + input,
-		Valid:        false,
-		Icon:         markdownIcon,
-	}
-}
-
-func openEndedIssueReferenceItem(input string) *alfred.Item {
-	return &alfred.Item{
-		Title:        fmt.Sprintf("Insert issue reference to %s...", input),
-		Autocomplete: "r " + input,
-		Valid:        false,
-		Icon:         issueIcon,
 	}
 }
 
@@ -847,22 +648,6 @@ func findProjectDirs(root string) (dirs []string, err error) {
 		return dirs, err
 	}
 	return dirs, nil
-}
-
-func queryStart(input string, env envVars) time.Time {
-	if query, ok := env["query"]; ok && query == input {
-		if sStr, ok := env["s"]; ok {
-			if nsStr, ok := env["ns"]; ok {
-				if s, err := strconv.ParseInt(sStr, 10, 64); err == nil {
-					if ns, err := strconv.ParseInt(nsStr, 10, 64); err == nil {
-						return time.Unix(s, ns)
-					}
-				}
-			}
-		}
-	}
-
-	return time.Now()
 }
 
 // Issue the given query string to the RPC backend.
@@ -1184,41 +969,6 @@ func issueMods(repo, number string) *alfred.Mods {
 	}
 }
 
-// octicon is relative to the alfred workflow, so this tells alfred to retrieve
-// icons from there rather than relative to this go binary.
-func octicon(name string) *alfred.Icon {
-	return &alfred.Icon{
-		Path: fmt.Sprintf("octicons-%s.png", name),
-	}
-}
-
-func issueStateIcon(kind, state string) *alfred.Icon {
-	switch kind {
-	case "Issue":
-		if state == "OPEN" {
-			return issueIconOpen
-		}
-		return issueIconClosed
-	case "PullRequest":
-		switch state {
-		case "OPEN":
-			return pullRequestIconOpen
-		case "CLOSED":
-			return pullRequestIconClosed
-		case "MERGED":
-			return pullRequestIconMerged
-		}
-	}
-	return issueIcon // sane default
-}
-
-func projectStateIcon(state string) *alfred.Icon {
-	if state == "OPEN" {
-		return projectIconOpen
-	}
-	return projectIconClosed
-}
-
 func errorItem(context, msg string) *alfred.Item {
 	return &alfred.Item{
 		Title:    context,
@@ -1226,16 +976,6 @@ func errorItem(context, msg string) *alfred.Item {
 		Icon:     octicon("alert"),
 		Valid:    false,
 	}
-}
-
-// getEnvironment parses the environment and returns a map.
-func getEnvironment() envVars {
-	env := envVars{}
-	for _, entry := range os.Environ() {
-		pair := strings.SplitN(entry, "=", 2)
-		env[pair[0]] = pair[1]
-	}
-	return env
 }
 
 func finalizeResult(result *alfred.FilterResult) {
