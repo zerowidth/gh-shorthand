@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/zerowidth/gh-shorthand/internal/pkg/config"
 	"github.com/zerowidth/gh-shorthand/pkg/alfred"
@@ -62,10 +63,13 @@ func (tc *completeTestCase) testItem(t *testing.T) {
 	if tc.cfg == nil {
 		tc.cfg = cfg
 	}
-	env := envVars{}
 	result := alfred.NewFilterResult()
 
-	appendParsedItems(result, tc.cfg, env, tc.input)
+	env := Environment{
+		Query: tc.input,
+		Start: time.Now(),
+	}
+	appendParsedItems(result, tc.cfg, env)
 
 	validateItems(t, result.Items)
 

@@ -21,8 +21,6 @@ import (
 	"github.com/zerowidth/gh-shorthand/pkg/alfred"
 )
 
-type envVars map[string]string
-
 const (
 	// rerunAfter defines how soon the alfred filter is invoked again.
 	// This number is an ideal, so true delay must be measured externally.
@@ -40,17 +38,16 @@ const (
 )
 
 // Complete runs the main completion code
-func Complete(input string) *alfred.FilterResult {
+func Complete(env Environment) *alfred.FilterResult {
 	result := alfred.NewFilterResult()
 
 	path, _ := homedir.Expand("~/.gh-shorthand.yml")
 	cfg, configErr := config.LoadFromFile(path)
 
-	vars := getEnvironment()
-	appendParsedItems(result, cfg, vars, input)
+	appendParsedItems(result, cfg, env)
 
 	// only show the config error when needed (i.e. there's input)
-	if configErr != nil && len(input) > 0 {
+	if configErr != nil && len(env.Query) > 0 {
 		result.AppendItems(errorItem("Could not load config from ~/.gh-shorthand.yml", configErr.Error()))
 	}
 
@@ -58,8 +55,38 @@ func Complete(input string) *alfred.FilterResult {
 	return result
 }
 
-func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[string]string, input string) {
-	fullInput := input
+// Environment represents the runtime environment from Alfred's invocation of
+// this binary.
+type Environment struct {
+	Query string
+	Start time.Time
+}
+
+// AlfredEnvironment extracts the runtime environment from the OS environment
+func AlfredEnvironment(input string) Environment {
+	e := Environment{
+		Query: input,
+		Start: time.Now(),
+	}
+
+	if query, ok := os.LookupEnv("query"); ok && query == input {
+		if sStr, ok := os.LookupEnv("s"); ok {
+			if nsStr, ok := os.LookupEnv("ns"); ok {
+				if s, err := strconv.ParseInt(sStr, 10, 64); err == nil {
+					if ns, err := strconv.ParseInt(nsStr, 10, 64); err == nil {
+						e.Start = time.Unix(s, ns)
+					}
+				}
+			}
+		}
+	}
+
+	return e
+}
+
+func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env Environment) {
+	fullInput := env.Query
+	input := env.Query
 
 	// input includes leading space or leading mode char followed by a space
 	var mode string
@@ -84,8 +111,7 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[
 
 	// for RPC calls on idle query input:
 	shouldRetry := false
-	start := queryStart(input, env)
-	duration := time.Since(start)
+	duration := time.Since(env.Start)
 
 	if !parsed.HasRepo() && len(cfg.DefaultRepo) > 0 && !parsed.HasOwner() && !parsed.HasPath() {
 		if err := parsed.SetRepo(cfg.DefaultRepo); err != nil {
@@ -233,9 +259,9 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env map[
 	// if any RPC-decorated items require a re-invocation of the script, save that
 	// information in the environment for the next time
 	if shouldRetry {
-		result.SetVariable("query", input)
-		result.SetVariable("s", fmt.Sprintf("%d", start.Unix()))
-		result.SetVariable("ns", fmt.Sprintf("%d", start.Nanosecond()))
+		result.SetVariable("query", fullInput)
+		result.SetVariable("s", fmt.Sprintf("%d", env.Start.Unix()))
+		result.SetVariable("ns", fmt.Sprintf("%d", env.Start.Nanosecond()))
 	}
 
 	// automatically copy "open <url>" urls to copy/large text
@@ -770,22 +796,6 @@ func findProjectDirs(root string) (dirs []string, err error) {
 	return dirs, nil
 }
 
-func queryStart(input string, env envVars) time.Time {
-	if query, ok := env["query"]; ok && query == input {
-		if sStr, ok := env["s"]; ok {
-			if nsStr, ok := env["ns"]; ok {
-				if s, err := strconv.ParseInt(sStr, 10, 64); err == nil {
-					if ns, err := strconv.ParseInt(nsStr, 10, 64); err == nil {
-						return time.Unix(s, ns)
-					}
-				}
-			}
-		}
-	}
-
-	return time.Now()
-}
-
 // Issue the given query string to the RPC backend.
 // If RPC is not configured, the results will be empty.
 func rpcRequest(query string, cfg *config.Config) (shouldRetry bool, results []string, err error) {
@@ -1112,16 +1122,6 @@ func errorItem(context, msg string) *alfred.Item {
 		Icon:     octicon("alert"),
 		Valid:    false,
 	}
-}
-
-// getEnvironment parses the environment and returns a map.
-func getEnvironment() envVars {
-	env := envVars{}
-	for _, entry := range os.Environ() {
-		pair := strings.SplitN(entry, "=", 2)
-		env[pair[0]] = pair[1]
-	}
-	return env
 }
 
 func finalizeResult(result *alfred.FilterResult) {
