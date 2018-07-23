@@ -3,9 +3,12 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:141b7d476fa3ff292a7aea51df9b4e73f79212c80e51c7da78327cfdd69e121d"
+  digest = "1:18f89977e61729ea11b8d5f05b4285e2428e0ec2c174030c1e7e4f2bc0812ad8"
   name = "github.com/go-chi/chi"
-  packages = ["."]
+  packages = [
+    ".",
+    "middleware",
+  ]
   pruneopts = "NUT"
   revision = "0c5e7abb4e562fa14dd2548cb57b28f979a7dcd9"
 
@@ -70,6 +73,7 @@
   analyzer-version = 1
   input-imports = [
     "github.com/go-chi/chi",
+    "github.com/go-chi/chi/middleware",
     "github.com/mitchellh/go-homedir",
     "github.com/pkg/errors",
     "github.com/sahilm/fuzzy",

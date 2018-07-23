@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/middleware"
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/zerowidth/gh-shorthand/internal/pkg/config"
 )
@@ -31,6 +32,7 @@ func Run() {
 	}
 
 	r := chi.NewRouter()
+	r.Use(middleware.Logger)
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte("hello world\n"))
 	})
