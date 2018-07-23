@@ -33,9 +33,9 @@ func Run() {
 
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
-	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-		_, _ = w.Write([]byte("hello world\n"))
-	})
+
+	rpc := NewRPC(cfg)
+	rpc.Mount(r)
 
 	server := &http.Server{
 		Handler:      r,
