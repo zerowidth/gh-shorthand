@@ -17,7 +17,10 @@ import (
 
 // Run runs the gh-shorthand RPC server on the configured unix socket path
 func Run() {
-	path, _ := homedir.Expand("~/.gh-shorthand.yml")
+	path, err := homedir.Expand("~/.gh-shorthand.yml")
+	if err != nil {
+		log.Fatal("couldn't load config", err)
+	}
 	cfg, err := config.LoadFromFile(path)
 	if err != nil {
 		log.Fatal("couldn't load config", err)

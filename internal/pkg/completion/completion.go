@@ -41,8 +41,14 @@ const (
 func Complete(env Environment) *alfred.FilterResult {
 	result := alfred.NewFilterResult()
 
-	path, _ := homedir.Expand("~/.gh-shorthand.yml")
-	cfg, configErr := config.LoadFromFile(path)
+	var configErr error
+	var cfg *config.Config
+	path, err := homedir.Expand("~/.gh-shorthand.yml")
+	if err != nil {
+		configErr = err
+	} else {
+		cfg, configErr = config.LoadFromFile(path)
+	}
 
 	appendParsedItems(result, cfg, env)
 
