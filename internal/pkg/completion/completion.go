@@ -135,7 +135,6 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env Envi
 		}
 
 		shouldRetry = annotateQuery(input, item, duration, cfg)
-
 		result.AppendItems(item)
 
 	case "": // no input, show default items
@@ -784,7 +783,14 @@ func annotateQuery(query string, item *alfred.Item, duration time.Duration, cfg 
 		return false
 	}
 
-	item.Subtitle = fmt.Sprintf("rpc response: %s", body)
+	if resp.StatusCode == 204 {
+		item.Subtitle = ellipsis("RPC query", duration)
+		return true
+	} else if resp.StatusCode == 200 {
+		item.Subtitle = fmt.Sprintf("rpc response: %s", body)
+	} else {
+		item.Subtitle = fmt.Sprintf("rpc error: %s", body)
+	}
 
 	return false
 }
