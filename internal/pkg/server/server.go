@@ -34,7 +34,7 @@ func Run() {
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 
-	rpc := NewRPC(cfg)
+	rpc := NewRPCHandler(cfg)
 	rpc.Mount(r)
 
 	server := &http.Server{

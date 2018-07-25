@@ -2,9 +2,11 @@ package completion
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"io/ioutil"
 	"net"
+	"net/http"
 	"net/url"
 	"os"
 	"path"
@@ -126,6 +128,16 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env Envi
 	}
 
 	switch mode {
+	case "x": // test mode for new RPC
+		item := &alfred.Item{
+			Title: fmt.Sprintf("x query test: %#v", input),
+			Valid: false,
+		}
+
+		shouldRetry = annotateQuery(input, item, duration, cfg)
+
+		result.AppendItems(item)
+
 	case "": // no input, show default items
 		result.AppendItems(
 			repoDefaultItem,
@@ -733,6 +745,48 @@ func retrieveRepoDescription(item *alfred.Item, duration time.Duration, parsed *
 	}
 
 	return
+}
+
+func annotateQuery(query string, item *alfred.Item, duration time.Duration, cfg *config.Config) bool {
+	if duration.Seconds() < delay {
+		return true
+	}
+
+	if len(cfg.SocketPath) == 0 {
+		return false // RPC isn't enabled, don't worry about it
+	}
+
+	c := http.Client{
+		Transport: &http.Transport{
+			DialContext: func(_ context.Context, _, _ string) (net.Conn, error) {
+				return net.Dial("unix", cfg.SocketPath)
+			},
+		},
+		Timeout: socketTimeout,
+	}
+
+	u, err := url.Parse("http://gh-shorthand/")
+	if err != nil {
+		return false
+	}
+	v := url.Values{}
+	v.Set("q", query)
+	u.RawQuery = v.Encode()
+
+	resp, err := c.Get(u.String())
+	if err != nil {
+		return false
+	}
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return false
+	}
+
+	item.Subtitle = fmt.Sprintf("rpc response: %s", body)
+
+	return false
 }
 
 // retrieveIssueTitle adds the title to the "open issue" item using an RPC call

@@ -8,27 +8,29 @@ import (
 	"github.com/zerowidth/gh-shorthand/internal/pkg/config"
 )
 
-// RPC is a set of RPC http handlers
-type RPC struct {
+// RPCHandler is a set of RPC http handlers
+type RPCHandler struct {
 	cfg *config.Config
 }
 
-// NewRPC creates a new RPC server with the given config
-func NewRPC(cfg *config.Config) *RPC {
-	return &RPC{
+// NewRPCHandler creates a new RPC server with the given config
+func NewRPCHandler(cfg *config.Config) *RPCHandler {
+	return &RPCHandler{
 		cfg: cfg,
 	}
 }
 
 // Mount routes the RPC handlers on a mux
-func (rpc *RPC) Mount(mux *chi.Mux) {
+func (rpc *RPCHandler) Mount(mux *chi.Mux) {
 	mux.Get("/", rpc.testHandler)
 }
 
-func (rpc *RPC) testHandler(w http.ResponseWriter, r *http.Request) {
+func (rpc *RPCHandler) testHandler(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
 		http.Error(w, http.StatusText(400), 400)
 		return
 	}
-	fmt.Fprintf(w, "query: %#v\n", r.Form.Get("q"))
+
+	query := r.Form.Get("q")
+	fmt.Fprintf(w, "query: %#v\n", query)
 }
