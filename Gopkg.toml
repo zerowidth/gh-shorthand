@@ -48,3 +48,7 @@
 [[constraint]]
   name = "github.com/go-chi/chi"
   branch = "master"
+
+[[constraint]]
+  name = "github.com/patrickmn/go-cache"
+  branch = "master"
