@@ -747,6 +747,10 @@ func retrieveRepoDescription(item *alfred.Item, duration time.Duration, parsed *
 }
 
 func annotateQuery(query string, item *alfred.Item, duration time.Duration, cfg *config.Config) bool {
+	if len(query) == 0 {
+		return false
+	}
+
 	if duration.Seconds() < delay {
 		return true
 	}
