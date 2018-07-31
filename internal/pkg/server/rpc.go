@@ -71,7 +71,10 @@ func (rpc *RPCHandler) testHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "request value: %s", res.Value)
 		return
 	}
+
+	// this will lock on the mutex immediately, but we're returning soon
 	go rpc.makeRequest(query)
+
 	w.WriteHeader(204) // No Content (request is pending)
 }
 
