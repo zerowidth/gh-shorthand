@@ -761,8 +761,9 @@ func annotateQuery(query string, item *alfred.Item, duration time.Duration, cfg 
 
 	c := http.Client{
 		Transport: &http.Transport{
-			DialContext: func(_ context.Context, _, _ string) (net.Conn, error) {
-				return net.Dial("unix", cfg.SocketPath)
+			DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
+				d := net.Dialer{}
+				return d.DialContext(ctx, "unix", cfg.SocketPath)
 			},
 		},
 		Timeout: socketTimeout,
