@@ -8,6 +8,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/zerowidth/gh-shorthand/internal/pkg/completion"
+	"github.com/zerowidth/gh-shorthand/internal/pkg/server"
 )
 
 var rootCmd = &cobra.Command{
@@ -24,13 +25,21 @@ var completeCommand = &cobra.Command{
 		env := completion.AlfredEnvironment(input)
 		result := completion.Complete(env)
 		if err := json.NewEncoder(os.Stdout).Encode(result); err != nil {
-			fmt.Fprintf(os.Stderr, "could not generate JSON: %s", err)
+			fmt.Fprintf(os.Stderr, "could not generate JSON: %s\n", err)
 		}
+	},
+}
+
+var serverCommand = &cobra.Command{
+	Use: "server",
+	Run: func(cmd *cobra.Command, args []string) {
+		server.Run()
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(completeCommand)
+	rootCmd.AddCommand(serverCommand)
 }
 
 func main() {

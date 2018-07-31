@@ -2,6 +2,17 @@
 
 
 [[projects]]
+  branch = "master"
+  digest = "1:18f89977e61729ea11b8d5f05b4285e2428e0ec2c174030c1e7e4f2bc0812ad8"
+  name = "github.com/go-chi/chi"
+  packages = [
+    ".",
+    "middleware",
+  ]
+  pruneopts = "NUT"
+  revision = "0c5e7abb4e562fa14dd2548cb57b28f979a7dcd9"
+
+[[projects]]
   digest = "1:406338ad39ab2e37b7f4452906442a3dbf0eb3379dd1f06aafb5c07e769a5fbb"
   name = "github.com/inconshreveable/mousetrap"
   packages = ["."]
@@ -16,6 +27,14 @@
   packages = ["."]
   pruneopts = "NUT"
   revision = "b8bc1bf767474819792c23f32d8286a45736f1c6"
+
+[[projects]]
+  branch = "master"
+  digest = "1:748946761cf99c8b73cef5a3c0ee3e040859dd713a20cece0d0e0dc04e6ceca7"
+  name = "github.com/patrickmn/go-cache"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "9f6ff22cfff829561052f5886ec80a2ac148b4eb"
 
 [[projects]]
   branch = "master"
@@ -61,7 +80,10 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
+    "github.com/go-chi/chi",
+    "github.com/go-chi/chi/middleware",
     "github.com/mitchellh/go-homedir",
+    "github.com/patrickmn/go-cache",
     "github.com/pkg/errors",
     "github.com/sahilm/fuzzy",
     "github.com/spf13/cobra",

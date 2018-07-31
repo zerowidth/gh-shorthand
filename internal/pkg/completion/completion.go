@@ -2,9 +2,11 @@ package completion
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"io/ioutil"
 	"net"
+	"net/http"
 	"net/url"
 	"os"
 	"path"
@@ -41,8 +43,14 @@ const (
 func Complete(env Environment) *alfred.FilterResult {
 	result := alfred.NewFilterResult()
 
-	path, _ := homedir.Expand("~/.gh-shorthand.yml")
-	cfg, configErr := config.LoadFromFile(path)
+	var configErr error
+	var cfg *config.Config
+	path, err := homedir.Expand("~/.gh-shorthand.yml")
+	if err != nil {
+		configErr = err
+	} else {
+		cfg, configErr = config.LoadFromFile(path)
+	}
 
 	appendParsedItems(result, cfg, env)
 
@@ -120,6 +128,15 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env Envi
 	}
 
 	switch mode {
+	case "x": // test mode for new RPC
+		item := &alfred.Item{
+			Title: fmt.Sprintf("x query test: %#v", input),
+			Valid: false,
+		}
+
+		shouldRetry = annotateQuery(input, item, duration, cfg)
+		result.AppendItems(item)
+
 	case "": // no input, show default items
 		result.AppendItems(
 			repoDefaultItem,
@@ -727,6 +744,62 @@ func retrieveRepoDescription(item *alfred.Item, duration time.Duration, parsed *
 	}
 
 	return
+}
+
+func annotateQuery(query string, item *alfred.Item, duration time.Duration, cfg *config.Config) bool {
+	if len(query) == 0 {
+		return false
+	}
+
+	if duration.Seconds() < delay {
+		return true
+	}
+
+	if len(cfg.SocketPath) == 0 {
+		return false // RPC isn't enabled, don't worry about it
+	}
+
+	c := http.Client{
+		Transport: &http.Transport{
+			DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
+				d := net.Dialer{}
+				return d.DialContext(ctx, "unix", cfg.SocketPath)
+			},
+		},
+		Timeout: socketTimeout,
+	}
+
+	u, err := url.Parse("http://gh-shorthand/")
+	if err != nil {
+		item.Subtitle = err.Error()
+		return false
+	}
+	v := url.Values{}
+	v.Set("q", query)
+	u.RawQuery = v.Encode()
+
+	resp, err := c.Get(u.String())
+	if err != nil {
+		item.Subtitle = err.Error()
+		return false
+	}
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return false
+	}
+
+	if resp.StatusCode == 204 {
+		item.Subtitle = ellipsis("RPC query", duration)
+		return true
+	} else if resp.StatusCode == 200 {
+		item.Subtitle = fmt.Sprintf("rpc response: %s", body)
+	} else {
+		item.Subtitle = fmt.Sprintf("rpc error: %s", body)
+	}
+
+	return false
 }
 
 // retrieveIssueTitle adds the title to the "open issue" item using an RPC call
