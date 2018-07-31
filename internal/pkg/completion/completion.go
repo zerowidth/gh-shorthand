@@ -144,9 +144,7 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env Envi
 			projectListDefaultItem,
 			newIssueDefaultItem,
 			issueSearchDefaultItem,
-			editProjectDefaultItem,
-			openFinderDefaultItem,
-			openTerminalDefaultItem,
+			openProjectDefaultItem,
 		)
 
 	case " ": // open repo, issue, and/or path
@@ -238,13 +236,7 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env Envi
 				autocompleteNewIssueItem, autocompleteUserNewIssueItem, openEndedNewIssueItem)...)
 	case "e":
 		result.AppendItems(
-			actionItems(cfg.ProjectDirMap(), input, "ghe", "edit", "Edit", editorIcon)...)
-	case "o":
-		result.AppendItems(
-			actionItems(cfg.ProjectDirMap(), input, "gho", "finder", "Open Finder in", finderIcon)...)
-	case "t":
-		result.AppendItems(
-			actionItems(cfg.ProjectDirMap(), input, "ght", "term", "Open terminal in", terminalIcon)...)
+			projectItems(cfg.ProjectDirMap(), input, editorIcon)...)
 	case "s":
 		searchItem := globalIssueSearchItem(input)
 		retry, matches := retrieveIssueSearchItems(searchItem, duration, "", input, cfg, true)
@@ -270,7 +262,7 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env Envi
 	}
 }
 
-func actionItems(dirs map[string]string, search, uidPrefix, action, desc string, icon *alfred.Icon) (items alfred.Items) {
+func projectItems(dirs map[string]string, search string, icon *alfred.Icon) (items alfred.Items) {
 	projects := map[string]string{}
 	projectNames := []string{}
 
@@ -297,12 +289,27 @@ func actionItems(dirs map[string]string, search, uidPrefix, action, desc string,
 
 	for _, short := range projectNames {
 		items = append(items, &alfred.Item{
-			UID:   uidPrefix + ":" + short,
-			Title: desc + " " + short,
-			Arg:   action + " " + projects[short],
-			Text:  &alfred.Text{Copy: projects[short], LargeType: projects[short]},
-			Valid: true,
-			Icon:  icon,
+			UID:      "ghe:" + short,
+			Title:    short,
+			Subtitle: "Edit " + short,
+			Arg:      "edit " + projects[short],
+			Text:     &alfred.Text{Copy: projects[short], LargeType: projects[short]},
+			Valid:    true,
+			Icon:     icon,
+			Mods: &alfred.Mods{
+				Cmd: &alfred.ModItem{
+					Valid:    true,
+					Arg:      "term " + projects[short],
+					Subtitle: "Open terminal in " + short,
+					Icon:     terminalIcon,
+				},
+				Alt: &alfred.ModItem{
+					Valid:    true,
+					Arg:      "finder " + projects[short],
+					Subtitle: "Open finder in " + short,
+					Icon:     finderIcon,
+				},
+			},
 		})
 	}
 

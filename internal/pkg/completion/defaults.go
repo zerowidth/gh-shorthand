@@ -28,19 +28,9 @@ var (
 		Autocomplete: "n ",
 		Icon:         newIssueIcon,
 	}
-	editProjectDefaultItem = &alfred.Item{
-		Title:        "Edit a project",
+	openProjectDefaultItem = &alfred.Item{
+		Title:        "Open a project",
 		Autocomplete: "e ",
 		Icon:         editorIcon,
-	}
-	openFinderDefaultItem = &alfred.Item{
-		Title:        "Open a project directory in Finder",
-		Autocomplete: "o ",
-		Icon:         finderIcon,
-	}
-	openTerminalDefaultItem = &alfred.Item{
-		Title:        "Open terminal in a project",
-		Autocomplete: "t ",
-		Icon:         terminalIcon,
 	}
 )
