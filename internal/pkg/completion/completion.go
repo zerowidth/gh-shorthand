@@ -771,6 +771,7 @@ func annotateQuery(query string, item *alfred.Item, duration time.Duration, cfg 
 
 	u, err := url.Parse("http://gh-shorthand/")
 	if err != nil {
+		item.Subtitle = err.Error()
 		return false
 	}
 	v := url.Values{}
@@ -779,6 +780,7 @@ func annotateQuery(query string, item *alfred.Item, duration time.Duration, cfg 
 
 	resp, err := c.Get(u.String())
 	if err != nil {
+		item.Subtitle = err.Error()
 		return false
 	}
 	defer resp.Body.Close()
