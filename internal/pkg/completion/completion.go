@@ -239,12 +239,6 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env Envi
 	case "e":
 		result.AppendItems(
 			actionItems(cfg.ProjectDirMap(), input, "ghe", "edit", "Edit", editorIcon)...)
-	case "o":
-		result.AppendItems(
-			actionItems(cfg.ProjectDirMap(), input, "gho", "finder", "Open Finder in", finderIcon)...)
-	case "t":
-		result.AppendItems(
-			actionItems(cfg.ProjectDirMap(), input, "ght", "term", "Open terminal in", terminalIcon)...)
 	case "s":
 		searchItem := globalIssueSearchItem(input)
 		retry, matches := retrieveIssueSearchItems(searchItem, duration, "", input, cfg, true)
@@ -303,6 +297,20 @@ func actionItems(dirs map[string]string, search, uidPrefix, action, desc string,
 			Text:  &alfred.Text{Copy: projects[short], LargeType: projects[short]},
 			Valid: true,
 			Icon:  icon,
+			Mods: &alfred.Mods{
+				Cmd: &alfred.ModItem{
+					Valid:    true,
+					Arg:      "term " + projects[short],
+					Subtitle: "Open terminal in " + projects[short],
+					Icon:     terminalIcon,
+				},
+				Alt: &alfred.ModItem{
+					Valid:    true,
+					Arg:      "finder " + projects[short],
+					Subtitle: "Open finder in " + projects[short],
+					Icon:     finderIcon,
+				},
+			},
 		})
 	}
 
