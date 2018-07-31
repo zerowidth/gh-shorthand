@@ -20,16 +20,20 @@ const (
 
 // RPCHandler is a set of RPC http handlers
 type RPCHandler struct {
-	cfg   *config.Config
-	cache *cache.Cache
+	cfg     *config.Config
+	cache   *cache.Cache
+	m       sync.Mutex
+	pending map[string]struct{}
 }
 
 // NewRPCHandler creates a new RPC server with the given config
 func NewRPCHandler(cfg *config.Config) *RPCHandler {
-	return &RPCHandler{
-		cfg:   cfg,
-		cache: cache.New(resultTTL, sweepInterval),
+	handler := RPCHandler{
+		cfg:     cfg,
+		cache:   cache.New(resultTTL, sweepInterval),
+		pending: make(map[string]struct{}),
 	}
+	return &handler
 }
 
 // Mount routes the RPC handlers on a mux
@@ -48,81 +52,57 @@ func (rpc *RPCHandler) testHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req Request
-	cr, ok := rpc.cache.Get(query)
-	if ok {
-		req = *cr.(*Request)
-	} else {
-		req = Request{}
-		go rpc.makeRequest(&req, query)
-		rpc.cache.Set(query, &req, resultTTL)
-	}
+	// now that basic checks are done, lock the cache and pending map to see
+	// if the request is already in flight.
+	rpc.m.Lock()
+	defer rpc.m.Unlock()
+	var res Result
 
-	if req.Done() {
-		if err := req.Error(); err != nil {
-			w.WriteHeader(400)
-			fmt.Fprintf(w, "request error: %s", err.Error())
+	if _, ok := rpc.pending[query]; ok {
+		w.WriteHeader(204) // No Content (request is pending)
+		return
+	} else if cr, ok := rpc.cache.Get(query); ok {
+		res = cr.(Result)
+		if res.Error != nil {
+			w.WriteHeader(400) // bad request
+			fmt.Fprintf(w, "request error: %s", res.Error.Error())
 			return
 		}
-
-		fmt.Fprintf(w, "request value: %s", req.Value())
+		fmt.Fprintf(w, "request value: %s", res.Value)
 		return
 	}
-
+	go rpc.makeRequest(query)
 	w.WriteHeader(204) // No Content (request is pending)
 }
 
-func (rpc *RPCHandler) makeRequest(req *Request, query string) {
+func (rpc *RPCHandler) makeRequest(query string) {
+	rpc.m.Lock()
+	rpc.pending[query] = struct{}{}
+	rpc.m.Unlock()
+
 	log.Println("RPC request: ", query)
-	<-time.After(3 * time.Second)
+	<-time.After(2 * time.Second)
+	res := Result{Query: query}
+	var ttl time.Duration
 	if query == "error" {
 		log.Println("RPC request error: ", query)
-		req.setError(fmt.Errorf("an error occurred in the rpc service"))
-		return
+		res.Error = fmt.Errorf("an error occurred in the rpc service")
+		ttl = errorTTL
+	} else {
+		log.Println("RPC result: ", query)
+		res.Value = fmt.Sprintf("RPC sees: %s", query)
+		ttl = resultTTL
 	}
-	log.Println("RPC result: ", query)
-	req.setValue(fmt.Sprintf("RPC sees: %s", query))
+
+	rpc.m.Lock()
+	delete(rpc.pending, query)
+	rpc.cache.Set(query, res, ttl)
+	rpc.m.Unlock()
 }
 
-// Request represents a pending or completed RPC request
-type Request struct {
-	done  bool
-	value string
-	error error
-	m     sync.RWMutex
-}
-
-// Done checks if this RPC request is done yet
-func (r *Request) Done() bool {
-	r.m.RLock()
-	defer r.m.RUnlock()
-	return r.done
-}
-
-// Value retrieves the request's value, if applicable
-func (r *Request) Value() string {
-	r.m.RLock()
-	defer r.m.RUnlock()
-	return r.value
-}
-
-// Error retrieves the request's error, if applicable
-func (r *Request) Error() error {
-	r.m.RLock()
-	defer r.m.RUnlock()
-	return r.error
-}
-
-func (r *Request) setValue(v string) {
-	r.m.Lock()
-	r.value = v
-	r.done = true
-	r.m.Unlock()
-}
-
-func (r *Request) setError(e error) {
-	r.m.Lock()
-	r.error = e
-	r.done = true
-	r.m.Unlock()
+// Result is the result of an RPC call
+type Result struct {
+	Query string
+	Value string
+	Error error
 }
