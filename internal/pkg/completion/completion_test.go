@@ -174,18 +174,8 @@ func TestCompleteItems(t *testing.T) {
 		},
 		"empty input shows edit project default": {
 			input: "",
-			title: "Edit a project",
+			title: "Open a project",
 			auto:  "e ",
-		},
-		"empty input shows open finder default": {
-			input: "",
-			title: "Open a project directory in Finder",
-			auto:  "o ",
-		},
-		"empty input shows open terminal default": {
-			input: "",
-			title: "Open terminal in a project",
-			auto:  "t ",
 		},
 		"empty input shows search issues default": {
 			input: "",
@@ -652,7 +642,7 @@ func TestCompleteItems(t *testing.T) {
 			input:  "e ",
 			uid:    "ghe:../../../test/fixtures/work/work-foo",
 			valid:  true,
-			title:  "Edit ../../../test/fixtures/work/work-foo",
+			title:  "../../../test/fixtures/work/work-foo",
 			arg:    "edit " + fixturePath + "/work/work-foo",
 			copy:   fixturePath + "/work/work-foo",
 			cmdMod: "term " + fixturePath + "/work/work-foo",
@@ -662,7 +652,7 @@ func TestCompleteItems(t *testing.T) {
 			input:  "e ",
 			uid:    "ghe:../../../test/fixtures/projects/project-bar",
 			valid:  true,
-			title:  "Edit ../../../test/fixtures/projects/project-bar",
+			title:  "../../../test/fixtures/projects/project-bar",
 			arg:    "edit " + fixturePath + "/projects/project-bar",
 			cmdMod: "term " + fixturePath + "/projects/project-bar",
 			altMod: "finder " + fixturePath + "/projects/project-bar",
