@@ -144,9 +144,7 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env Envi
 			projectListDefaultItem,
 			newIssueDefaultItem,
 			issueSearchDefaultItem,
-			editProjectDefaultItem,
-			openFinderDefaultItem,
-			openTerminalDefaultItem,
+			openProjectDefaultItem,
 		)
 
 	case " ": // open repo, issue, and/or path
