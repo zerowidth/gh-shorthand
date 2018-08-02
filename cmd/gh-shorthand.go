@@ -9,6 +9,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/zerowidth/gh-shorthand/internal/pkg/completion"
 	"github.com/zerowidth/gh-shorthand/internal/pkg/server"
+	"github.com/zerowidth/gh-shorthand/internal/pkg/snippets"
 )
 
 var rootCmd = &cobra.Command{
@@ -37,9 +38,27 @@ var serverCommand = &cobra.Command{
 	},
 }
 
+var markdownCommand = &cobra.Command{
+	Use: "markdown-link",
+	Run: func(cmd *cobra.Command, args []string) {
+		link := snippets.MarkdownLink(strings.Join(args, " "))
+		fmt.Fprintf(os.Stdout, link)
+	},
+}
+
+var issueReferenceCommand = &cobra.Command{
+	Use: "issue-reference",
+	Run: func(cmd *cobra.Command, args []string) {
+		ref := snippets.IssueReference(strings.Join(args, " "))
+		fmt.Fprintf(os.Stdout, ref)
+	},
+}
+
 func init() {
 	rootCmd.AddCommand(completeCommand)
 	rootCmd.AddCommand(serverCommand)
+	rootCmd.AddCommand(markdownCommand)
+	rootCmd.AddCommand(issueReferenceCommand)
 }
 
 func main() {
