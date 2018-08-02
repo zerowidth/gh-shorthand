@@ -52,3 +52,8 @@
 [[constraint]]
   name = "github.com/patrickmn/go-cache"
   branch = "master"
+
+[[constraint]]
+  name = "github.com/stretchr/testify"
+  branch = "master"
+
