@@ -17,7 +17,7 @@ func NewFilterResult() FilterResult {
 }
 
 // Items is a list of Item pointers.
-type Items []*Item
+type Items []Item
 
 func (is Items) String() string {
 	s := "[\n"
@@ -48,7 +48,7 @@ type Item struct {
 }
 
 // AppendItems is shorthand for adding more items to a FilterResult's Items list
-func (result *FilterResult) AppendItems(items ...*Item) {
+func (result *FilterResult) AppendItems(items ...Item) {
 	result.Items = append(result.Items, items...)
 }
 
