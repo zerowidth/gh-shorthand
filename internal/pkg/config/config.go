@@ -11,6 +11,9 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+// Filename is the default file location for gh-shorthand config
+var Filename = "~/.gh-shorthand.yml"
+
 // Config is a shorthand configuration, read from a yaml file
 type Config struct {
 	RepoMap     map[string]string `yaml:"repos"`

@@ -14,8 +14,6 @@ import (
 	"github.com/zerowidth/gh-shorthand/internal/pkg/snippets"
 )
 
-var configPath = "~/.gh-shorthand.yml"
-
 var rootCmd = &cobra.Command{
 	Use: "gh-shorthand",
 	Run: func(cmd *cobra.Command, args []string) {
@@ -28,13 +26,13 @@ var completeCommand = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		input := strings.Join(args, " ")
 
-		cfg, cfgErr := config.LoadFromFile(configPath)
+		cfg, cfgErr := config.LoadFromFile(config.Filename)
 		env := completion.LoadAlfredEnvironment(input)
 		result := completion.Complete(cfg, env)
 
 		// only include config loading error result if there was any input
 		if cfgErr != nil && len(env.Query) > 0 {
-			result.AppendItems(completion.ErrorItem(fmt.Sprintf("Could not load config from %s", configPath), cfgErr.Error()))
+			result.AppendItems(completion.ErrorItem(fmt.Sprintf("Could not load config from %s", config.Filename), cfgErr.Error()))
 		}
 
 		if err := json.NewEncoder(os.Stdout).Encode(result); err != nil {
@@ -47,7 +45,7 @@ var serverCommand = &cobra.Command{
 	Use: "server",
 	Run: func(cmd *cobra.Command, args []string) {
 
-		cfg, err := config.LoadFromFile(configPath)
+		cfg, err := config.LoadFromFile(config.Filename)
 		if err != nil {
 			log.Fatal("couldn't load config", err)
 		}

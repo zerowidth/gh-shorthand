@@ -1,4 +1,4 @@
-package server
+package rpc
 
 import (
 	"fmt"
@@ -8,27 +8,27 @@ import (
 	"time"
 
 	"github.com/go-chi/chi"
-	"github.com/patrickmn/go-cache"
+	cache "github.com/patrickmn/go-cache"
 	"github.com/zerowidth/gh-shorthand/internal/pkg/config"
 )
 
 const (
-	resultTTL     = 10 * time.Minute
-	errorTTL      = 10 * time.Second
-	sweepInterval = 10 * time.Minute
+	resultTTL     = 10 * time.Minute // how long to keep successful results
+	errorTTL      = 10 * time.Second // how long to keep errors
+	sweepInterval = 10 * time.Minute // how often to sweep the cache
 )
 
-// RPCHandler is a set of RPC http handlers
-type RPCHandler struct {
+// Handler is a set of RPC http handlers
+type Handler struct {
 	cfg     config.Config
 	cache   *cache.Cache
 	m       sync.Mutex
 	pending map[string]struct{}
 }
 
-// NewRPCHandler creates a new RPC server with the given config
-func NewRPCHandler(cfg config.Config) *RPCHandler {
-	handler := RPCHandler{
+// NewHandler creates a new RPC handler with the given config
+func NewHandler(cfg config.Config) *Handler {
+	handler := Handler{
 		cfg:     cfg,
 		cache:   cache.New(resultTTL, sweepInterval),
 		pending: make(map[string]struct{}),
@@ -37,11 +37,11 @@ func NewRPCHandler(cfg config.Config) *RPCHandler {
 }
 
 // Mount routes the RPC handlers on a mux
-func (rpc *RPCHandler) Mount(mux *chi.Mux) {
-	mux.Get("/", rpc.testHandler)
+func (h *Handler) Mount(mux *chi.Mux) {
+	mux.Get("/", h.testHandler)
 }
 
-func (rpc *RPCHandler) testHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) testHandler(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
 		http.Error(w, http.StatusText(400), 400)
 		return
@@ -54,14 +54,14 @@ func (rpc *RPCHandler) testHandler(w http.ResponseWriter, r *http.Request) {
 
 	// now that basic checks are done, lock the cache and pending map to see
 	// if the request is already in flight.
-	rpc.m.Lock()
-	defer rpc.m.Unlock()
+	h.m.Lock()
+	defer h.m.Unlock()
 	var res Result
 
-	if _, ok := rpc.pending[query]; ok {
+	if _, ok := h.pending[query]; ok {
 		w.WriteHeader(204) // No Content (request is pending)
 		return
-	} else if cr, ok := rpc.cache.Get(query); ok {
+	} else if cr, ok := h.cache.Get(query); ok {
 		res = cr.(Result)
 		if res.Error != nil {
 			w.WriteHeader(400) // bad request
@@ -73,15 +73,15 @@ func (rpc *RPCHandler) testHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// this will lock on the mutex immediately, but we're returning soon
-	go rpc.makeRequest(query)
+	go h.makeRequest(query)
 
 	w.WriteHeader(204) // No Content (request is pending)
 }
 
-func (rpc *RPCHandler) makeRequest(query string) {
-	rpc.m.Lock()
-	rpc.pending[query] = struct{}{}
-	rpc.m.Unlock()
+func (h *Handler) makeRequest(query string) {
+	h.m.Lock()
+	h.pending[query] = struct{}{}
+	h.m.Unlock()
 
 	log.Println("RPC request: ", query)
 	<-time.After(2 * time.Second)
@@ -97,10 +97,10 @@ func (rpc *RPCHandler) makeRequest(query string) {
 		ttl = resultTTL
 	}
 
-	rpc.m.Lock()
-	delete(rpc.pending, query)
-	rpc.cache.Set(query, res, ttl)
-	rpc.m.Unlock()
+	h.m.Lock()
+	delete(h.pending, query)
+	h.cache.Set(query, res, ttl)
+	h.m.Unlock()
 }
 
 // Result is the result of an RPC call
