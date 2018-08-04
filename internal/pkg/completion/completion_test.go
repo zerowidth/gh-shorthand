@@ -11,7 +11,7 @@ import (
 	"github.com/zerowidth/gh-shorthand/pkg/alfred"
 )
 
-var cfg = &config.Config{
+var defaultCfg = &config.Config{
 	DefaultRepo: "zerowidth/default",
 	RepoMap: map[string]string{
 		"df":  "zerowidth/dotfiles",
@@ -61,7 +61,7 @@ type completeTestCase struct {
 
 func (tc *completeTestCase) testItem(t *testing.T) {
 	if tc.cfg == nil {
-		tc.cfg = cfg
+		tc.cfg = defaultCfg
 	}
 	result := alfred.NewFilterResult()
 
@@ -69,7 +69,7 @@ func (tc *completeTestCase) testItem(t *testing.T) {
 		Query: tc.input,
 		Start: time.Now(),
 	}
-	appendParsedItems(result, tc.cfg, env)
+	appendParsedItems(result, *tc.cfg, env)
 
 	validateItems(t, result.Items)
 

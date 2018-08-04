@@ -12,20 +12,11 @@ import (
 
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
-	homedir "github.com/mitchellh/go-homedir"
 	"github.com/zerowidth/gh-shorthand/internal/pkg/config"
 )
 
 // Run runs the gh-shorthand RPC server on the configured unix socket path
-func Run() {
-	path, err := homedir.Expand("~/.gh-shorthand.yml")
-	if err != nil {
-		log.Fatal("couldn't load config", err)
-	}
-	cfg, err := config.LoadFromFile(path)
-	if err != nil {
-		log.Fatal("couldn't load config", err)
-	}
+func Run(cfg config.Config) {
 
 	if len(cfg.SocketPath) == 0 {
 		log.Fatal("no socket_path configured in ~/.gh-shorthand.yml")

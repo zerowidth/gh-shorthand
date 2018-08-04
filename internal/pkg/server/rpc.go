@@ -20,14 +20,14 @@ const (
 
 // RPCHandler is a set of RPC http handlers
 type RPCHandler struct {
-	cfg     *config.Config
+	cfg     config.Config
 	cache   *cache.Cache
 	m       sync.Mutex
 	pending map[string]struct{}
 }
 
 // NewRPCHandler creates a new RPC server with the given config
-func NewRPCHandler(cfg *config.Config) *RPCHandler {
+func NewRPCHandler(cfg config.Config) *RPCHandler {
 	handler := RPCHandler{
 		cfg:     cfg,
 		cache:   cache.New(resultTTL, sweepInterval),

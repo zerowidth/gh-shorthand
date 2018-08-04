@@ -38,27 +38,34 @@ func (config Config) ProjectDirMap() (dirs map[string]string) {
 
 // Load a Config from a yaml string.
 // Returns an empty config if an error occurs.
-func Load(yml string) (*Config, error) {
+func Load(yml string) (Config, error) {
 	var config Config
 
 	if err := yaml.Unmarshal([]byte(yml), &config); err != nil {
-		return &config, err
+		return Config{}, err
 	}
 
 	for k, v := range config.RepoMap {
 		if !strings.Contains(v, "/") {
-			return &config, fmt.Errorf("repo shorthand %q: %q not in owner/name format", k, v)
+			return config, fmt.Errorf("repo shorthand %q: %q not in owner/name format", k, v)
 		}
 	}
 
-	return &config, nil
+	return config, nil
 }
 
 // LoadFromFile attempts to load a Config from a given yaml file.
-func LoadFromFile(path string) (*Config, error) {
-	yml, err := ioutil.ReadFile(path)
+// This always returns an empty config.
+func LoadFromFile(path string) (Config, error) {
+	realpath, err := homedir.Expand(path)
 	if err != nil {
-		return &Config{}, err
+		return Config{}, err
 	}
+
+	yml, err := ioutil.ReadFile(realpath)
+	if err != nil {
+		return Config{}, err
+	}
+
 	return Load(string(yml))
 }

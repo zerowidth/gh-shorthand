@@ -15,7 +15,6 @@ import (
 	"strings"
 	"time"
 
-	homedir "github.com/mitchellh/go-homedir"
 	"github.com/pkg/errors"
 	"github.com/sahilm/fuzzy"
 	"github.com/zerowidth/gh-shorthand/internal/pkg/config"
@@ -40,25 +39,9 @@ const (
 )
 
 // Complete runs the main completion code
-func Complete(env Environment) *alfred.FilterResult {
+func Complete(cfg config.Config, env Environment) *alfred.FilterResult {
 	result := alfred.NewFilterResult()
-
-	var configErr error
-	var cfg *config.Config
-	path, err := homedir.Expand("~/.gh-shorthand.yml")
-	if err != nil {
-		configErr = err
-	} else {
-		cfg, configErr = config.LoadFromFile(path)
-	}
-
 	appendParsedItems(result, cfg, env)
-
-	// only show the config error when needed (i.e. there's input)
-	if configErr != nil && len(env.Query) > 0 {
-		result.AppendItems(errorItem("Could not load config from ~/.gh-shorthand.yml", configErr.Error()))
-	}
-
 	finalizeResult(result)
 	return result
 }
@@ -92,7 +75,7 @@ func AlfredEnvironment(input string) Environment {
 	return e
 }
 
-func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env Environment) {
+func appendParsedItems(result *alfred.FilterResult, cfg config.Config, env Environment) {
 	fullInput := env.Query
 	input := env.Query
 
@@ -123,7 +106,7 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env Envi
 
 	if !parsed.HasRepo() && len(cfg.DefaultRepo) > 0 && !parsed.HasOwner() && !parsed.HasPath() {
 		if err := parsed.SetRepo(cfg.DefaultRepo); err != nil {
-			result.AppendItems(errorItem("Could not set default repo", err.Error()))
+			result.AppendItems(ErrorItem("Could not set default repo", err.Error()))
 		}
 	}
 
@@ -275,7 +258,7 @@ func projectItems(dirs map[string]string, search string, icon *alfred.Icon) (ite
 				projectNames = append(projectNames, short)
 			}
 		} else {
-			items = append(items, errorItem("Invalid project directory: "+base, err.Error()))
+			items = append(items, ErrorItem("Invalid project directory: "+base, err.Error()))
 		}
 	}
 
@@ -596,7 +579,7 @@ func openEndedNewIssueItem(input string) *alfred.Item {
 	}
 }
 
-func autocompleteItems(cfg *config.Config, input string, parsed *parser.Result,
+func autocompleteItems(cfg config.Config, input string, parsed *parser.Result,
 	autocompleteRepoItem func(string, string) *alfred.Item,
 	autocompleteUserItem func(string, string) *alfred.Item,
 	openEndedItem func(string) *alfred.Item) (items alfred.Items) {
@@ -616,7 +599,7 @@ func autocompleteItems(cfg *config.Config, input string, parsed *parser.Result,
 	return
 }
 
-func autocompleteRepoItems(cfg *config.Config, input string,
+func autocompleteRepoItems(cfg config.Config, input string,
 	autocompleteRepoItem func(string, string) *alfred.Item) (items alfred.Items) {
 	if len(input) > 0 {
 		for key, repo := range cfg.RepoMap {
@@ -628,7 +611,7 @@ func autocompleteRepoItems(cfg *config.Config, input string,
 	return
 }
 
-func autocompleteUserItems(cfg *config.Config, input string,
+func autocompleteUserItems(cfg config.Config, input string,
 	parsed *parser.Result, includeMatchedUser bool,
 	autocompleteUserItem func(string, string) *alfred.Item) (items alfred.Items) {
 	if len(input) > 0 {
@@ -676,7 +659,7 @@ func findProjectDirs(root string) (dirs []string, err error) {
 
 // Issue the given query string to the RPC backend.
 // If RPC is not configured, the results will be empty.
-func rpcRequest(query string, cfg *config.Config) (shouldRetry bool, results []string, err error) {
+func rpcRequest(query string, cfg config.Config) (shouldRetry bool, results []string, err error) {
 	if len(cfg.SocketPath) == 0 {
 		return false, results, nil // RPC isn't enabled, don't worry about it
 	}
@@ -734,7 +717,7 @@ func ellipsis(prefix string, duration time.Duration) string {
 
 // retrieveRepoDescription adds the repo description to the "open repo" item
 // using an RPC call.
-func retrieveRepoDescription(item *alfred.Item, duration time.Duration, parsed *parser.Result, cfg *config.Config) (shouldRetry bool) {
+func retrieveRepoDescription(item *alfred.Item, duration time.Duration, parsed *parser.Result, cfg config.Config) (shouldRetry bool) {
 	if duration.Seconds() < delay {
 		shouldRetry = true
 		return
@@ -753,7 +736,7 @@ func retrieveRepoDescription(item *alfred.Item, duration time.Duration, parsed *
 	return
 }
 
-func annotateQuery(query string, item *alfred.Item, duration time.Duration, cfg *config.Config) bool {
+func annotateQuery(query string, item *alfred.Item, duration time.Duration, cfg config.Config) bool {
 	if len(query) == 0 {
 		return false
 	}
@@ -810,7 +793,7 @@ func annotateQuery(query string, item *alfred.Item, duration time.Duration, cfg 
 }
 
 // retrieveIssueTitle adds the title to the "open issue" item using an RPC call
-func retrieveIssueTitle(item *alfred.Item, duration time.Duration, parsed *parser.Result, cfg *config.Config) (shouldRetry bool) {
+func retrieveIssueTitle(item *alfred.Item, duration time.Duration, parsed *parser.Result, cfg config.Config) (shouldRetry bool) {
 	if duration.Seconds() < delay {
 		shouldRetry = true
 		return
@@ -836,7 +819,7 @@ func retrieveIssueTitle(item *alfred.Item, duration time.Duration, parsed *parse
 	return
 }
 
-func retrieveRepoProjectName(item *alfred.Item, duration time.Duration, parsed *parser.Result, cfg *config.Config) (shouldRetry bool) {
+func retrieveRepoProjectName(item *alfred.Item, duration time.Duration, parsed *parser.Result, cfg config.Config) (shouldRetry bool) {
 	if duration.Seconds() < delay {
 		shouldRetry = true
 		return
@@ -862,7 +845,7 @@ func retrieveRepoProjectName(item *alfred.Item, duration time.Duration, parsed *
 	return
 }
 
-func retrieveOrgProjectName(item *alfred.Item, duration time.Duration, parsed *parser.Result, cfg *config.Config) (shouldRetry bool) {
+func retrieveOrgProjectName(item *alfred.Item, duration time.Duration, parsed *parser.Result, cfg config.Config) (shouldRetry bool) {
 	if duration.Seconds() < delay {
 		shouldRetry = true
 		return
@@ -888,7 +871,7 @@ func retrieveOrgProjectName(item *alfred.Item, duration time.Duration, parsed *p
 	return
 }
 
-func retrieveOrgProjects(item *alfred.Item, duration time.Duration, parsed *parser.Result, cfg *config.Config) (shouldRetry bool, projects alfred.Items) {
+func retrieveOrgProjects(item *alfred.Item, duration time.Duration, parsed *parser.Result, cfg config.Config) (shouldRetry bool, projects alfred.Items) {
 	if duration.Seconds() < delay {
 		shouldRetry = true
 		return
@@ -906,7 +889,7 @@ func retrieveOrgProjects(item *alfred.Item, duration time.Duration, parsed *pars
 	return
 }
 
-func retrieveRepoProjects(item *alfred.Item, duration time.Duration, parsed *parser.Result, cfg *config.Config) (shouldRetry bool, projects alfred.Items) {
+func retrieveRepoProjects(item *alfred.Item, duration time.Duration, parsed *parser.Result, cfg config.Config) (shouldRetry bool, projects alfred.Items) {
 	if duration.Seconds() < delay {
 		shouldRetry = true
 		return
@@ -944,7 +927,7 @@ func projectItemsFromResults(results []string, desc string) (items alfred.Items)
 	return
 }
 
-func retrieveIssueSearchItems(item *alfred.Item, duration time.Duration, repo, query string, cfg *config.Config, includeRepo bool) (shouldRetry bool, matches alfred.Items) {
+func retrieveIssueSearchItems(item *alfred.Item, duration time.Duration, repo, query string, cfg config.Config, includeRepo bool) (shouldRetry bool, matches alfred.Items) {
 	if !item.Valid {
 		return
 	}
@@ -971,7 +954,7 @@ func retrieveIssueSearchItems(item *alfred.Item, duration time.Duration, repo, q
 	return
 }
 
-func retrieveIssueList(item *alfred.Item, duration time.Duration, parsed *parser.Result, cfg *config.Config) (shouldRetry bool, matches alfred.Items) {
+func retrieveIssueList(item *alfred.Item, duration time.Duration, parsed *parser.Result, cfg config.Config) (shouldRetry bool, matches alfred.Items) {
 	if duration.Seconds() < issueListDelay {
 		shouldRetry = true
 		return
@@ -1049,10 +1032,11 @@ func issueMods(repo, number string) *alfred.Mods {
 	}
 }
 
-func errorItem(context, msg string) *alfred.Item {
+// ErrorItem returns an error message entry to display in alfred
+func ErrorItem(title, subtitle string) *alfred.Item {
 	return &alfred.Item{
-		Title:    context,
-		Subtitle: msg,
+		Title:    title,
+		Subtitle: subtitle,
 		Icon:     octicon("alert"),
 		Valid:    false,
 	}
