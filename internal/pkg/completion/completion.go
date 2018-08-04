@@ -53,8 +53,8 @@ type Environment struct {
 	Start time.Time
 }
 
-// AlfredEnvironment extracts the runtime environment from the OS environment
-func AlfredEnvironment(input string) Environment {
+// LoadAlfredEnvironment extracts the runtime environment from the OS environment
+func LoadAlfredEnvironment(input string) Environment {
 	e := Environment{
 		Query: input,
 		Start: time.Now(),

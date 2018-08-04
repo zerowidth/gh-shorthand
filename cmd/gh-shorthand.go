@@ -29,7 +29,7 @@ var completeCommand = &cobra.Command{
 		input := strings.Join(args, " ")
 
 		cfg, cfgErr := config.LoadFromFile(configPath)
-		env := completion.AlfredEnvironment(input)
+		env := completion.LoadAlfredEnvironment(input)
 		result := completion.Complete(cfg, env)
 
 		// only include config loading error result if there was any input
