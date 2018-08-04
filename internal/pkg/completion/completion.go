@@ -38,12 +38,24 @@ const (
 	socketTimeout = 100 * time.Millisecond
 )
 
+type completion struct {
+	cfg    config.Config
+	env    Environment
+	result alfred.FilterResult
+}
+
 // Complete runs the main completion code
-func Complete(cfg config.Config, env Environment) *alfred.FilterResult {
-	result := alfred.NewFilterResult()
-	appendParsedItems(result, cfg, env)
-	finalizeResult(result)
-	return result
+func Complete(cfg config.Config, env Environment) alfred.FilterResult {
+	c := completion{
+		cfg:    cfg,
+		env:    env,
+		result: alfred.NewFilterResult(),
+	}
+
+	c.appendParsedItems()
+	c.finalizeResult()
+
+	return c.result
 }
 
 // Environment represents the runtime environment from Alfred's invocation of
@@ -75,9 +87,9 @@ func LoadAlfredEnvironment(input string) Environment {
 	return e
 }
 
-func appendParsedItems(result *alfred.FilterResult, cfg config.Config, env Environment) {
-	fullInput := env.Query
-	input := env.Query
+func (c *completion) appendParsedItems() {
+	fullInput := c.env.Query
+	input := c.env.Query
 
 	// input includes leading space or leading mode char followed by a space
 	var mode string
@@ -97,16 +109,16 @@ func appendParsedItems(result *alfred.FilterResult, cfg config.Config, env Envir
 	}
 
 	bareUser := mode == "p"
-	ignoreNumeric := len(cfg.DefaultRepo) > 0
-	parsed := parser.Parse(cfg.RepoMap, cfg.UserMap, input, bareUser, ignoreNumeric)
+	ignoreNumeric := len(c.cfg.DefaultRepo) > 0
+	parsed := parser.Parse(c.cfg.RepoMap, c.cfg.UserMap, input, bareUser, ignoreNumeric)
 
 	// for RPC calls on idle query input:
 	shouldRetry := false
-	duration := time.Since(env.Start)
+	duration := time.Since(c.env.Start)
 
-	if !parsed.HasRepo() && len(cfg.DefaultRepo) > 0 && !parsed.HasOwner() && !parsed.HasPath() {
-		if err := parsed.SetRepo(cfg.DefaultRepo); err != nil {
-			result.AppendItems(ErrorItem("Could not set default repo", err.Error()))
+	if !parsed.HasRepo() && len(c.cfg.DefaultRepo) > 0 && !parsed.HasOwner() && !parsed.HasPath() {
+		if err := parsed.SetRepo(c.cfg.DefaultRepo); err != nil {
+			c.result.AppendItems(ErrorItem("Could not set default repo", err.Error()))
 		}
 	}
 
@@ -117,11 +129,11 @@ func appendParsedItems(result *alfred.FilterResult, cfg config.Config, env Envir
 			Valid: false,
 		}
 
-		shouldRetry = annotateQuery(input, item, duration, cfg)
-		result.AppendItems(item)
+		shouldRetry = annotateQuery(input, item, duration, c.cfg)
+		c.result.AppendItems(item)
 
 	case "": // no input, show default items
-		result.AppendItems(
+		c.result.AppendItems(
 			repoDefaultItem,
 			issueListDefaultItem,
 			projectListDefaultItem,
@@ -136,108 +148,108 @@ func appendParsedItems(result *alfred.FilterResult, cfg config.Config, env Envir
 			(parsed.HasIssue() || parsed.HasPath() || parsed.EmptyQuery()) {
 			item := openRepoItem(parsed)
 			if parsed.HasIssue() {
-				shouldRetry = retrieveIssueTitle(item, duration, parsed, cfg)
+				shouldRetry = retrieveIssueTitle(item, duration, parsed, c.cfg)
 			} else {
-				shouldRetry = retrieveRepoDescription(item, duration, parsed, cfg)
+				shouldRetry = retrieveRepoDescription(item, duration, parsed, c.cfg)
 			}
-			result.AppendItems(item)
+			c.result.AppendItems(item)
 		}
 
 		if !parsed.HasRepo() && !parsed.HasOwner() && parsed.HasPath() {
-			result.AppendItems(openPathItem(parsed.Path()))
+			c.result.AppendItems(openPathItem(parsed.Path()))
 		}
 
-		result.AppendItems(
-			autocompleteItems(cfg, input, parsed,
+		c.result.AppendItems(
+			autocompleteItems(c.cfg, input, parsed,
 				autocompleteOpenItem, autocompleteUserOpenItem, openEndedOpenItem)...)
 	case "i":
 		// repo required
 		if parsed.HasRepo() {
 			if parsed.EmptyQuery() {
 				issuesItem := openIssuesItem(parsed)
-				retry, matches := retrieveIssueList(issuesItem, duration, parsed, cfg)
+				retry, matches := retrieveIssueList(issuesItem, duration, parsed, c.cfg)
 				shouldRetry = retry
-				result.AppendItems(issuesItem)
-				result.AppendItems(searchIssuesItem(parsed, fullInput))
-				result.AppendItems(matches...)
+				c.result.AppendItems(issuesItem)
+				c.result.AppendItems(searchIssuesItem(parsed, fullInput))
+				c.result.AppendItems(matches...)
 			} else {
 				searchItem := searchIssuesItem(parsed, fullInput)
-				retry, matches := retrieveIssueSearchItems(searchItem, duration, parsed.Repo(), parsed.Query, cfg, false)
+				retry, matches := retrieveIssueSearchItems(searchItem, duration, parsed.Repo(), parsed.Query, c.cfg, false)
 				shouldRetry = retry
-				result.AppendItems(searchItem)
-				result.AppendItems(matches...)
+				c.result.AppendItems(searchItem)
+				c.result.AppendItems(matches...)
 			}
 		}
 
-		result.AppendItems(
-			autocompleteItems(cfg, input, parsed,
+		c.result.AppendItems(
+			autocompleteItems(c.cfg, input, parsed,
 				autocompleteIssueItem, autocompleteUserIssueItem, openEndedIssueItem)...)
 	case "p":
 		if parsed.HasOwner() && (parsed.HasIssue() || parsed.EmptyQuery()) {
 			if parsed.HasRepo() {
 				item := repoProjectsItem(parsed)
 				if parsed.HasIssue() {
-					shouldRetry = retrieveRepoProjectName(item, duration, parsed, cfg)
-					result.AppendItems(item)
+					shouldRetry = retrieveRepoProjectName(item, duration, parsed, c.cfg)
+					c.result.AppendItems(item)
 				} else {
-					retry, projects := retrieveRepoProjects(item, duration, parsed, cfg)
+					retry, projects := retrieveRepoProjects(item, duration, parsed, c.cfg)
 					shouldRetry = retry
-					result.AppendItems(item)
-					result.AppendItems(projects...)
+					c.result.AppendItems(item)
+					c.result.AppendItems(projects...)
 				}
 			} else {
 				item := orgProjectsItem(parsed)
 				if parsed.HasIssue() {
-					shouldRetry = retrieveOrgProjectName(item, duration, parsed, cfg)
-					result.AppendItems(item)
+					shouldRetry = retrieveOrgProjectName(item, duration, parsed, c.cfg)
+					c.result.AppendItems(item)
 				} else {
-					retry, projects := retrieveOrgProjects(item, duration, parsed, cfg)
+					retry, projects := retrieveOrgProjects(item, duration, parsed, c.cfg)
 					shouldRetry = retry
-					result.AppendItems(item)
-					result.AppendItems(projects...)
+					c.result.AppendItems(item)
+					c.result.AppendItems(projects...)
 				}
 			}
 		}
 
 		if !strings.Contains(input, " ") {
-			result.AppendItems(
-				autocompleteRepoItems(cfg, input, autocompleteProjectItem)...)
-			result.AppendItems(
-				autocompleteUserItems(cfg, input, parsed, false, autocompleteOrgProjectItem)...)
+			c.result.AppendItems(
+				autocompleteRepoItems(c.cfg, input, autocompleteProjectItem)...)
+			c.result.AppendItems(
+				autocompleteUserItems(c.cfg, input, parsed, false, autocompleteOrgProjectItem)...)
 			if len(input) == 0 || parsed.Repo() != input {
-				result.AppendItems(openEndedProjectItem(input))
+				c.result.AppendItems(openEndedProjectItem(input))
 			}
 		}
 	case "n":
 		// repo required
 		if parsed.HasRepo() {
-			result.AppendItems(newIssueItem(parsed))
+			c.result.AppendItems(newIssueItem(parsed))
 		}
 
-		result.AppendItems(
-			autocompleteItems(cfg, input, parsed,
+		c.result.AppendItems(
+			autocompleteItems(c.cfg, input, parsed,
 				autocompleteNewIssueItem, autocompleteUserNewIssueItem, openEndedNewIssueItem)...)
 	case "e":
-		result.AppendItems(
-			projectItems(cfg.ProjectDirMap(), input, editorIcon)...)
+		c.result.AppendItems(
+			projectItems(c.cfg.ProjectDirMap(), input, editorIcon)...)
 	case "s":
 		searchItem := globalIssueSearchItem(input)
-		retry, matches := retrieveIssueSearchItems(searchItem, duration, "", input, cfg, true)
+		retry, matches := retrieveIssueSearchItems(searchItem, duration, "", input, c.cfg, true)
 		shouldRetry = retry
-		result.AppendItems(searchItem)
-		result.AppendItems(matches...)
+		c.result.AppendItems(searchItem)
+		c.result.AppendItems(matches...)
 	}
 
 	// if any RPC-decorated items require a re-invocation of the script, save that
 	// information in the environment for the next time
 	if shouldRetry {
-		result.SetVariable("query", fullInput)
-		result.SetVariable("s", fmt.Sprintf("%d", env.Start.Unix()))
-		result.SetVariable("ns", fmt.Sprintf("%d", env.Start.Nanosecond()))
+		c.result.SetVariable("query", fullInput)
+		c.result.SetVariable("s", fmt.Sprintf("%d", c.env.Start.Unix()))
+		c.result.SetVariable("ns", fmt.Sprintf("%d", c.env.Start.Nanosecond()))
 	}
 
 	// automatically copy "open <url>" urls to copy/large text
-	for _, item := range result.Items {
+	for _, item := range c.result.Items {
 		if item.Text == nil && len(item.Arg) > 5 && strings.HasPrefix(item.Arg, "open ") {
 			url := item.Arg[5:]
 			item.Text = &alfred.Text{Copy: url, LargeType: url}
@@ -1042,8 +1054,8 @@ func ErrorItem(title, subtitle string) *alfred.Item {
 	}
 }
 
-func finalizeResult(result *alfred.FilterResult) {
-	if result.Variables != nil && len(*result.Variables) > 0 {
-		result.Rerun = rerunAfter
+func (c *completion) finalizeResult() {
+	if c.result.Variables != nil && len(*c.result.Variables) > 0 {
+		c.result.Rerun = rerunAfter
 	}
 }

@@ -63,20 +63,24 @@ func (tc *completeTestCase) testItem(t *testing.T) {
 	if tc.cfg == nil {
 		tc.cfg = defaultCfg
 	}
-	result := alfred.NewFilterResult()
 
-	env := Environment{
-		Query: tc.input,
-		Start: time.Now(),
+	c := completion{
+		env: Environment{
+			Query: tc.input,
+			Start: time.Now(),
+		},
+		cfg:    *tc.cfg,
+		result: alfred.NewFilterResult(),
 	}
-	appendParsedItems(result, *tc.cfg, env)
 
-	validateItems(t, result.Items)
+	c.appendParsedItems()
+
+	validateItems(t, c.result.Items)
 
 	if len(tc.exclude) > 0 {
-		item := findMatchingItem(tc.exclude, tc.exclude, result.Items)
+		item := findMatchingItem(tc.exclude, tc.exclude, c.result.Items)
 		if item != nil {
-			t.Errorf("%s\nexpected no item with UID or Title %q", result.Items, tc.exclude)
+			t.Errorf("%s\nexpected no item with UID or Title %q", c.result.Items, tc.exclude)
 		}
 		return
 	}
@@ -85,7 +89,7 @@ func (tc *completeTestCase) testItem(t *testing.T) {
 		t.Skip("skipping, uid/title/exclude not specified")
 	}
 
-	item := findMatchingItem(tc.uid, tc.title, result.Items)
+	item := findMatchingItem(tc.uid, tc.title, c.result.Items)
 	if item != nil {
 		if len(tc.uid) > 0 && item.UID != tc.uid {
 			t.Errorf("%+v\nexpected UID %q to be %q", item, item.UID, tc.uid)
@@ -139,7 +143,7 @@ func (tc *completeTestCase) testItem(t *testing.T) {
 		}
 
 	} else {
-		t.Errorf("expected item with uid %q and/or title %q in %s", tc.uid, tc.title, result.Items)
+		t.Errorf("expected item with uid %q and/or title %q in %s", tc.uid, tc.title, c.result.Items)
 	}
 }
 
@@ -756,17 +760,23 @@ func TestFinalizeResult(t *testing.T) {
 		&alfred.Item{Title: "also valid", Valid: true},
 		&alfred.Item{Title: "an invalid item", Valid: false},
 	)
-	finalizeResult(result)
+
+	c := completion{
+		result: result,
+	}
+	c.finalizeResult()
 
 	// test that Rerun only gets set if a variable's been set
-	if result.Rerun != 0 {
-		t.Errorf("expected result %#v to not have a Rerun value", result)
+	if c.result.Rerun != 0 {
+		t.Errorf("expected result %#v to not have a Rerun value", c.result)
 	}
+
 	result = alfred.NewFilterResult()
 	result.SetVariable("foo", "bar")
-	finalizeResult(result)
-	if result.Rerun != rerunAfter {
-		t.Errorf("expected result %#v to have Rerun of %f", result, rerunAfter)
+	c.result = result
+	c.finalizeResult()
+	if c.result.Rerun != rerunAfter {
+		t.Errorf("expected result %#v to have Rerun of %f", c.result, rerunAfter)
 	}
 }
 
