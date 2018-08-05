@@ -54,16 +54,12 @@ func TestLoad(t *testing.T) {
 			t.Errorf("expected DefaultRepo to be %q, got %q", "zerowidth/default", config.DefaultRepo)
 		}
 
-		if cfg, err := Load(invalidYaml); err == nil {
+		if _, err := Load(invalidYaml); err == nil {
 			t.Error("expected invalid YML to error, but no error occurred")
-		} else if cfg == nil {
-			t.Error("expected Load with error to return empty config")
 		}
 
-		if cfg, err := Load(invalidRepo); err == nil {
+		if _, err := Load(invalidRepo); err == nil {
 			t.Error("expected invalid repos to result in an error, but no error occurred")
-		} else if cfg == nil {
-			t.Error("expected Load with error to return empty config")
 		}
 	}
 }
@@ -112,9 +108,7 @@ func TestLoadFromFile(t *testing.T) {
 		t.Errorf("expected DefaultRepo to be %q, got %q", "zerowidth/default", config.DefaultRepo)
 	}
 
-	if cfg, err := LoadFromFile("../../../test/fixtures/nonexistent.yml"); err == nil {
+	if _, err := LoadFromFile("../../../test/fixtures/nonexistent.yml"); err == nil {
 		t.Error("expected missing yaml file to error, but no error occurred")
-	} else if cfg == nil {
-		t.Error("expected LoadFromFile with error to return empty config")
 	}
 }

@@ -15,7 +15,6 @@ import (
 	"strings"
 	"time"
 
-	homedir "github.com/mitchellh/go-homedir"
 	"github.com/pkg/errors"
 	"github.com/sahilm/fuzzy"
 	"github.com/zerowidth/gh-shorthand/internal/pkg/config"
@@ -39,28 +38,24 @@ const (
 	socketTimeout = 100 * time.Millisecond
 )
 
+type completion struct {
+	cfg    config.Config
+	env    Environment
+	result alfred.FilterResult
+}
+
 // Complete runs the main completion code
-func Complete(env Environment) *alfred.FilterResult {
-	result := alfred.NewFilterResult()
-
-	var configErr error
-	var cfg *config.Config
-	path, err := homedir.Expand("~/.gh-shorthand.yml")
-	if err != nil {
-		configErr = err
-	} else {
-		cfg, configErr = config.LoadFromFile(path)
+func Complete(cfg config.Config, env Environment) alfred.FilterResult {
+	c := completion{
+		cfg:    cfg,
+		env:    env,
+		result: alfred.NewFilterResult(),
 	}
 
-	appendParsedItems(result, cfg, env)
+	c.appendParsedItems()
+	c.finalizeResult()
 
-	// only show the config error when needed (i.e. there's input)
-	if configErr != nil && len(env.Query) > 0 {
-		result.AppendItems(errorItem("Could not load config from ~/.gh-shorthand.yml", configErr.Error()))
-	}
-
-	finalizeResult(result)
-	return result
+	return c.result
 }
 
 // Environment represents the runtime environment from Alfred's invocation of
@@ -70,8 +65,8 @@ type Environment struct {
 	Start time.Time
 }
 
-// AlfredEnvironment extracts the runtime environment from the OS environment
-func AlfredEnvironment(input string) Environment {
+// LoadAlfredEnvironment extracts the runtime environment from the OS environment
+func LoadAlfredEnvironment(input string) Environment {
 	e := Environment{
 		Query: input,
 		Start: time.Now(),
@@ -92,9 +87,9 @@ func AlfredEnvironment(input string) Environment {
 	return e
 }
 
-func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env Environment) {
-	fullInput := env.Query
-	input := env.Query
+func (c *completion) appendParsedItems() {
+	fullInput := c.env.Query
+	input := c.env.Query
 
 	// input includes leading space or leading mode char followed by a space
 	var mode string
@@ -114,31 +109,31 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env Envi
 	}
 
 	bareUser := mode == "p"
-	ignoreNumeric := len(cfg.DefaultRepo) > 0
-	parsed := parser.Parse(cfg.RepoMap, cfg.UserMap, input, bareUser, ignoreNumeric)
+	ignoreNumeric := len(c.cfg.DefaultRepo) > 0
+	parsed := parser.Parse(c.cfg.RepoMap, c.cfg.UserMap, input, bareUser, ignoreNumeric)
 
 	// for RPC calls on idle query input:
 	shouldRetry := false
-	duration := time.Since(env.Start)
+	duration := time.Since(c.env.Start)
 
-	if !parsed.HasRepo() && len(cfg.DefaultRepo) > 0 && !parsed.HasOwner() && !parsed.HasPath() {
-		if err := parsed.SetRepo(cfg.DefaultRepo); err != nil {
-			result.AppendItems(errorItem("Could not set default repo", err.Error()))
+	if !parsed.HasRepo() && len(c.cfg.DefaultRepo) > 0 && !parsed.HasOwner() && !parsed.HasPath() {
+		if err := parsed.SetRepo(c.cfg.DefaultRepo); err != nil {
+			c.result.AppendItems(ErrorItem("Could not set default repo", err.Error()))
 		}
 	}
 
 	switch mode {
 	case "x": // test mode for new RPC
-		item := &alfred.Item{
+		item := alfred.Item{
 			Title: fmt.Sprintf("x query test: %#v", input),
 			Valid: false,
 		}
 
-		shouldRetry = annotateQuery(input, item, duration, cfg)
-		result.AppendItems(item)
+		shouldRetry = annotateQuery(input, &item, duration, c.cfg)
+		c.result.AppendItems(item)
 
 	case "": // no input, show default items
-		result.AppendItems(
+		c.result.AppendItems(
 			repoDefaultItem,
 			issueListDefaultItem,
 			projectListDefaultItem,
@@ -153,111 +148,111 @@ func appendParsedItems(result *alfred.FilterResult, cfg *config.Config, env Envi
 			(parsed.HasIssue() || parsed.HasPath() || parsed.EmptyQuery()) {
 			item := openRepoItem(parsed)
 			if parsed.HasIssue() {
-				shouldRetry = retrieveIssueTitle(item, duration, parsed, cfg)
+				shouldRetry = retrieveIssueTitle(&item, duration, parsed, c.cfg)
 			} else {
-				shouldRetry = retrieveRepoDescription(item, duration, parsed, cfg)
+				shouldRetry = retrieveRepoDescription(&item, duration, parsed, c.cfg)
 			}
-			result.AppendItems(item)
+			c.result.AppendItems(item)
 		}
 
 		if !parsed.HasRepo() && !parsed.HasOwner() && parsed.HasPath() {
-			result.AppendItems(openPathItem(parsed.Path()))
+			c.result.AppendItems(openPathItem(parsed.Path()))
 		}
 
-		result.AppendItems(
-			autocompleteItems(cfg, input, parsed,
+		c.result.AppendItems(
+			autocompleteItems(c.cfg, input, parsed,
 				autocompleteOpenItem, autocompleteUserOpenItem, openEndedOpenItem)...)
 	case "i":
 		// repo required
 		if parsed.HasRepo() {
 			if parsed.EmptyQuery() {
 				issuesItem := openIssuesItem(parsed)
-				retry, matches := retrieveIssueList(issuesItem, duration, parsed, cfg)
+				retry, matches := retrieveIssueList(&issuesItem, duration, parsed, c.cfg)
 				shouldRetry = retry
-				result.AppendItems(issuesItem)
-				result.AppendItems(searchIssuesItem(parsed, fullInput))
-				result.AppendItems(matches...)
+				c.result.AppendItems(issuesItem)
+				c.result.AppendItems(searchIssuesItem(parsed, fullInput))
+				c.result.AppendItems(matches...)
 			} else {
 				searchItem := searchIssuesItem(parsed, fullInput)
-				retry, matches := retrieveIssueSearchItems(searchItem, duration, parsed.Repo(), parsed.Query, cfg, false)
+				retry, matches := retrieveIssueSearchItems(&searchItem, duration, parsed.Repo(), parsed.Query, c.cfg, false)
 				shouldRetry = retry
-				result.AppendItems(searchItem)
-				result.AppendItems(matches...)
+				c.result.AppendItems(searchItem)
+				c.result.AppendItems(matches...)
 			}
 		}
 
-		result.AppendItems(
-			autocompleteItems(cfg, input, parsed,
+		c.result.AppendItems(
+			autocompleteItems(c.cfg, input, parsed,
 				autocompleteIssueItem, autocompleteUserIssueItem, openEndedIssueItem)...)
 	case "p":
 		if parsed.HasOwner() && (parsed.HasIssue() || parsed.EmptyQuery()) {
 			if parsed.HasRepo() {
 				item := repoProjectsItem(parsed)
 				if parsed.HasIssue() {
-					shouldRetry = retrieveRepoProjectName(item, duration, parsed, cfg)
-					result.AppendItems(item)
+					shouldRetry = retrieveRepoProjectName(&item, duration, parsed, c.cfg)
+					c.result.AppendItems(item)
 				} else {
-					retry, projects := retrieveRepoProjects(item, duration, parsed, cfg)
+					retry, projects := retrieveRepoProjects(&item, duration, parsed, c.cfg)
 					shouldRetry = retry
-					result.AppendItems(item)
-					result.AppendItems(projects...)
+					c.result.AppendItems(item)
+					c.result.AppendItems(projects...)
 				}
 			} else {
 				item := orgProjectsItem(parsed)
 				if parsed.HasIssue() {
-					shouldRetry = retrieveOrgProjectName(item, duration, parsed, cfg)
-					result.AppendItems(item)
+					shouldRetry = retrieveOrgProjectName(&item, duration, parsed, c.cfg)
+					c.result.AppendItems(item)
 				} else {
-					retry, projects := retrieveOrgProjects(item, duration, parsed, cfg)
+					retry, projects := retrieveOrgProjects(&item, duration, parsed, c.cfg)
 					shouldRetry = retry
-					result.AppendItems(item)
-					result.AppendItems(projects...)
+					c.result.AppendItems(item)
+					c.result.AppendItems(projects...)
 				}
 			}
 		}
 
 		if !strings.Contains(input, " ") {
-			result.AppendItems(
-				autocompleteRepoItems(cfg, input, autocompleteProjectItem)...)
-			result.AppendItems(
-				autocompleteUserItems(cfg, input, parsed, false, autocompleteOrgProjectItem)...)
+			c.result.AppendItems(
+				autocompleteRepoItems(c.cfg, input, autocompleteProjectItem)...)
+			c.result.AppendItems(
+				autocompleteUserItems(c.cfg, input, parsed, false, autocompleteOrgProjectItem)...)
 			if len(input) == 0 || parsed.Repo() != input {
-				result.AppendItems(openEndedProjectItem(input))
+				c.result.AppendItems(openEndedProjectItem(input))
 			}
 		}
 	case "n":
 		// repo required
 		if parsed.HasRepo() {
-			result.AppendItems(newIssueItem(parsed))
+			c.result.AppendItems(newIssueItem(parsed))
 		}
 
-		result.AppendItems(
-			autocompleteItems(cfg, input, parsed,
+		c.result.AppendItems(
+			autocompleteItems(c.cfg, input, parsed,
 				autocompleteNewIssueItem, autocompleteUserNewIssueItem, openEndedNewIssueItem)...)
 	case "e":
-		result.AppendItems(
-			projectItems(cfg.ProjectDirMap(), input, editorIcon)...)
+		c.result.AppendItems(
+			projectItems(c.cfg.ProjectDirMap(), input, editorIcon)...)
 	case "s":
 		searchItem := globalIssueSearchItem(input)
-		retry, matches := retrieveIssueSearchItems(searchItem, duration, "", input, cfg, true)
+		retry, matches := retrieveIssueSearchItems(&searchItem, duration, "", input, c.cfg, true)
 		shouldRetry = retry
-		result.AppendItems(searchItem)
-		result.AppendItems(matches...)
+		c.result.AppendItems(searchItem)
+		c.result.AppendItems(matches...)
 	}
 
 	// if any RPC-decorated items require a re-invocation of the script, save that
 	// information in the environment for the next time
 	if shouldRetry {
-		result.SetVariable("query", fullInput)
-		result.SetVariable("s", fmt.Sprintf("%d", env.Start.Unix()))
-		result.SetVariable("ns", fmt.Sprintf("%d", env.Start.Nanosecond()))
+		c.result.SetVariable("query", fullInput)
+		c.result.SetVariable("s", fmt.Sprintf("%d", c.env.Start.Unix()))
+		c.result.SetVariable("ns", fmt.Sprintf("%d", c.env.Start.Nanosecond()))
 	}
 
 	// automatically copy "open <url>" urls to copy/large text
-	for _, item := range result.Items {
-		if item.Text == nil && len(item.Arg) > 5 && strings.HasPrefix(item.Arg, "open ") {
+	for i, item := range c.result.Items {
+		if item.Text == nil && strings.HasPrefix(item.Arg, "open ") {
 			url := item.Arg[5:]
-			item.Text = &alfred.Text{Copy: url, LargeType: url}
+			c.result.Items[i].Text = &alfred.Text{Copy: url, LargeType: url}
 		}
 	}
 }
@@ -275,7 +270,7 @@ func projectItems(dirs map[string]string, search string, icon *alfred.Icon) (ite
 				projectNames = append(projectNames, short)
 			}
 		} else {
-			items = append(items, errorItem("Invalid project directory: "+base, err.Error()))
+			items = append(items, ErrorItem("Invalid project directory: "+base, err.Error()))
 		}
 	}
 
@@ -288,7 +283,7 @@ func projectItems(dirs map[string]string, search string, icon *alfred.Icon) (ite
 	}
 
 	for _, short := range projectNames {
-		items = append(items, &alfred.Item{
+		items = append(items, alfred.Item{
 			UID:      "ghe:" + short,
 			Title:    short,
 			Subtitle: "Edit " + short,
@@ -316,7 +311,7 @@ func projectItems(dirs map[string]string, search string, icon *alfred.Icon) (ite
 	return
 }
 
-func openRepoItem(parsed *parser.Result) *alfred.Item {
+func openRepoItem(parsed *parser.Result) alfred.Item {
 	uid := "gh:" + parsed.Repo()
 	title := "Open " + parsed.Repo()
 	arg := "open https://github.com/" + parsed.Repo()
@@ -344,7 +339,7 @@ func openRepoItem(parsed *parser.Result) *alfred.Item {
 
 	title += parsed.Annotation()
 
-	return &alfred.Item{
+	return alfred.Item{
 		UID:   uid,
 		Title: title,
 		Arg:   arg,
@@ -354,8 +349,8 @@ func openRepoItem(parsed *parser.Result) *alfred.Item {
 	}
 }
 
-func openPathItem(path string) *alfred.Item {
-	return &alfred.Item{
+func openPathItem(path string) alfred.Item {
+	return alfred.Item{
 		UID:   "gh:" + path,
 		Title: fmt.Sprintf("Open %s", path),
 		Arg:   "open https://github.com" + path,
@@ -364,8 +359,8 @@ func openPathItem(path string) *alfred.Item {
 	}
 }
 
-func openIssuesItem(parsed *parser.Result) (item *alfred.Item) {
-	return &alfred.Item{
+func openIssuesItem(parsed *parser.Result) (item alfred.Item) {
+	return alfred.Item{
 		UID:   "ghi:" + parsed.Repo(),
 		Title: "List issues for " + parsed.Repo() + parsed.Annotation(),
 		Arg:   "open https://github.com/" + parsed.Repo() + "/issues",
@@ -374,13 +369,13 @@ func openIssuesItem(parsed *parser.Result) (item *alfred.Item) {
 	}
 }
 
-func searchIssuesItem(parsed *parser.Result, fullInput string) *alfred.Item {
+func searchIssuesItem(parsed *parser.Result, fullInput string) alfred.Item {
 	extra := parsed.Annotation()
 
 	if len(parsed.Query) > 0 {
 		escaped := url.PathEscape(parsed.Query)
 		arg := "open https://github.com/" + parsed.Repo() + "/search?utf8=✓&type=Issues&q=" + escaped
-		return &alfred.Item{
+		return alfred.Item{
 			UID:   "ghis:" + parsed.Repo(),
 			Title: "Search issues in " + parsed.Repo() + extra + " for " + parsed.Query,
 			Arg:   arg,
@@ -389,7 +384,7 @@ func searchIssuesItem(parsed *parser.Result, fullInput string) *alfred.Item {
 		}
 	}
 
-	return &alfred.Item{
+	return alfred.Item{
 		Title:        "Search issues in " + parsed.Repo() + extra + " for...",
 		Valid:        false,
 		Icon:         searchIcon,
@@ -397,9 +392,9 @@ func searchIssuesItem(parsed *parser.Result, fullInput string) *alfred.Item {
 	}
 }
 
-func repoProjectsItem(parsed *parser.Result) *alfred.Item {
+func repoProjectsItem(parsed *parser.Result) alfred.Item {
 	if parsed.HasIssue() {
-		return &alfred.Item{
+		return alfred.Item{
 			UID:   "ghp:" + parsed.Repo() + "/" + parsed.Issue(),
 			Title: "Open project #" + parsed.Issue() + " in " + parsed.Repo() + parsed.Annotation(),
 			Valid: true,
@@ -407,7 +402,7 @@ func repoProjectsItem(parsed *parser.Result) *alfred.Item {
 			Icon:  projectIcon,
 		}
 	}
-	return &alfred.Item{
+	return alfred.Item{
 		UID:   "ghp:" + parsed.Repo(),
 		Title: "List projects in " + parsed.Repo() + parsed.Annotation(),
 		Valid: true,
@@ -416,9 +411,9 @@ func repoProjectsItem(parsed *parser.Result) *alfred.Item {
 	}
 }
 
-func orgProjectsItem(parsed *parser.Result) *alfred.Item {
+func orgProjectsItem(parsed *parser.Result) alfred.Item {
 	if parsed.HasIssue() {
-		return &alfred.Item{
+		return alfred.Item{
 			UID:   "ghp:" + parsed.Owner + "/" + parsed.Issue(),
 			Title: "Open project #" + parsed.Issue() + " for " + parsed.Owner + parsed.Annotation(),
 			Valid: true,
@@ -426,7 +421,7 @@ func orgProjectsItem(parsed *parser.Result) *alfred.Item {
 			Icon:  projectIcon,
 		}
 	}
-	return &alfred.Item{
+	return alfred.Item{
 		UID:   "ghp:" + parsed.Owner,
 		Title: "List projects for " + parsed.Owner + parsed.Annotation(),
 		Valid: true,
@@ -435,12 +430,12 @@ func orgProjectsItem(parsed *parser.Result) *alfred.Item {
 	}
 }
 
-func newIssueItem(parsed *parser.Result) *alfred.Item {
+func newIssueItem(parsed *parser.Result) alfred.Item {
 	title := "New issue in " + parsed.Repo()
 	title += parsed.Annotation()
 
 	if parsed.EmptyQuery() {
-		return &alfred.Item{
+		return alfred.Item{
 			UID:   "ghn:" + parsed.Repo(),
 			Title: title,
 			Arg:   "open https://github.com/" + parsed.Repo() + "/issues/new",
@@ -451,7 +446,7 @@ func newIssueItem(parsed *parser.Result) *alfred.Item {
 
 	escaped := url.PathEscape(parsed.Query)
 	arg := "open https://github.com/" + parsed.Repo() + "/issues/new?title=" + escaped
-	return &alfred.Item{
+	return alfred.Item{
 		UID:   "ghn:" + parsed.Repo(),
 		Title: title + ": " + parsed.Query,
 		Arg:   arg,
@@ -460,11 +455,11 @@ func newIssueItem(parsed *parser.Result) *alfred.Item {
 	}
 }
 
-func globalIssueSearchItem(input string) *alfred.Item {
+func globalIssueSearchItem(input string) alfred.Item {
 	if len(input) > 0 {
 		escaped := url.PathEscape(input)
 		arg := "open https://github.com/search?utf8=✓&type=Issues&q=" + escaped
-		return &alfred.Item{
+		return alfred.Item{
 			UID:   "ghs:",
 			Title: "Search issues for " + input,
 			Arg:   arg,
@@ -473,7 +468,7 @@ func globalIssueSearchItem(input string) *alfred.Item {
 		}
 	}
 
-	return &alfred.Item{
+	return alfred.Item{
 		Title:        "Search issues for...",
 		Valid:        false,
 		Icon:         searchIcon,
@@ -481,8 +476,8 @@ func globalIssueSearchItem(input string) *alfred.Item {
 	}
 }
 
-func autocompleteOpenItem(key, repo string) *alfred.Item {
-	return &alfred.Item{
+func autocompleteOpenItem(key, repo string) alfred.Item {
+	return alfred.Item{
 		UID:          "gh:" + repo,
 		Title:        fmt.Sprintf("Open %s (%s)", repo, key),
 		Arg:          "open https://github.com/" + repo,
@@ -492,16 +487,16 @@ func autocompleteOpenItem(key, repo string) *alfred.Item {
 	}
 }
 
-func autocompleteUserOpenItem(key, user string) *alfred.Item {
-	return &alfred.Item{
+func autocompleteUserOpenItem(key, user string) alfred.Item {
+	return alfred.Item{
 		Title:        fmt.Sprintf("Open %s/... (%s)", user, key),
 		Autocomplete: " " + key + "/",
 		Icon:         repoIcon,
 	}
 }
 
-func autocompleteIssueItem(key, repo string) *alfred.Item {
-	return &alfred.Item{
+func autocompleteIssueItem(key, repo string) alfred.Item {
+	return alfred.Item{
 		UID:          "ghi:" + repo,
 		Title:        fmt.Sprintf("List issues for %s (%s)", repo, key),
 		Arg:          "open https://github.com/" + repo + "/issues",
@@ -511,16 +506,16 @@ func autocompleteIssueItem(key, repo string) *alfred.Item {
 	}
 }
 
-func autocompleteUserIssueItem(key, repo string) *alfred.Item {
-	return &alfred.Item{
+func autocompleteUserIssueItem(key, repo string) alfred.Item {
+	return alfred.Item{
 		Title:        fmt.Sprintf("List issues for %s/... (%s)", repo, key),
 		Autocomplete: "i " + key + "/",
 		Icon:         issueListIcon,
 	}
 }
 
-func autocompleteProjectItem(key, repo string) *alfred.Item {
-	return &alfred.Item{
+func autocompleteProjectItem(key, repo string) alfred.Item {
+	return alfred.Item{
 		UID:          "ghp:" + repo,
 		Title:        fmt.Sprintf("List projects in %s (%s)", repo, key),
 		Arg:          "open https://github.com/" + repo + "/projects",
@@ -530,8 +525,8 @@ func autocompleteProjectItem(key, repo string) *alfred.Item {
 	}
 }
 
-func autocompleteOrgProjectItem(key, user string) *alfred.Item {
-	return &alfred.Item{
+func autocompleteOrgProjectItem(key, user string) alfred.Item {
+	return alfred.Item{
 		UID:          "ghp:" + user,
 		Title:        fmt.Sprintf("List projects for %s (%s)", user, key),
 		Arg:          "open https://github.com/orgs/" + user + "/projects",
@@ -541,8 +536,8 @@ func autocompleteOrgProjectItem(key, user string) *alfred.Item {
 	}
 }
 
-func autocompleteNewIssueItem(key, repo string) *alfred.Item {
-	return &alfred.Item{
+func autocompleteNewIssueItem(key, repo string) alfred.Item {
+	return alfred.Item{
 		UID:          "ghn:" + repo,
 		Title:        fmt.Sprintf("New issue in %s (%s)", repo, key),
 		Arg:          "open https://github.com/" + repo + "/issues/new",
@@ -552,16 +547,16 @@ func autocompleteNewIssueItem(key, repo string) *alfred.Item {
 	}
 }
 
-func autocompleteUserNewIssueItem(key, user string) *alfred.Item {
-	return &alfred.Item{
+func autocompleteUserNewIssueItem(key, user string) alfred.Item {
+	return alfred.Item{
 		Title:        fmt.Sprintf("New issue in %s/... (%s)", user, key),
 		Autocomplete: "n " + key + "/",
 		Icon:         newIssueIcon,
 	}
 }
 
-func openEndedOpenItem(input string) *alfred.Item {
-	return &alfred.Item{
+func openEndedOpenItem(input string) alfred.Item {
+	return alfred.Item{
 		Title:        fmt.Sprintf("Open %s...", input),
 		Autocomplete: " " + input,
 		Valid:        false,
@@ -569,8 +564,8 @@ func openEndedOpenItem(input string) *alfred.Item {
 	}
 }
 
-func openEndedIssueItem(input string) *alfred.Item {
-	return &alfred.Item{
+func openEndedIssueItem(input string) alfred.Item {
+	return alfred.Item{
 		Title:        fmt.Sprintf("List issues for %s...", input),
 		Autocomplete: "i " + input,
 		Valid:        false,
@@ -578,8 +573,8 @@ func openEndedIssueItem(input string) *alfred.Item {
 	}
 }
 
-func openEndedProjectItem(input string) *alfred.Item {
-	return &alfred.Item{
+func openEndedProjectItem(input string) alfred.Item {
+	return alfred.Item{
 		Title:        fmt.Sprintf("List projects for %s...", input),
 		Autocomplete: "p " + input,
 		Valid:        false,
@@ -587,8 +582,8 @@ func openEndedProjectItem(input string) *alfred.Item {
 	}
 }
 
-func openEndedNewIssueItem(input string) *alfred.Item {
-	return &alfred.Item{
+func openEndedNewIssueItem(input string) alfred.Item {
+	return alfred.Item{
 		Title:        fmt.Sprintf("New issue in %s...", input),
 		Autocomplete: "n " + input,
 		Valid:        false,
@@ -596,10 +591,10 @@ func openEndedNewIssueItem(input string) *alfred.Item {
 	}
 }
 
-func autocompleteItems(cfg *config.Config, input string, parsed *parser.Result,
-	autocompleteRepoItem func(string, string) *alfred.Item,
-	autocompleteUserItem func(string, string) *alfred.Item,
-	openEndedItem func(string) *alfred.Item) (items alfred.Items) {
+func autocompleteItems(cfg config.Config, input string, parsed *parser.Result,
+	autocompleteRepoItem func(string, string) alfred.Item,
+	autocompleteUserItem func(string, string) alfred.Item,
+	openEndedItem func(string) alfred.Item) (items alfred.Items) {
 
 	if strings.Contains(input, " ") {
 		return
@@ -616,8 +611,8 @@ func autocompleteItems(cfg *config.Config, input string, parsed *parser.Result,
 	return
 }
 
-func autocompleteRepoItems(cfg *config.Config, input string,
-	autocompleteRepoItem func(string, string) *alfred.Item) (items alfred.Items) {
+func autocompleteRepoItems(cfg config.Config, input string,
+	autocompleteRepoItem func(string, string) alfred.Item) (items alfred.Items) {
 	if len(input) > 0 {
 		for key, repo := range cfg.RepoMap {
 			if strings.HasPrefix(key, input) && len(key) > len(input) {
@@ -628,9 +623,9 @@ func autocompleteRepoItems(cfg *config.Config, input string,
 	return
 }
 
-func autocompleteUserItems(cfg *config.Config, input string,
+func autocompleteUserItems(cfg config.Config, input string,
 	parsed *parser.Result, includeMatchedUser bool,
-	autocompleteUserItem func(string, string) *alfred.Item) (items alfred.Items) {
+	autocompleteUserItem func(string, string) alfred.Item) (items alfred.Items) {
 	if len(input) > 0 {
 		for key, user := range cfg.UserMap {
 			prefixed := strings.HasPrefix(key, input) && len(key) > len(input)
@@ -676,7 +671,7 @@ func findProjectDirs(root string) (dirs []string, err error) {
 
 // Issue the given query string to the RPC backend.
 // If RPC is not configured, the results will be empty.
-func rpcRequest(query string, cfg *config.Config) (shouldRetry bool, results []string, err error) {
+func rpcRequest(query string, cfg config.Config) (shouldRetry bool, results []string, err error) {
 	if len(cfg.SocketPath) == 0 {
 		return false, results, nil // RPC isn't enabled, don't worry about it
 	}
@@ -734,7 +729,7 @@ func ellipsis(prefix string, duration time.Duration) string {
 
 // retrieveRepoDescription adds the repo description to the "open repo" item
 // using an RPC call.
-func retrieveRepoDescription(item *alfred.Item, duration time.Duration, parsed *parser.Result, cfg *config.Config) (shouldRetry bool) {
+func retrieveRepoDescription(item *alfred.Item, duration time.Duration, parsed *parser.Result, cfg config.Config) (shouldRetry bool) {
 	if duration.Seconds() < delay {
 		shouldRetry = true
 		return
@@ -753,7 +748,7 @@ func retrieveRepoDescription(item *alfred.Item, duration time.Duration, parsed *
 	return
 }
 
-func annotateQuery(query string, item *alfred.Item, duration time.Duration, cfg *config.Config) bool {
+func annotateQuery(query string, item *alfred.Item, duration time.Duration, cfg config.Config) bool {
 	if len(query) == 0 {
 		return false
 	}
@@ -810,7 +805,7 @@ func annotateQuery(query string, item *alfred.Item, duration time.Duration, cfg 
 }
 
 // retrieveIssueTitle adds the title to the "open issue" item using an RPC call
-func retrieveIssueTitle(item *alfred.Item, duration time.Duration, parsed *parser.Result, cfg *config.Config) (shouldRetry bool) {
+func retrieveIssueTitle(item *alfred.Item, duration time.Duration, parsed *parser.Result, cfg config.Config) (shouldRetry bool) {
 	if duration.Seconds() < delay {
 		shouldRetry = true
 		return
@@ -836,7 +831,7 @@ func retrieveIssueTitle(item *alfred.Item, duration time.Duration, parsed *parse
 	return
 }
 
-func retrieveRepoProjectName(item *alfred.Item, duration time.Duration, parsed *parser.Result, cfg *config.Config) (shouldRetry bool) {
+func retrieveRepoProjectName(item *alfred.Item, duration time.Duration, parsed *parser.Result, cfg config.Config) (shouldRetry bool) {
 	if duration.Seconds() < delay {
 		shouldRetry = true
 		return
@@ -862,7 +857,7 @@ func retrieveRepoProjectName(item *alfred.Item, duration time.Duration, parsed *
 	return
 }
 
-func retrieveOrgProjectName(item *alfred.Item, duration time.Duration, parsed *parser.Result, cfg *config.Config) (shouldRetry bool) {
+func retrieveOrgProjectName(item *alfred.Item, duration time.Duration, parsed *parser.Result, cfg config.Config) (shouldRetry bool) {
 	if duration.Seconds() < delay {
 		shouldRetry = true
 		return
@@ -888,7 +883,7 @@ func retrieveOrgProjectName(item *alfred.Item, duration time.Duration, parsed *p
 	return
 }
 
-func retrieveOrgProjects(item *alfred.Item, duration time.Duration, parsed *parser.Result, cfg *config.Config) (shouldRetry bool, projects alfred.Items) {
+func retrieveOrgProjects(item *alfred.Item, duration time.Duration, parsed *parser.Result, cfg config.Config) (shouldRetry bool, projects alfred.Items) {
 	if duration.Seconds() < delay {
 		shouldRetry = true
 		return
@@ -906,7 +901,7 @@ func retrieveOrgProjects(item *alfred.Item, duration time.Duration, parsed *pars
 	return
 }
 
-func retrieveRepoProjects(item *alfred.Item, duration time.Duration, parsed *parser.Result, cfg *config.Config) (shouldRetry bool, projects alfred.Items) {
+func retrieveRepoProjects(item *alfred.Item, duration time.Duration, parsed *parser.Result, cfg config.Config) (shouldRetry bool, projects alfred.Items) {
 	if duration.Seconds() < delay {
 		shouldRetry = true
 		return
@@ -933,7 +928,7 @@ func projectItemsFromResults(results []string, desc string) (items alfred.Items)
 		number, state, url, name := parts[0], parts[1], parts[2], parts[3]
 
 		// no UID so alfred doesn't remember these
-		items = append(items, &alfred.Item{
+		items = append(items, alfred.Item{
 			Title:    name,
 			Subtitle: fmt.Sprintf("Open project #%s %s", number, desc),
 			Valid:    true,
@@ -944,7 +939,7 @@ func projectItemsFromResults(results []string, desc string) (items alfred.Items)
 	return
 }
 
-func retrieveIssueSearchItems(item *alfred.Item, duration time.Duration, repo, query string, cfg *config.Config, includeRepo bool) (shouldRetry bool, matches alfred.Items) {
+func retrieveIssueSearchItems(item *alfred.Item, duration time.Duration, repo, query string, cfg config.Config, includeRepo bool) (shouldRetry bool, matches alfred.Items) {
 	if !item.Valid {
 		return
 	}
@@ -971,7 +966,7 @@ func retrieveIssueSearchItems(item *alfred.Item, duration time.Duration, repo, q
 	return
 }
 
-func retrieveIssueList(item *alfred.Item, duration time.Duration, parsed *parser.Result, cfg *config.Config) (shouldRetry bool, matches alfred.Items) {
+func retrieveIssueList(item *alfred.Item, duration time.Duration, parsed *parser.Result, cfg config.Config) (shouldRetry bool, matches alfred.Items) {
 	if duration.Seconds() < issueListDelay {
 		shouldRetry = true
 		return
@@ -1009,7 +1004,7 @@ func issueItemsFromResults(results []string, includeRepo bool) (matches alfred.I
 		}
 
 		// no UID so alfred doesn't remember these
-		matches = append(matches, &alfred.Item{
+		matches = append(matches, alfred.Item{
 			Title:    itemTitle,
 			Subtitle: fmt.Sprintf("Open %s#%s", repo, number),
 			Valid:    true,
@@ -1049,17 +1044,18 @@ func issueMods(repo, number string) *alfred.Mods {
 	}
 }
 
-func errorItem(context, msg string) *alfred.Item {
-	return &alfred.Item{
-		Title:    context,
-		Subtitle: msg,
+// ErrorItem returns an error message entry to display in alfred
+func ErrorItem(title, subtitle string) alfred.Item {
+	return alfred.Item{
+		Title:    title,
+		Subtitle: subtitle,
 		Icon:     octicon("alert"),
 		Valid:    false,
 	}
 }
 
-func finalizeResult(result *alfred.FilterResult) {
-	if result.Variables != nil && len(*result.Variables) > 0 {
-		result.Rerun = rerunAfter
+func (c *completion) finalizeResult() {
+	if c.result.Variables != nil && len(*c.result.Variables) > 0 {
+		c.result.Rerun = rerunAfter
 	}
 }

@@ -11,7 +11,7 @@ import (
 	"github.com/zerowidth/gh-shorthand/pkg/alfred"
 )
 
-var cfg = &config.Config{
+var defaultCfg = &config.Config{
 	DefaultRepo: "zerowidth/default",
 	RepoMap: map[string]string{
 		"df":  "zerowidth/dotfiles",
@@ -61,22 +61,26 @@ type completeTestCase struct {
 
 func (tc *completeTestCase) testItem(t *testing.T) {
 	if tc.cfg == nil {
-		tc.cfg = cfg
+		tc.cfg = defaultCfg
 	}
-	result := alfred.NewFilterResult()
 
-	env := Environment{
-		Query: tc.input,
-		Start: time.Now(),
+	c := completion{
+		env: Environment{
+			Query: tc.input,
+			Start: time.Now(),
+		},
+		cfg:    *tc.cfg,
+		result: alfred.NewFilterResult(),
 	}
-	appendParsedItems(result, tc.cfg, env)
 
-	validateItems(t, result.Items)
+	c.appendParsedItems()
+
+	validateItems(t, c.result.Items)
 
 	if len(tc.exclude) > 0 {
-		item := findMatchingItem(tc.exclude, tc.exclude, result.Items)
-		if item != nil {
-			t.Errorf("%s\nexpected no item with UID or Title %q", result.Items, tc.exclude)
+		_, ok := findMatchingItem(tc.exclude, tc.exclude, c.result.Items)
+		if ok {
+			t.Errorf("%s\nexpected no item with UID or Title %q", c.result.Items, tc.exclude)
 		}
 		return
 	}
@@ -85,62 +89,61 @@ func (tc *completeTestCase) testItem(t *testing.T) {
 		t.Skip("skipping, uid/title/exclude not specified")
 	}
 
-	item := findMatchingItem(tc.uid, tc.title, result.Items)
-	if item != nil {
-		if len(tc.uid) > 0 && item.UID != tc.uid {
-			t.Errorf("%+v\nexpected UID %q to be %q", item, item.UID, tc.uid)
-		}
+	item, ok := findMatchingItem(tc.uid, tc.title, c.result.Items)
+	if !ok {
+		t.Errorf("expected item with uid %q and/or title %q in %s", tc.uid, tc.title, c.result.Items)
+	}
+	if len(tc.uid) > 0 && item.UID != tc.uid {
+		t.Errorf("%+v\nexpected UID %q to be %q", item, item.UID, tc.uid)
+	}
 
-		if len(tc.title) > 0 && item.Title != tc.title {
-			t.Errorf("%+v\nexpected Title %q to be %q", item, item.Title, tc.title)
-		}
+	if len(tc.title) > 0 && item.Title != tc.title {
+		t.Errorf("%+v\nexpected Title %q to be %q", item, item.Title, tc.title)
+	}
 
-		if item.Valid != tc.valid {
-			t.Errorf("%+v\nexpected Valid %t to be %t", item, item.Valid, tc.valid)
-		}
+	if item.Valid != tc.valid {
+		t.Errorf("%+v\nexpected Valid %t to be %t", item, item.Valid, tc.valid)
+	}
 
-		if len(tc.arg) > 0 && item.Arg != tc.arg {
-			t.Errorf("%+v\nexpected Arg %q to be %q", item, item.Arg, tc.arg)
-		}
+	if len(tc.arg) > 0 && item.Arg != tc.arg {
+		t.Errorf("%+v\nexpected Arg %q to be %q", item, item.Arg, tc.arg)
+	}
 
-		if len(tc.auto) > 0 && item.Autocomplete != tc.auto {
-			t.Errorf("%+v\nexpected Autocomplete %q to be %q", item, item.Autocomplete, tc.auto)
-		}
+	if len(tc.auto) > 0 && item.Autocomplete != tc.auto {
+		t.Errorf("%+v\nexpected Autocomplete %q to be %q", item, item.Autocomplete, tc.auto)
+	}
 
-		if len(tc.copy) > 0 && (item.Text == nil || item.Text.Copy != tc.copy) {
-			t.Errorf("%+v\nexpected Text.Copy %+v to be %q", item, item.Text, tc.copy)
-		}
+	if len(tc.copy) > 0 && (item.Text == nil || item.Text.Copy != tc.copy) {
+		t.Errorf("%+v\nexpected Text.Copy %+v to be %q", item, item.Text, tc.copy)
+	}
 
-		if len(tc.cmdMod) > 0 || len(tc.altMod) > 0 {
-			if item.Mods == nil {
-				t.Errorf("%+v\nexpected Mods to be have a value", item)
-			} else {
+	if len(tc.cmdMod) > 0 || len(tc.altMod) > 0 {
+		if item.Mods == nil {
+			t.Errorf("%+v\nexpected Mods to be have a value", item)
+		} else {
 
-				if len(tc.cmdMod) > 0 {
-					if item.Mods.Cmd == nil {
-						t.Errorf("%+v\nexpected Mods.Cmd to have a value", item)
-					} else {
-						if tc.cmdMod != item.Mods.Cmd.Arg {
-							t.Errorf("%+v\nexpected Mods.Cmd.Arg to be %s, was %+v", item, tc.cmdMod, item.Mods.Cmd.Arg)
-						}
+			if len(tc.cmdMod) > 0 {
+				if item.Mods.Cmd == nil {
+					t.Errorf("%+v\nexpected Mods.Cmd to have a value", item)
+				} else {
+					if tc.cmdMod != item.Mods.Cmd.Arg {
+						t.Errorf("%+v\nexpected Mods.Cmd.Arg to be %s, was %+v", item, tc.cmdMod, item.Mods.Cmd.Arg)
 					}
 				}
+			}
 
-				if len(tc.altMod) > 0 {
-					if item.Mods.Alt == nil {
-						t.Errorf("%+v\nexpected Mods.Alt to have a value", item)
-					} else {
-						if tc.altMod != item.Mods.Alt.Arg {
-							t.Errorf("%+v\nexpected Mods.Alt.Arg to be %s, was %+v", item, tc.altMod, item.Mods.Alt.Arg)
-						}
+			if len(tc.altMod) > 0 {
+				if item.Mods.Alt == nil {
+					t.Errorf("%+v\nexpected Mods.Alt to have a value", item)
+				} else {
+					if tc.altMod != item.Mods.Alt.Arg {
+						t.Errorf("%+v\nexpected Mods.Alt.Arg to be %s, was %+v", item, tc.altMod, item.Mods.Alt.Arg)
 					}
 				}
 			}
 		}
-
-	} else {
-		t.Errorf("expected item with uid %q and/or title %q in %s", tc.uid, tc.title, result.Items)
 	}
+
 }
 
 func TestCompleteItems(t *testing.T) {
@@ -728,7 +731,7 @@ func validateItems(t *testing.T, items alfred.Items) {
 				uids[item.UID] = true
 			}
 		}
-		if len(item.Arg) > 5 && strings.HasPrefix(item.Arg, "open ") {
+		if strings.HasPrefix(item.Arg, "open ") {
 			url := item.Arg[5:]
 			if item.Text == nil || item.Text.Copy != url {
 				t.Errorf("expected item text to have url %s in %+v", url, item.Text)
@@ -739,34 +742,40 @@ func validateItems(t *testing.T, items alfred.Items) {
 }
 
 // Try to find item by uid or title
-func findMatchingItem(uid, title string, items alfred.Items) *alfred.Item {
+func findMatchingItem(uid, title string, items alfred.Items) (alfred.Item, bool) {
 	for _, item := range items {
 		if item.Title == title || (len(item.UID) > 0 && item.UID == uid) {
-			return item
+			return item, true
 		}
 	}
-	return nil
+	return alfred.Item{}, false
 }
 
 func TestFinalizeResult(t *testing.T) {
 	result := alfred.NewFilterResult()
 	result.AppendItems(
-		&alfred.Item{Title: "bother, invalid", Valid: false},
-		&alfred.Item{Title: "valid", Valid: true},
-		&alfred.Item{Title: "also valid", Valid: true},
-		&alfred.Item{Title: "an invalid item", Valid: false},
+		alfred.Item{Title: "bother, invalid", Valid: false},
+		alfred.Item{Title: "valid", Valid: true},
+		alfred.Item{Title: "also valid", Valid: true},
+		alfred.Item{Title: "an invalid item", Valid: false},
 	)
-	finalizeResult(result)
+
+	c := completion{
+		result: result,
+	}
+	c.finalizeResult()
 
 	// test that Rerun only gets set if a variable's been set
-	if result.Rerun != 0 {
-		t.Errorf("expected result %#v to not have a Rerun value", result)
+	if c.result.Rerun != 0 {
+		t.Errorf("expected result %#v to not have a Rerun value", c.result)
 	}
+
 	result = alfred.NewFilterResult()
 	result.SetVariable("foo", "bar")
-	finalizeResult(result)
-	if result.Rerun != rerunAfter {
-		t.Errorf("expected result %#v to have Rerun of %f", result, rerunAfter)
+	c.result = result
+	c.finalizeResult()
+	if c.result.Rerun != rerunAfter {
+		t.Errorf("expected result %#v to have Rerun of %f", c.result, rerunAfter)
 	}
 }
 
