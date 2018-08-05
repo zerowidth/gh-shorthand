@@ -1,6 +1,7 @@
 package rpc
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -52,30 +53,27 @@ func (h *Handler) testHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// now that basic checks are done, lock the cache and pending map to see
-	// if the request is already in flight.
+	// Now that basic checks are done, lock the cache and pending map to see
+	// if the request is already in flight. If not, kick it off.
 	h.m.Lock()
 	defer h.m.Unlock()
 	var res Result
 
-	if _, ok := h.pending[query]; ok {
-		w.WriteHeader(204) // No Content (request is pending)
-		return
-	} else if cr, ok := h.cache.Get(query); ok {
-		res = cr.(Result)
-		if res.Error != nil {
-			w.WriteHeader(400) // bad request
-			fmt.Fprintf(w, "request error: %s", res.Error.Error())
-			return
+	if _, pending := h.pending[query]; !pending {
+		if cr, ok := h.cache.Get(query); ok {
+			res = cr.(Result)
+			if len(res.Error) > 0 {
+				w.WriteHeader(500) // internal server error
+			}
+		} else {
+			// this will wait on the mutex immediately, but we're returning soon anyway
+			go h.makeRequest(query)
 		}
-		fmt.Fprintf(w, "request value: %s", res.Value)
-		return
 	}
 
-	// this will lock on the mutex immediately, but we're returning soon
-	go h.makeRequest(query)
-
-	w.WriteHeader(204) // No Content (request is pending)
+	if err := json.NewEncoder(w).Encode(res); err != nil {
+		log.Fatalf(err.Error())
+	}
 }
 
 func (h *Handler) makeRequest(query string) {
@@ -84,12 +82,12 @@ func (h *Handler) makeRequest(query string) {
 	h.m.Unlock()
 
 	log.Println("RPC request: ", query)
-	<-time.After(2 * time.Second)
-	res := Result{Query: query}
+	<-time.After(1 * time.Second)
+	res := Result{}
 	var ttl time.Duration
 	if query == "error" {
 		log.Println("RPC request error: ", query)
-		res.Error = fmt.Errorf("an error occurred in the rpc service")
+		res.Error = "an error occurred in the rpc service"
 		ttl = errorTTL
 	} else {
 		log.Println("RPC result: ", query)
@@ -99,13 +97,7 @@ func (h *Handler) makeRequest(query string) {
 
 	h.m.Lock()
 	delete(h.pending, query)
+	res.Complete = true
 	h.cache.Set(query, res, ttl)
 	h.m.Unlock()
-}
-
-// Result is the result of an RPC call
-type Result struct {
-	Query string
-	Value string
-	Error error
 }
