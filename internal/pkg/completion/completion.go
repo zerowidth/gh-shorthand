@@ -2,11 +2,9 @@ package completion
 
 import (
 	"bufio"
-	"context"
 	"fmt"
 	"io/ioutil"
 	"net"
-	"net/http"
 	"net/url"
 	"os"
 	"path"
@@ -19,6 +17,7 @@ import (
 	"github.com/sahilm/fuzzy"
 	"github.com/zerowidth/gh-shorthand/internal/pkg/config"
 	"github.com/zerowidth/gh-shorthand/internal/pkg/parser"
+	"github.com/zerowidth/gh-shorthand/internal/pkg/rpc"
 	"github.com/zerowidth/gh-shorthand/pkg/alfred"
 )
 
@@ -757,51 +756,24 @@ func annotateQuery(query string, item *alfred.Item, duration time.Duration, cfg 
 		return true
 	}
 
-	if len(cfg.SocketPath) == 0 {
-		return false // RPC isn't enabled, don't worry about it
-	}
-
-	c := http.Client{
-		Transport: &http.Transport{
-			DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
-				d := net.Dialer{}
-				return d.DialContext(ctx, "unix", cfg.SocketPath)
-			},
-		},
-		Timeout: socketTimeout,
-	}
-
-	u, err := url.Parse("http://gh-shorthand/")
+	res, err := rpc.Query(cfg, "/", query)
 	if err != nil {
 		item.Subtitle = err.Error()
 		return false
 	}
-	v := url.Values{}
-	v.Set("q", query)
-	u.RawQuery = v.Encode()
 
-	resp, err := c.Get(u.String())
-	if err != nil {
-		item.Subtitle = err.Error()
-		return false
-	}
-	defer resp.Body.Close()
+	if res.Complete {
+		if len(res.Error) > 0 {
+			item.Subtitle = fmt.Sprintf("rpc error: %s", res.Error)
+		} else {
+			item.Subtitle = fmt.Sprintf("rpc response: %s", res.Value)
+		}
 
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
 		return false
 	}
 
-	if resp.StatusCode == 204 {
-		item.Subtitle = ellipsis("RPC query", duration)
-		return true
-	} else if resp.StatusCode == 200 {
-		item.Subtitle = fmt.Sprintf("rpc response: %s", body)
-	} else {
-		item.Subtitle = fmt.Sprintf("rpc error: %s", body)
-	}
-
-	return false
+	item.Subtitle = ellipsis("RPC query", duration)
+	return true
 }
 
 // retrieveIssueTitle adds the title to the "open issue" item using an RPC call
