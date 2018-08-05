@@ -53,27 +53,27 @@ func (h *Handler) testHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// now that basic checks are done, lock the cache and pending map to see
-	// if the request is already in flight.
+	// Now that basic checks are done, lock the cache and pending map to see
+	// if the request is already in flight. If not, kick it off.
 	h.m.Lock()
 	defer h.m.Unlock()
 	var res Result
 
-	if _, ok := h.pending[query]; ok {
-		_ = json.NewEncoder(w).Encode(res)
-		return
-	} else if cr, ok := h.cache.Get(query); ok {
-		res = cr.(Result)
-		if len(res.Error) > 0 {
-			w.WriteHeader(500) // internal server error
+	if _, pending := h.pending[query]; !pending {
+		if cr, ok := h.cache.Get(query); ok {
+			res = cr.(Result)
+			if len(res.Error) > 0 {
+				w.WriteHeader(500) // internal server error
+			}
+		} else {
+			// this will wait on the mutex immediately, but we're returning soon anyway
+			go h.makeRequest(query)
 		}
-		_ = json.NewEncoder(w).Encode(res)
-		return
 	}
 
-	// this will wait on the mutex immediately, but we're returning soon anyway
-	go h.makeRequest(query)
-	_ = json.NewEncoder(w).Encode(res)
+	if err := json.NewEncoder(w).Encode(res); err != nil {
+		log.Fatalf(err.Error())
+	}
 }
 
 func (h *Handler) makeRequest(query string) {
@@ -82,7 +82,7 @@ func (h *Handler) makeRequest(query string) {
 	h.m.Unlock()
 
 	log.Println("RPC request: ", query)
-	<-time.After(2 * time.Second)
+	<-time.After(1 * time.Second)
 	res := Result{}
 	var ttl time.Duration
 	if query == "error" {
