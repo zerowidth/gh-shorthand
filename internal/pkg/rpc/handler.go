@@ -2,7 +2,6 @@ package rpc
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 	"sync"
@@ -21,8 +20,8 @@ const (
 
 // Handler is a set of RPC http handlers
 type Handler struct {
-	cfg     config.Config
 	cache   *cache.Cache
+	client  *GitHubClient
 	m       sync.Mutex
 	pending map[string]struct{}
 }
@@ -30,9 +29,9 @@ type Handler struct {
 // NewHandler creates a new RPC handler with the given config
 func NewHandler(cfg config.Config) *Handler {
 	handler := Handler{
-		cfg:     cfg,
 		cache:   cache.New(resultTTL, sweepInterval),
 		pending: make(map[string]struct{}),
+		client:  NewGitHubClient(cfg),
 	}
 	return &handler
 }
@@ -81,18 +80,23 @@ func (h *Handler) makeRequest(query string) {
 	h.pending[query] = struct{}{}
 	h.m.Unlock()
 
+	var res Result
+	ttl := resultTTL
+
 	log.Println("RPC request: ", query)
-	<-time.After(1 * time.Second)
-	res := Result{}
-	var ttl time.Duration
 	if query == "error" {
-		log.Println("RPC request error: ", query)
-		res.Error = "an error occurred in the rpc service"
+		<-time.After(1 * time.Second)
+		res.Error = "an error occurred in the RPC service"
+		log.Println("RPC request error")
 		ttl = errorTTL
 	} else {
-		log.Println("RPC result: ", query)
-		res.Value = fmt.Sprintf("RPC sees: %s", query)
-		ttl = resultTTL
+		desc, err := h.client.GetRepoDescription(query)
+		if err != nil {
+			res.Error = err.Error()
+			ttl = errorTTL
+		}
+		res.Value = desc
+		log.Println("RPC result: ", desc)
 	}
 
 	h.m.Lock()
