@@ -11,7 +11,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:18f89977e61729ea11b8d5f05b4285e2428e0ec2c174030c1e7e4f2bc0812ad8"
+  digest = "1:f778f992e98fce4d0deef1890f87ccec3dc94a1894ad1cd0436f094ea78228a6"
   name = "github.com/go-chi/chi"
   packages = [
     ".",
@@ -19,6 +19,14 @@
   ]
   pruneopts = "NUT"
   revision = "0c5e7abb4e562fa14dd2548cb57b28f979a7dcd9"
+
+[[projects]]
+  digest = "1:15042ad3498153684d09f393bbaec6b216c8eec6d61f63dff711de7d64ed8861"
+  name = "github.com/golang/protobuf"
+  packages = ["proto"]
+  pruneopts = "NUT"
+  revision = "b4deda0973fb4c70b50d226b1af49f3da59f5265"
+  version = "v1.1.0"
 
 [[projects]]
   digest = "1:406338ad39ab2e37b7f4452906442a3dbf0eb3379dd1f06aafb5c07e769a5fbb"
@@ -70,7 +78,35 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:2c3b60fc961b7ddca4336bb7bb39146cb73ea2ad73d4afc6b4ffea05571e712a"
+  digest = "1:3d10a3bdabc0890155135c0be1034e56c69ea22239eb8f19a430230c74edad3b"
+  name = "github.com/shurcooL/githubv4"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "19298c78142b5fe80c2cdaa2091bc51cbc3a94fc"
+
+[[projects]]
+  branch = "master"
+  digest = "1:ddaa79b37808fbd09a1c3f484bba6320c884664dfc25ccc5f2d7d5a82222177c"
+  name = "github.com/shurcooL/go"
+  packages = ["ctxhttp"]
+  pruneopts = "NUT"
+  revision = "9e1955d9fb6e1ee2345ba1f5e71669263e719e27"
+
+[[projects]]
+  branch = "master"
+  digest = "1:870f4a3abcc75b9d2aaa14d9a9b58b59aa93d0a817097db2a77d76bfdfa856c2"
+  name = "github.com/shurcooL/graphql"
+  packages = [
+    ".",
+    "ident",
+    "internal/jsonutil",
+  ]
+  pruneopts = "NUT"
+  revision = "62c9ce094e75302d560f7adcdf16c06d05aaa958"
+
+[[projects]]
+  branch = "master"
+  digest = "1:343d44e06621142ab09ae0c76c1799104cdfddd3ffb445d78b1adf8dc3ffaf3d"
   name = "github.com/spf13/cobra"
   packages = ["."]
   pruneopts = "NUT"
@@ -93,6 +129,44 @@
   revision = "f35b8ab0b5a2cef36673838d662e249dd9c94686"
 
 [[projects]]
+  branch = "master"
+  digest = "1:d6b719875cf8091fbab38527d81d34e71f4521b9ee9ccfbd4a32cff2ac5af96e"
+  name = "golang.org/x/net"
+  packages = [
+    "context",
+    "context/ctxhttp",
+  ]
+  pruneopts = "NUT"
+  revision = "f4c29de78a2a91c00474a2e689954305c350adf9"
+
+[[projects]]
+  branch = "master"
+  digest = "1:806685616259192286b80e5924f92aad0a1cd880959cecd6441925f393a4a34d"
+  name = "golang.org/x/oauth2"
+  packages = [
+    ".",
+    "internal",
+  ]
+  pruneopts = "NUT"
+  revision = "3d292e4d0cdc3a0113e6d207bb137145ef1de42f"
+
+[[projects]]
+  digest = "1:af71cb57ffcbc389c2f8af1e6a763c0d2e6f08d2ceb64140c0fd4c57fdbc2898"
+  name = "google.golang.org/appengine"
+  packages = [
+    "internal",
+    "internal/base",
+    "internal/datastore",
+    "internal/log",
+    "internal/remote_api",
+    "internal/urlfetch",
+    "urlfetch",
+  ]
+  pruneopts = "NUT"
+  revision = "b1f26356af11148e710935ed1ac8a7f5702c7612"
+  version = "v1.1.0"
+
+[[projects]]
   digest = "1:7c95b35057a0ff2e19f707173cc1a947fa43a6eb5c4d300d196ece0334046082"
   name = "gopkg.in/yaml.v2"
   packages = ["."]
@@ -110,8 +184,10 @@
     "github.com/patrickmn/go-cache",
     "github.com/pkg/errors",
     "github.com/sahilm/fuzzy",
+    "github.com/shurcooL/githubv4",
     "github.com/spf13/cobra",
     "github.com/stretchr/testify/assert",
+    "golang.org/x/oauth2",
     "gopkg.in/yaml.v2",
   ]
   solver-name = "gps-cdcl"

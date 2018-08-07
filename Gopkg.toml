@@ -57,3 +57,10 @@
   name = "github.com/stretchr/testify"
   branch = "master"
 
+[[constraint]]
+  name = "golang.org/x/oauth2"
+  branch = "master"
+
+[[constraint]]
+  name = "github.com/shurcooL/githubv4"
+  branch = "master"
