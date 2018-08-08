@@ -60,8 +60,10 @@ type completeTestCase struct {
 }
 
 func (tc *completeTestCase) testItem(t *testing.T) {
-	if tc.cfg == nil {
-		tc.cfg = defaultCfg
+	t.Parallel()
+	cfg := tc.cfg
+	if cfg == nil {
+		cfg = defaultCfg
 	}
 
 	c := completion{
@@ -69,7 +71,7 @@ func (tc *completeTestCase) testItem(t *testing.T) {
 			Query: tc.input,
 			Start: time.Now(),
 		},
-		cfg:    *tc.cfg,
+		cfg:    *cfg,
 		result: alfred.NewFilterResult(),
 	}
 
@@ -752,6 +754,7 @@ func findMatchingItem(uid, title string, items alfred.Items) (alfred.Item, bool)
 }
 
 func TestFinalizeResult(t *testing.T) {
+	t.Parallel()
 	result := alfred.NewFilterResult()
 	result.AppendItems(
 		alfred.Item{Title: "bother, invalid", Valid: false},
@@ -780,6 +783,7 @@ func TestFinalizeResult(t *testing.T) {
 }
 
 func TestFindProjectDirs(t *testing.T) {
+	t.Parallel()
 	fixturePath, _ := filepath.Abs("../../../test/fixtures/projects")
 	dirList, err := findProjectDirs(fixturePath)
 	dirs := make(map[string]struct{}, len(dirList))
