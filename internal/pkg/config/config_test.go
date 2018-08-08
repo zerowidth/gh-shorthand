@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	homedir "github.com/mitchellh/go-homedir"
+	"github.com/stretchr/testify/assert"
 )
 
 var (
@@ -28,6 +29,10 @@ repos:
 	foo: bar
 `
 
+	invalidDefaultRepo = `---
+default_repo: foo
+`
+
 	repoMap = map[string]string{
 		"df": "zerowidth/dotfiles",
 	}
@@ -38,6 +43,7 @@ repos:
 )
 
 func TestLoad(t *testing.T) {
+	t.Parallel()
 	config, err := Load(configYaml)
 	if err != nil {
 		t.Errorf("could not load config yaml: %q", err.Error())
@@ -64,7 +70,17 @@ func TestLoad(t *testing.T) {
 	}
 }
 
+func TestLoadInvalidDefault(t *testing.T) {
+	t.Parallel()
+
+	_, err := Load(invalidDefaultRepo)
+	if assert.Error(t, err) {
+		assert.Equal(t, "default repo \"foo\" not in owner/name format", err.Error())
+	}
+}
+
 func TestProjectDirMap(t *testing.T) {
+	t.Parallel()
 	config, _ := Load(configYaml)
 	dirs := config.ProjectDirMap()
 	if len(dirs) != 3 {

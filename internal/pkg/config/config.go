@@ -50,8 +50,14 @@ func Load(yml string) (Config, error) {
 	}
 
 	for k, v := range config.RepoMap {
-		if !strings.Contains(v, "/") {
+		if !validRepoFormat(v) {
 			return config, fmt.Errorf("repo shorthand %q: %q not in owner/name format", k, v)
+		}
+	}
+
+	if len(config.DefaultRepo) > 0 {
+		if !validRepoFormat(config.DefaultRepo) {
+			return config, fmt.Errorf("default repo %q not in owner/name format", config.DefaultRepo)
 		}
 	}
 
@@ -72,4 +78,12 @@ func LoadFromFile(path string) (Config, error) {
 	}
 
 	return Load(string(yml))
+}
+
+func validRepoFormat(s string) bool {
+	split := strings.Split(s, "/")
+	if len(split) != 2 || len(split[0]) == 0 || len(split[1]) == 0 {
+		return false
+	}
+	return true
 }

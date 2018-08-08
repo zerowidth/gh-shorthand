@@ -1,7 +1,6 @@
 package parser
 
 import (
-	"fmt"
 	"regexp"
 	"sort"
 	"strings"
@@ -37,15 +36,10 @@ func (r *Result) Repo() string {
 }
 
 // SetRepo overrides owner and name on the result from an `owner/name` string.
-func (r *Result) SetRepo(repo string) error {
+func (r *Result) SetRepo(repo string) {
 	parts := strings.SplitN(repo, "/", 2)
-	if len(parts) > 1 {
-		r.Owner = parts[0]
-		r.Name = parts[1]
-	} else {
-		return fmt.Errorf("repo %q does not look like `owner/name`", repo)
-	}
-	return nil
+	r.Owner = parts[0]
+	r.Name = parts[1]
 }
 
 // HasIssue checks to see if the result's query looks like an issue reference.

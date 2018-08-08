@@ -116,9 +116,7 @@ func (c *completion) appendParsedItems() {
 	duration := time.Since(c.env.Start)
 
 	if !parsed.HasRepo() && len(c.cfg.DefaultRepo) > 0 && !parsed.HasOwner() && !parsed.HasPath() {
-		if err := parsed.SetRepo(c.cfg.DefaultRepo); err != nil {
-			c.result.AppendItems(ErrorItem("Could not set default repo", err.Error()))
-		}
+		parsed.SetRepo(c.cfg.DefaultRepo)
 	}
 
 	switch mode {

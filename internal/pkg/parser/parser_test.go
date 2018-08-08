@@ -3,6 +3,8 @@ package parser
 import (
 	"fmt"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 var repoMap = map[string]string{
@@ -28,6 +30,7 @@ type testCase struct {
 }
 
 func (tc *testCase) assert(t *testing.T) {
+	t.Parallel()
 	result := Parse(repoMap, userMap, tc.input, tc.bare, tc.ignoreNumeric)
 	if result.Repo() != tc.repo {
 		t.Errorf("expected Repo %#v, got %#v", tc.repo, result.Repo())
@@ -254,19 +257,8 @@ func TestParse(t *testing.T) {
 }
 
 func TestSetRepo(t *testing.T) {
+	t.Parallel()
 	result := &Result{}
-
-	err := result.SetRepo("foo")
-	if err == nil {
-		t.Errorf("Expected error when setting invalid repo")
-	}
-
-	err = result.SetRepo("foo/bar")
-	if err != nil {
-		t.Errorf("Expected no error")
-	}
-	if result.Repo() != "foo/bar" {
-		t.Errorf("Expected result repo to be foo/bar, got %q:\n%+v", result.Repo(), result)
-	}
-
+	result.SetRepo("foo/bar")
+	assert.Equal(t, "foo/bar", result.Repo())
 }
