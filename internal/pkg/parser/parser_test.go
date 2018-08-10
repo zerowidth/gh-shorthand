@@ -25,7 +25,7 @@ type testCase struct {
 	hasRepo       bool   // should the parser have matched a repo?
 	hasUser       bool   // should the parser have matched as a user?
 	repoMatch     string // the matched repo shorthand
-	ownerMatch    string // the matched user shorthand
+	userMatch     string // the matched user shorthand
 	issue         string // the expected issue match
 	path          string // the expected path match
 	query         string // the remaining query text after parsing/expansion
@@ -44,8 +44,8 @@ func (tc *testCase) assert(t *testing.T) {
 	if result.RepoMatch != tc.repoMatch {
 		t.Errorf("expected RepoMatch %#v, got %#v", tc.repoMatch, result.RepoMatch)
 	}
-	if result.UserMatch != tc.ownerMatch {
-		t.Errorf("expected UserMatch %#v, got %#v", tc.ownerMatch, result.UserMatch)
+	if result.UserMatch != tc.userMatch {
+		t.Errorf("expected UserMatch %#v, got %#v", tc.userMatch, result.UserMatch)
 	}
 	if result.Issue() != tc.issue {
 		t.Errorf("expected Issue %#v, got %#v", tc.issue, result.Issue())
@@ -183,15 +183,15 @@ func TestParse(t *testing.T) {
 			repo:  "foo/bar",
 		},
 		"expands user with empty repo name": {
-			input:      "zw/",
-			user:       "zerowidth",
-			ownerMatch: "zw",
+			input:     "zw/",
+			user:      "zerowidth",
+			userMatch: "zw",
 		},
 		"expands user in repo declaration": {
-			input:      "zw/foo",
-			user:       "zerowidth",
-			repo:       "zerowidth/foo",
-			ownerMatch: "zw",
+			input:     "zw/foo",
+			user:      "zerowidth",
+			repo:      "zerowidth/foo",
+			userMatch: "zw",
 		},
 		"matches non-shorthand user with empty repo": {
 			input: "foo/",
@@ -229,17 +229,17 @@ func TestParse(t *testing.T) {
 			user:  "foo",
 		},
 		"expands bare user shorthand": {
-			input:      "zw",
-			bare:       true,
-			user:       "zerowidth",
-			ownerMatch: "zw",
+			input:     "zw",
+			bare:      true,
+			user:      "zerowidth",
+			userMatch: "zw",
 		},
 		"expands bare user with query": {
-			input:      "zw foo",
-			bare:       true,
-			user:       "zerowidth",
-			ownerMatch: "zw",
-			query:      "foo",
+			input:     "zw foo",
+			bare:      true,
+			user:      "zerowidth",
+			userMatch: "zw",
+			query:     "foo",
 		},
 		"can ignore numeric-only username for bare user": {
 			input:         "1234",
