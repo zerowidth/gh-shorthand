@@ -308,7 +308,7 @@ func projectItems(dirs map[string]string, search string, icon *alfred.Icon) (ite
 	return
 }
 
-func openRepoItem(parsed *parser.Result) alfred.Item {
+func openRepoItem(parsed parser.Result) alfred.Item {
 	uid := "gh:" + parsed.Repo()
 	title := "Open " + parsed.Repo()
 	arg := "open https://github.com/" + parsed.Repo()
@@ -356,7 +356,7 @@ func openPathItem(path string) alfred.Item {
 	}
 }
 
-func openIssuesItem(parsed *parser.Result) (item alfred.Item) {
+func openIssuesItem(parsed parser.Result) (item alfred.Item) {
 	return alfred.Item{
 		UID:   "ghi:" + parsed.Repo(),
 		Title: "List issues for " + parsed.Repo() + parsed.Annotation(),
@@ -366,7 +366,7 @@ func openIssuesItem(parsed *parser.Result) (item alfred.Item) {
 	}
 }
 
-func searchIssuesItem(parsed *parser.Result, fullInput string) alfred.Item {
+func searchIssuesItem(parsed parser.Result, fullInput string) alfred.Item {
 	extra := parsed.Annotation()
 
 	if len(parsed.Query) > 0 {
@@ -389,7 +389,7 @@ func searchIssuesItem(parsed *parser.Result, fullInput string) alfred.Item {
 	}
 }
 
-func repoProjectsItem(parsed *parser.Result) alfred.Item {
+func repoProjectsItem(parsed parser.Result) alfred.Item {
 	if parsed.HasIssue() {
 		return alfred.Item{
 			UID:   "ghp:" + parsed.Repo() + "/" + parsed.Issue(),
@@ -408,7 +408,7 @@ func repoProjectsItem(parsed *parser.Result) alfred.Item {
 	}
 }
 
-func orgProjectsItem(parsed *parser.Result) alfred.Item {
+func orgProjectsItem(parsed parser.Result) alfred.Item {
 	if parsed.HasIssue() {
 		return alfred.Item{
 			UID:   "ghp:" + parsed.Owner + "/" + parsed.Issue(),
@@ -427,7 +427,7 @@ func orgProjectsItem(parsed *parser.Result) alfred.Item {
 	}
 }
 
-func newIssueItem(parsed *parser.Result) alfred.Item {
+func newIssueItem(parsed parser.Result) alfred.Item {
 	title := "New issue in " + parsed.Repo()
 	title += parsed.Annotation()
 
@@ -588,7 +588,7 @@ func openEndedNewIssueItem(input string) alfred.Item {
 	}
 }
 
-func autocompleteItems(cfg config.Config, input string, parsed *parser.Result,
+func autocompleteItems(cfg config.Config, input string, parsed parser.Result,
 	autocompleteRepoItem func(string, string) alfred.Item,
 	autocompleteUserItem func(string, string) alfred.Item,
 	openEndedItem func(string) alfred.Item) (items alfred.Items) {
@@ -621,7 +621,7 @@ func autocompleteRepoItems(cfg config.Config, input string,
 }
 
 func autocompleteUserItems(cfg config.Config, input string,
-	parsed *parser.Result, includeMatchedUser bool,
+	parsed parser.Result, includeMatchedUser bool,
 	autocompleteUserItem func(string, string) alfred.Item) (items alfred.Items) {
 	if len(input) > 0 {
 		for key, user := range cfg.UserMap {
@@ -726,7 +726,7 @@ func ellipsis(prefix string, duration time.Duration) string {
 
 // retrieveRepoDescription adds the repo description to the "open repo" item
 // using an RPC call.
-func retrieveRepoDescription(item *alfred.Item, duration time.Duration, parsed *parser.Result, cfg config.Config) (shouldRetry bool) {
+func retrieveRepoDescription(item *alfred.Item, duration time.Duration, parsed parser.Result, cfg config.Config) (shouldRetry bool) {
 	if duration.Seconds() < delay {
 		shouldRetry = true
 		return
@@ -775,7 +775,7 @@ func annotateQuery(query string, item *alfred.Item, duration time.Duration, cfg 
 }
 
 // retrieveIssueTitle adds the title to the "open issue" item using an RPC call
-func retrieveIssueTitle(item *alfred.Item, duration time.Duration, parsed *parser.Result, cfg config.Config) (shouldRetry bool) {
+func retrieveIssueTitle(item *alfred.Item, duration time.Duration, parsed parser.Result, cfg config.Config) (shouldRetry bool) {
 	if duration.Seconds() < delay {
 		shouldRetry = true
 		return
@@ -801,7 +801,7 @@ func retrieveIssueTitle(item *alfred.Item, duration time.Duration, parsed *parse
 	return
 }
 
-func retrieveRepoProjectName(item *alfred.Item, duration time.Duration, parsed *parser.Result, cfg config.Config) (shouldRetry bool) {
+func retrieveRepoProjectName(item *alfred.Item, duration time.Duration, parsed parser.Result, cfg config.Config) (shouldRetry bool) {
 	if duration.Seconds() < delay {
 		shouldRetry = true
 		return
@@ -827,7 +827,7 @@ func retrieveRepoProjectName(item *alfred.Item, duration time.Duration, parsed *
 	return
 }
 
-func retrieveOrgProjectName(item *alfred.Item, duration time.Duration, parsed *parser.Result, cfg config.Config) (shouldRetry bool) {
+func retrieveOrgProjectName(item *alfred.Item, duration time.Duration, parsed parser.Result, cfg config.Config) (shouldRetry bool) {
 	if duration.Seconds() < delay {
 		shouldRetry = true
 		return
@@ -853,7 +853,7 @@ func retrieveOrgProjectName(item *alfred.Item, duration time.Duration, parsed *p
 	return
 }
 
-func retrieveOrgProjects(item *alfred.Item, duration time.Duration, parsed *parser.Result, cfg config.Config) (shouldRetry bool, projects alfred.Items) {
+func retrieveOrgProjects(item *alfred.Item, duration time.Duration, parsed parser.Result, cfg config.Config) (shouldRetry bool, projects alfred.Items) {
 	if duration.Seconds() < delay {
 		shouldRetry = true
 		return
@@ -871,7 +871,7 @@ func retrieveOrgProjects(item *alfred.Item, duration time.Duration, parsed *pars
 	return
 }
 
-func retrieveRepoProjects(item *alfred.Item, duration time.Duration, parsed *parser.Result, cfg config.Config) (shouldRetry bool, projects alfred.Items) {
+func retrieveRepoProjects(item *alfred.Item, duration time.Duration, parsed parser.Result, cfg config.Config) (shouldRetry bool, projects alfred.Items) {
 	if duration.Seconds() < delay {
 		shouldRetry = true
 		return
@@ -936,7 +936,7 @@ func retrieveIssueSearchItems(item *alfred.Item, duration time.Duration, repo, q
 	return
 }
 
-func retrieveIssueList(item *alfred.Item, duration time.Duration, parsed *parser.Result, cfg config.Config) (shouldRetry bool, matches alfred.Items) {
+func retrieveIssueList(item *alfred.Item, duration time.Duration, parsed parser.Result, cfg config.Config) (shouldRetry bool, matches alfred.Items) {
 	if duration.Seconds() < issueListDelay {
 		shouldRetry = true
 		return
