@@ -7,7 +7,7 @@ import (
 
 // Result is a Parse result, returning the matched repo, issue, etc. as applicable
 type Result struct {
-	Owner     string // the repository owner, if present
+	User      string // the repository owner, if present
 	Name      string // the repository name, if present
 	RepoMatch string // the matched repo shorthand value, if shorthand was expanded
 	UserMatch string // the matched repo shorthand value, if shorthand was expanded
@@ -16,7 +16,7 @@ type Result struct {
 
 // HasOwner checks if the result has an owner.
 func (r *Result) HasOwner() bool {
-	return len(r.Owner) > 0
+	return len(r.User) > 0
 }
 
 // HasRepo checks if the result has a repo, either from a matched repo shorthand,
@@ -29,7 +29,7 @@ func (r *Result) HasRepo() bool {
 // shorthand or from an explicit owner/name.
 func (r *Result) Repo() string {
 	if r.HasRepo() {
-		return r.Owner + "/" + r.Name
+		return r.User + "/" + r.Name
 	}
 	return ""
 }
@@ -37,7 +37,7 @@ func (r *Result) Repo() string {
 // SetRepo overrides owner and name on the result from an `owner/name` string.
 func (r *Result) SetRepo(repo string) {
 	parts := strings.SplitN(repo, "/", 2)
-	r.Owner = parts[0]
+	r.User = parts[0]
 	r.Name = parts[1]
 }
 
@@ -113,9 +113,9 @@ func Parse(repoMap, userMap map[string]string, input string, bareUser, ignoreNum
 
 	if r := userRepoRegexp.FindString(input); len(r) > 0 {
 		res.SetRepo(r)
-		if su, ok := userMap[res.Owner]; ok {
-			res.UserMatch = res.Owner
-			res.Owner = su
+		if su, ok := userMap[res.User]; ok {
+			res.UserMatch = res.User
+			res.User = su
 		}
 		input = input[len(r):]
 	} else if u := userRegexp.FindString(input); len(u) > 0 {
@@ -125,10 +125,10 @@ func Parse(repoMap, userMap map[string]string, input string, bareUser, ignoreNum
 			input = input[len(u):]
 		} else if su, ok := userMap[u]; ok {
 			res.UserMatch = u
-			res.Owner = su
+			res.User = su
 			input = input[len(u):]
 		} else if bareUser && (!ignoreNumeric || !issueRegexp.MatchString(input)) {
-			res.Owner = u
+			res.User = u
 			input = input[len(u):]
 		}
 	}

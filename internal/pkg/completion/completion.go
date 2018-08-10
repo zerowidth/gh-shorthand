@@ -411,18 +411,18 @@ func repoProjectsItem(parsed parser.Result) alfred.Item {
 func orgProjectsItem(parsed parser.Result) alfred.Item {
 	if parsed.HasIssue() {
 		return alfred.Item{
-			UID:   "ghp:" + parsed.Owner + "/" + parsed.Issue(),
-			Title: "Open project #" + parsed.Issue() + " for " + parsed.Owner + parsed.Annotation(),
+			UID:   "ghp:" + parsed.User + "/" + parsed.Issue(),
+			Title: "Open project #" + parsed.Issue() + " for " + parsed.User + parsed.Annotation(),
 			Valid: true,
-			Arg:   "open https://github.com/orgs/" + parsed.Owner + "/projects/" + parsed.Issue(),
+			Arg:   "open https://github.com/orgs/" + parsed.User + "/projects/" + parsed.Issue(),
 			Icon:  projectIcon,
 		}
 	}
 	return alfred.Item{
-		UID:   "ghp:" + parsed.Owner,
-		Title: "List projects for " + parsed.Owner + parsed.Annotation(),
+		UID:   "ghp:" + parsed.User,
+		Title: "List projects for " + parsed.User + parsed.Annotation(),
 		Valid: true,
-		Arg:   "open https://github.com/orgs/" + parsed.Owner + "/projects",
+		Arg:   "open https://github.com/orgs/" + parsed.User + "/projects",
 		Icon:  projectIcon,
 	}
 }
@@ -833,7 +833,7 @@ func retrieveOrgProjectName(item *alfred.Item, duration time.Duration, parsed pa
 		return
 	}
 
-	retry, results, err := rpcRequest("org_project:"+parsed.Owner+"/"+parsed.Issue(), cfg)
+	retry, results, err := rpcRequest("org_project:"+parsed.User+"/"+parsed.Issue(), cfg)
 	shouldRetry = retry
 	if err != nil {
 		item.Subtitle = err.Error()
@@ -859,14 +859,14 @@ func retrieveOrgProjects(item *alfred.Item, duration time.Duration, parsed parse
 		return
 	}
 
-	retry, results, err := rpcRequest("org_projects:"+parsed.Owner, cfg)
+	retry, results, err := rpcRequest("org_projects:"+parsed.User, cfg)
 	shouldRetry = retry
 	if err != nil {
 		item.Subtitle = err.Error()
 	} else if shouldRetry {
 		item.Subtitle = ellipsis("Retrieving projects", duration)
 	} else if len(results) > 0 {
-		projects = append(projects, projectItemsFromResults(results, "for "+parsed.Owner)...)
+		projects = append(projects, projectItemsFromResults(results, "for "+parsed.User)...)
 	}
 	return
 }

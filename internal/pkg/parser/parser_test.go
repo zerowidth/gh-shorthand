@@ -21,7 +21,7 @@ type testCase struct {
 	bare          bool   // allow bare user
 	ignoreNumeric bool   // whether or not to ignore numeric bare usernames
 	repo          string // the expected repo match or expansion
-	owner         string // the expected user match or expansion
+	user          string // the expected user match or expansion
 	hasRepo       bool   // should the parser have matched a repo?
 	hasUser       bool   // should the parser have matched as a user?
 	repoMatch     string // the matched repo shorthand
@@ -38,8 +38,8 @@ func (tc *testCase) assert(t *testing.T) {
 	if result.Repo() != tc.repo {
 		t.Errorf("expected Repo %#v, got %#v", tc.repo, result.Repo())
 	}
-	if len(tc.owner) > 0 && result.Owner != tc.owner {
-		t.Errorf("expected Owner %#v, got %#v", tc.owner, result.Owner)
+	if len(tc.user) > 0 && result.User != tc.user {
+		t.Errorf("expected Owner %#v, got %#v", tc.user, result.User)
 	}
 	if result.RepoMatch != tc.repoMatch {
 		t.Errorf("expected RepoMatch %#v, got %#v", tc.repoMatch, result.RepoMatch)
@@ -184,18 +184,18 @@ func TestParse(t *testing.T) {
 		},
 		"expands user with empty repo name": {
 			input:      "zw/",
-			owner:      "zerowidth",
+			user:       "zerowidth",
 			ownerMatch: "zw",
 		},
 		"expands user in repo declaration": {
 			input:      "zw/foo",
-			owner:      "zerowidth",
+			user:       "zerowidth",
 			repo:       "zerowidth/foo",
 			ownerMatch: "zw",
 		},
 		"matches non-shorthand user with empty repo": {
 			input: "foo/",
-			owner: "foo",
+			user:  "foo",
 			query: "",
 		},
 		"strips whitespace from query": {
@@ -204,40 +204,40 @@ func TestParse(t *testing.T) {
 		},
 		"requires exact match for repo shorthand expansion": {
 			input: "dfx/foo",
-			owner: "dfx",
+			user:  "dfx",
 			repo:  "dfx/foo",
 		},
 		"requires exact match for user shorthand expansion": {
 			input: "zwx/foo",
-			owner: "zwx",
+			user:  "zwx",
 			repo:  "zwx/foo",
 		},
 		"matches bare user when allowed": {
 			input: "foo",
 			bare:  true,
-			owner: "foo",
+			user:  "foo",
 		},
 		"matches bare user and leaves the remainder as a query": {
 			input: "foo bar",
 			bare:  true,
-			owner: "foo",
+			user:  "foo",
 			query: "bar",
 		},
 		"allows trailing separator on bare user": {
 			input: "foo/",
 			bare:  true,
-			owner: "foo",
+			user:  "foo",
 		},
 		"expands bare user shorthand": {
 			input:      "zw",
 			bare:       true,
-			owner:      "zerowidth",
+			user:       "zerowidth",
 			ownerMatch: "zw",
 		},
 		"expands bare user with query": {
 			input:      "zw foo",
 			bare:       true,
-			owner:      "zerowidth",
+			user:       "zerowidth",
 			ownerMatch: "zw",
 			query:      "foo",
 		},
@@ -245,7 +245,7 @@ func TestParse(t *testing.T) {
 			input:         "1234",
 			bare:          true,
 			ignoreNumeric: true,
-			owner:         "",
+			user:          "",
 			issue:         "1234",
 			query:         "1234",
 		},
