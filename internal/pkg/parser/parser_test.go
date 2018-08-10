@@ -22,8 +22,10 @@ type testCase struct {
 	ignoreNumeric bool   // whether or not to ignore numeric bare usernames
 	repo          string // the expected repo match or expansion
 	owner         string // the expected user match or expansion
+	hasRepo       bool   // should the parser have matched a repo?
+	hasUser       bool   // should the parser have matched as a user?
 	repoMatch     string // the matched repo shorthand
-	userMatch     string // the matched user shorthand
+	ownerMatch    string // the matched user shorthand
 	issue         string // the expected issue match
 	path          string // the expected path match
 	query         string // the remaining query text after parsing/expansion
@@ -32,6 +34,7 @@ type testCase struct {
 func (tc *testCase) assert(t *testing.T) {
 	t.Parallel()
 	result := Parse(repoMap, userMap, tc.input, tc.bare, tc.ignoreNumeric)
+
 	if result.Repo() != tc.repo {
 		t.Errorf("expected Repo %#v, got %#v", tc.repo, result.Repo())
 	}
@@ -41,8 +44,8 @@ func (tc *testCase) assert(t *testing.T) {
 	if result.RepoMatch != tc.repoMatch {
 		t.Errorf("expected RepoMatch %#v, got %#v", tc.repoMatch, result.RepoMatch)
 	}
-	if result.UserMatch != tc.userMatch {
-		t.Errorf("expected UserMatch %#v, got %#v", tc.userMatch, result.UserMatch)
+	if result.UserMatch != tc.ownerMatch {
+		t.Errorf("expected UserMatch %#v, got %#v", tc.ownerMatch, result.UserMatch)
 	}
 	if result.Issue() != tc.issue {
 		t.Errorf("expected Issue %#v, got %#v", tc.issue, result.Issue())
@@ -111,7 +114,7 @@ func TestParse(t *testing.T) {
 			repoMatch: "df2",
 			query:     "34",
 		},
-		"fully qualified repo": {
+		"fully qualified repo and issue": {
 			input:     "foo/bar 123",
 			repo:      "foo/bar",
 			issue:     "123",
@@ -125,7 +128,7 @@ func TestParse(t *testing.T) {
 			repoMatch: "df",
 			query:     "0123",
 		},
-		"retrieve query after expansion": {
+		"matches query after repo expansion": {
 			input:     "df foo",
 			repo:      "zerowidth/dotfiles",
 			repoMatch: "df",
@@ -175,27 +178,25 @@ func TestParse(t *testing.T) {
 			input: "123 /foo",
 			query: "123 /foo",
 		},
-		"parses repo, not path": {
+		"parses as repo, not path": {
 			input: "foo/bar",
 			repo:  "foo/bar",
 		},
-		"expands user": {
-			input:     "zw/",
-			owner:     "zerowidth",
-			userMatch: "zw",
-			path:      "/",
-			query:     "/",
+		"expands user with empty repo name": {
+			input:      "zw/",
+			owner:      "zerowidth",
+			ownerMatch: "zw",
 		},
 		"expands user in repo declaration": {
-			input:     "zw/foo",
-			owner:     "zerowidth",
-			repo:      "zerowidth/foo",
-			userMatch: "zw",
+			input:      "zw/foo",
+			owner:      "zerowidth",
+			repo:       "zerowidth/foo",
+			ownerMatch: "zw",
 		},
-		"does not match non-shorthand user": {
+		"matches non-shorthand user with empty repo": {
 			input: "foo/",
-			owner: "",
-			query: "foo/",
+			owner: "foo",
+			query: "",
 		},
 		"strips whitespace from query": {
 			input: " x    ",
@@ -226,21 +227,19 @@ func TestParse(t *testing.T) {
 			input: "foo/",
 			bare:  true,
 			owner: "foo",
-			path:  "/",
-			query: "/",
 		},
 		"expands bare user shorthand": {
-			input:     "zw",
-			bare:      true,
-			owner:     "zerowidth",
-			userMatch: "zw",
+			input:      "zw",
+			bare:       true,
+			owner:      "zerowidth",
+			ownerMatch: "zw",
 		},
 		"expands bare user with query": {
-			input:     "zw foo",
-			bare:      true,
-			owner:     "zerowidth",
-			userMatch: "zw",
-			query:     "foo",
+			input:      "zw foo",
+			bare:       true,
+			owner:      "zerowidth",
+			ownerMatch: "zw",
+			query:      "foo",
 		},
 		"can ignore numeric-only username for bare user": {
 			input:         "1234",
