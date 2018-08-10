@@ -66,23 +66,18 @@ func (tc *completeTestCase) testItem(t *testing.T) {
 		cfg = defaultCfg
 	}
 
-	c := completion{
-		env: Environment{
-			Query: tc.input,
-			Start: time.Now(),
-		},
-		cfg:    *cfg,
-		result: alfred.NewFilterResult(),
+	env := Environment{
+		Query: tc.input,
+		Start: time.Now(),
 	}
 
-	c.appendParsedItems()
-
-	validateItems(t, c.result.Items)
+	result := Complete(*cfg, env)
+	validateItems(t, result.Items)
 
 	if len(tc.exclude) > 0 {
-		_, ok := findMatchingItem(tc.exclude, tc.exclude, c.result.Items)
+		_, ok := findMatchingItem(tc.exclude, tc.exclude, result.Items)
 		if ok {
-			t.Errorf("%s\nexpected no item with UID or Title %q", c.result.Items, tc.exclude)
+			t.Errorf("%s\nexpected no item with UID or Title %q", result.Items, tc.exclude)
 		}
 		return
 	}
@@ -91,9 +86,9 @@ func (tc *completeTestCase) testItem(t *testing.T) {
 		t.Skip("skipping, uid/title/exclude not specified")
 	}
 
-	item, ok := findMatchingItem(tc.uid, tc.title, c.result.Items)
+	item, ok := findMatchingItem(tc.uid, tc.title, result.Items)
 	if !ok {
-		t.Errorf("expected item with uid %q and/or title %q in %s", tc.uid, tc.title, c.result.Items)
+		t.Errorf("expected item with uid %q and/or title %q in %s", tc.uid, tc.title, result.Items)
 	}
 	if len(tc.uid) > 0 && item.UID != tc.uid {
 		t.Errorf("%+v\nexpected UID %q to be %q", item, item.UID, tc.uid)
@@ -704,7 +699,7 @@ func TestCompleteItems(t *testing.T) {
 			exclude: "ghe:../../../test/fixtures/projects/project-bar",
 		},
 	} {
-		t.Run(fmt.Sprintf("appendParsedItems(%#v): %s", tc.input, desc), tc.testItem)
+		t.Run(fmt.Sprintf("Complete(%#v): %s", tc.input, desc), tc.testItem)
 	}
 }
 

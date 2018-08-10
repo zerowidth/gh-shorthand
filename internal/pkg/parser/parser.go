@@ -19,8 +19,8 @@ func (r *Result) HasOwner() bool {
 	return len(r.User) > 0
 }
 
-// HasRepo checks if the result has a repo, either from a matched repo shorthand,
-// or from an explicit owner/name.
+// HasRepo checks if the result has a fully qualified repo, either from a
+// matched repo shorthand, or from an explicit owner/name.
 func (r *Result) HasRepo() bool {
 	return len(r.Name) > 0
 }
@@ -133,7 +133,8 @@ func Parse(repoMap, userMap map[string]string, input string, bareUser, ignoreNum
 		}
 	}
 
-	res.Query = strings.Trim(input, " ")
+	// only remove the first leading space
+	res.Query = strings.TrimPrefix(strings.TrimRight(input, " "), " ")
 
 	return res
 }

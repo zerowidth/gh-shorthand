@@ -48,16 +48,24 @@ type completion struct {
 	cfg    config.Config
 	env    Environment
 	result alfred.FilterResult
+	mode   string
+	input  string
 }
 
 // Complete runs the main completion code
 func Complete(cfg config.Config, env Environment) alfred.FilterResult {
+	mode, input, ok := extractMode(env.Query)
+	if !ok {
+		return alfred.NewFilterResult()
+	}
+
 	c := completion{
 		cfg:    cfg,
 		env:    env,
 		result: alfred.NewFilterResult(),
+		mode:   mode,
+		input:  input,
 	}
-
 	c.appendParsedItems()
 	c.finalizeResult()
 
@@ -93,30 +101,36 @@ func LoadAlfredEnvironment(input string) Environment {
 	return e
 }
 
-func (c *completion) appendParsedItems() {
-	fullInput := c.env.Query
-	input := c.env.Query
-
-	// input includes leading space or leading mode char followed by a space
+// given an input query, extract the mode and input string. returns false if
+// mode+input is invalid.
+//
+// mode is an optional single character, followed by a space.
+func extractMode(input string) (string, string, bool) {
 	var mode string
-	if len(input) > 1 {
+	if len(input) == 1 {
+		mode = input[0:1]
+		input = ""
+	} else if len(input) > 1 {
 		mode = input[0:1]
 		if mode == " " {
 			input = input[1:]
 		} else {
+			// not a mode followed by space, it's invalid
 			if input[1:2] != " " {
-				return
+				return "", "", false
 			}
 			input = input[2:]
 		}
-	} else if len(input) > 0 {
-		mode = input[0:1]
-		input = ""
 	}
+	return mode, input, true
+}
 
-	bareUser := mode == "p"
+func (c *completion) appendParsedItems() {
+	fullInput := c.env.Query
+
+	bareUser := c.mode == "p"
 	ignoreNumeric := len(c.cfg.DefaultRepo) > 0
-	parsed := parser.Parse(c.cfg.RepoMap, c.cfg.UserMap, input, bareUser, ignoreNumeric)
+	parsed := parser.Parse(c.cfg.RepoMap, c.cfg.UserMap, c.input, bareUser, ignoreNumeric)
 
 	// for RPC calls on idle query input:
 	shouldRetry := false
@@ -126,7 +140,7 @@ func (c *completion) appendParsedItems() {
 		parsed.SetRepo(c.cfg.DefaultRepo)
 	}
 
-	switch mode {
+	switch c.mode {
 	case "x": // test mode for new RPC
 		item := alfred.Item{
 			Title: fmt.Sprintf("x query test: %#v", input),
@@ -164,7 +178,7 @@ func (c *completion) appendParsedItems() {
 		}
 
 		c.result.AppendItems(
-			autocompleteItems(c.cfg, input, parsed,
+			autocompleteItems(c.cfg, c.input, parsed,
 				autocompleteOpenItem, autocompleteUserOpenItem, openEndedOpenItem)...)
 	case "i":
 		// repo required
@@ -186,7 +200,7 @@ func (c *completion) appendParsedItems() {
 		}
 
 		c.result.AppendItems(
-			autocompleteItems(c.cfg, input, parsed,
+			autocompleteItems(c.cfg, c.input, parsed,
 				autocompleteIssueItem, autocompleteUserIssueItem, openEndedIssueItem)...)
 	case "p":
 		if parsed.HasOwner() && (parsed.HasIssue() || parsed.EmptyQuery()) {
@@ -215,13 +229,13 @@ func (c *completion) appendParsedItems() {
 			}
 		}
 
-		if !strings.Contains(input, " ") {
+		if !strings.Contains(c.input, " ") {
 			c.result.AppendItems(
-				autocompleteRepoItems(c.cfg, input, autocompleteProjectItem)...)
+				autocompleteRepoItems(c.cfg, c.input, autocompleteProjectItem)...)
 			c.result.AppendItems(
-				autocompleteUserItems(c.cfg, input, parsed, false, autocompleteOrgProjectItem)...)
-			if len(input) == 0 || parsed.Repo() != input {
-				c.result.AppendItems(openEndedProjectItem(input))
+				autocompleteUserItems(c.cfg, c.input, parsed, false, autocompleteOrgProjectItem)...)
+			if len(c.input) == 0 || parsed.Repo() != c.input {
+				c.result.AppendItems(openEndedProjectItem(c.input))
 			}
 		}
 	case "n":
@@ -231,17 +245,17 @@ func (c *completion) appendParsedItems() {
 		}
 
 		c.result.AppendItems(
-			autocompleteItems(c.cfg, input, parsed,
+			autocompleteItems(c.cfg, c.input, parsed,
 				autocompleteNewIssueItem, autocompleteUserNewIssueItem, openEndedNewIssueItem)...)
 	case "e":
 		c.result.AppendItems(
-			projectItems(c.cfg.ProjectDirMap(), input, modeEdit)...)
+			projectItems(c.cfg.ProjectDirMap(), c.input, modeEdit)...)
 	case "t":
 		c.result.AppendItems(
-			projectItems(c.cfg.ProjectDirMap(), input, modeTerm)...)
+			projectItems(c.cfg.ProjectDirMap(), c.input, modeTerm)...)
 	case "s":
-		searchItem := globalIssueSearchItem(input)
-		retry, matches := retrieveIssueSearchItems(&searchItem, duration, "", input, c.cfg, true)
+		searchItem := globalIssueSearchItem(c.input)
+		retry, matches := retrieveIssueSearchItems(&searchItem, duration, "", c.input, c.cfg, true)
 		shouldRetry = retry
 		c.result.AppendItems(searchItem)
 		c.result.AppendItems(matches...)
@@ -255,13 +269,6 @@ func (c *completion) appendParsedItems() {
 		c.result.SetVariable("ns", fmt.Sprintf("%d", c.env.Start.Nanosecond()))
 	}
 
-	// automatically set "open <url>" urls to copy/large text
-	for i, item := range c.result.Items {
-		if item.Text == nil && strings.HasPrefix(item.Arg, "open ") {
-			url := item.Arg[5:]
-			c.result.Items[i].Text = &alfred.Text{Copy: url, LargeType: url}
-		}
-	}
 }
 
 func projectItems(dirs map[string]string, search string, mode projectMode) (items alfred.Items) {
@@ -1055,6 +1062,14 @@ func ErrorItem(title, subtitle string) alfred.Item {
 }
 
 func (c *completion) finalizeResult() {
+	// automatically set "open <url>" urls to copy/large text
+	for i, item := range c.result.Items {
+		if item.Text == nil && strings.HasPrefix(item.Arg, "open ") {
+			url := item.Arg[5:]
+			c.result.Items[i].Text = &alfred.Text{Copy: url, LargeType: url}
+		}
+	}
+
 	if c.result.Variables != nil && len(*c.result.Variables) > 0 {
 		c.result.Rerun = rerunAfter
 	}
