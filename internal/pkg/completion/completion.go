@@ -37,6 +37,13 @@ const (
 	socketTimeout = 100 * time.Millisecond
 )
 
+type projectMode int
+
+const (
+	modeEdit projectMode = iota
+	modeTerm
+)
+
 type completion struct {
 	cfg    config.Config
 	env    Environment
@@ -228,7 +235,10 @@ func (c *completion) appendParsedItems() {
 				autocompleteNewIssueItem, autocompleteUserNewIssueItem, openEndedNewIssueItem)...)
 	case "e":
 		c.result.AppendItems(
-			projectItems(c.cfg.ProjectDirMap(), input, editorIcon)...)
+			projectItems(c.cfg.ProjectDirMap(), input, modeEdit)...)
+	case "t":
+		c.result.AppendItems(
+			projectItems(c.cfg.ProjectDirMap(), input, modeTerm)...)
 	case "s":
 		searchItem := globalIssueSearchItem(input)
 		retry, matches := retrieveIssueSearchItems(&searchItem, duration, "", input, c.cfg, true)
@@ -245,7 +255,7 @@ func (c *completion) appendParsedItems() {
 		c.result.SetVariable("ns", fmt.Sprintf("%d", c.env.Start.Nanosecond()))
 	}
 
-	// automatically copy "open <url>" urls to copy/large text
+	// automatically set "open <url>" urls to copy/large text
 	for i, item := range c.result.Items {
 		if item.Text == nil && strings.HasPrefix(item.Arg, "open ") {
 			url := item.Arg[5:]
@@ -254,7 +264,7 @@ func (c *completion) appendParsedItems() {
 	}
 }
 
-func projectItems(dirs map[string]string, search string, icon *alfred.Icon) (items alfred.Items) {
+func projectItems(dirs map[string]string, search string, mode projectMode) (items alfred.Items) {
 	projects := map[string]string{}
 	projectNames := []string{}
 
@@ -280,14 +290,10 @@ func projectItems(dirs map[string]string, search string, icon *alfred.Icon) (ite
 	}
 
 	for _, short := range projectNames {
-		items = append(items, alfred.Item{
-			UID:      "ghe:" + short,
-			Title:    short,
-			Subtitle: "Edit " + short,
-			Arg:      "edit " + projects[short],
-			Text:     &alfred.Text{Copy: projects[short], LargeType: projects[short]},
-			Valid:    true,
-			Icon:     icon,
+		var item = alfred.Item{
+			Title: short,
+			Valid: true,
+			Text:  &alfred.Text{Copy: projects[short], LargeType: projects[short]},
 			Mods: &alfred.Mods{
 				Cmd: &alfred.ModItem{
 					Valid:    true,
@@ -302,7 +308,31 @@ func projectItems(dirs map[string]string, search string, icon *alfred.Icon) (ite
 					Icon:     finderIcon,
 				},
 			},
-		})
+		}
+
+		if mode == modeEdit {
+			item.UID = "ghe:" + short
+			item.Subtitle = "Edit " + short
+			item.Icon = editorIcon
+			item.Mods.Cmd = &alfred.ModItem{
+				Valid:    true,
+				Arg:      "term " + projects[short],
+				Subtitle: "Open terminal in " + short,
+				Icon:     terminalIcon,
+			}
+		} else {
+			item.UID = "ght:" + short
+			item.Subtitle = "Open terminal in " + short
+			item.Icon = terminalIcon
+			item.Mods.Cmd = &alfred.ModItem{
+				Valid:    true,
+				Arg:      "edit " + projects[short],
+				Subtitle: "Edit " + short,
+				Icon:     editorIcon,
+			}
+		}
+
+		items = append(items, item)
 	}
 
 	return
