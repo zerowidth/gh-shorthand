@@ -50,6 +50,8 @@ type completion struct {
 	result alfred.FilterResult
 	mode   string
 	input  string
+	parsed parser.Result
+	retry  bool // for RPC calls on idle query input
 }
 
 // Complete runs the main completion code
@@ -59,12 +61,17 @@ func Complete(cfg config.Config, env Environment) alfred.FilterResult {
 		return alfred.NewFilterResult()
 	}
 
+	bareUser := mode == "p"
+	ignoreNumeric := len(cfg.DefaultRepo) > 0
+	parsed := parser.Parse(cfg.RepoMap, cfg.UserMap, input, bareUser, ignoreNumeric)
+
 	c := completion{
 		cfg:    cfg,
 		env:    env,
 		result: alfred.NewFilterResult(),
 		mode:   mode,
 		input:  input,
+		parsed: parsed,
 	}
 	c.appendParsedItems()
 	c.finalizeResult()
@@ -101,6 +108,11 @@ func LoadAlfredEnvironment(input string) Environment {
 	return e
 }
 
+// Duration since alfred saw the first query
+func (e Environment) Duration() time.Duration {
+	return time.Since(e.Start)
+}
+
 // given an input query, extract the mode and input string. returns false if
 // mode+input is invalid.
 //
@@ -128,16 +140,8 @@ func extractMode(input string) (string, string, bool) {
 func (c *completion) appendParsedItems() {
 	fullInput := c.env.Query
 
-	bareUser := c.mode == "p"
-	ignoreNumeric := len(c.cfg.DefaultRepo) > 0
-	parsed := parser.Parse(c.cfg.RepoMap, c.cfg.UserMap, c.input, bareUser, ignoreNumeric)
-
-	// for RPC calls on idle query input:
-	shouldRetry := false
-	duration := time.Since(c.env.Start)
-
-	if !parsed.HasRepo() && len(c.cfg.DefaultRepo) > 0 && !parsed.HasOwner() && !parsed.HasPath() {
-		parsed.SetRepo(c.cfg.DefaultRepo)
+	if !c.parsed.HasRepo() && len(c.cfg.DefaultRepo) > 0 && !c.parsed.HasOwner() && !c.parsed.HasPath() {
+		c.parsed.SetRepo(c.cfg.DefaultRepo)
 	}
 
 	switch c.mode {
@@ -147,7 +151,7 @@ func (c *completion) appendParsedItems() {
 			Valid: false,
 		}
 
-		shouldRetry = annotateQuery(input, &item, duration, c.cfg)
+		// c.retry = annotateQuery(input, &item, c.env.Duration(), c.cfg)
 		c.result.AppendItems(item)
 
 	case "": // no input, show default items
@@ -162,67 +166,67 @@ func (c *completion) appendParsedItems() {
 
 	case " ": // open repo, issue, and/or path
 		// repo required, no query allowed
-		if parsed.HasRepo() &&
-			(parsed.HasIssue() || parsed.HasPath() || parsed.EmptyQuery()) {
-			item := openRepoItem(parsed)
-			if parsed.HasIssue() {
-				shouldRetry = retrieveIssueTitle(&item, duration, parsed, c.cfg)
+		if c.parsed.HasRepo() &&
+			(c.parsed.HasIssue() || c.parsed.HasPath() || c.parsed.EmptyQuery()) {
+			item := openRepoItem(c.parsed)
+			if c.parsed.HasIssue() {
+				c.retry = retrieveIssueTitle(&item, c.env.Duration(), c.parsed, c.cfg)
 			} else {
-				shouldRetry = retrieveRepoDescription(&item, duration, parsed, c.cfg)
+				c.retry = retrieveRepoDescription(&item, c.env.Duration(), c.parsed, c.cfg)
 			}
 			c.result.AppendItems(item)
 		}
 
-		if !parsed.HasRepo() && !parsed.HasOwner() && parsed.HasPath() {
-			c.result.AppendItems(openPathItem(parsed.Path()))
+		if !c.parsed.HasRepo() && !c.parsed.HasOwner() && c.parsed.HasPath() {
+			c.result.AppendItems(openPathItem(c.parsed.Path()))
 		}
 
 		c.result.AppendItems(
-			autocompleteItems(c.cfg, c.input, parsed,
+			autocompleteItems(c.cfg, c.input, c.parsed,
 				autocompleteOpenItem, autocompleteUserOpenItem, openEndedOpenItem)...)
 	case "i":
 		// repo required
-		if parsed.HasRepo() {
-			if parsed.EmptyQuery() {
-				issuesItem := openIssuesItem(parsed)
-				retry, matches := retrieveIssueList(&issuesItem, duration, parsed, c.cfg)
-				shouldRetry = retry
+		if c.parsed.HasRepo() {
+			if c.parsed.EmptyQuery() {
+				issuesItem := openIssuesItem(c.parsed)
+				retry, matches := retrieveIssueList(&issuesItem, c.env.Duration(), c.parsed, c.cfg)
+				c.retry = retry
 				c.result.AppendItems(issuesItem)
-				c.result.AppendItems(searchIssuesItem(parsed, fullInput))
+				c.result.AppendItems(searchIssuesItem(c.parsed, fullInput))
 				c.result.AppendItems(matches...)
 			} else {
-				searchItem := searchIssuesItem(parsed, fullInput)
-				retry, matches := retrieveIssueSearchItems(&searchItem, duration, parsed.Repo(), parsed.Query, c.cfg, false)
-				shouldRetry = retry
+				searchItem := searchIssuesItem(c.parsed, fullInput)
+				retry, matches := retrieveIssueSearchItems(&searchItem, c.env.Duration(), c.parsed.Repo(), c.parsed.Query, c.cfg, false)
+				c.retry = retry
 				c.result.AppendItems(searchItem)
 				c.result.AppendItems(matches...)
 			}
 		}
 
 		c.result.AppendItems(
-			autocompleteItems(c.cfg, c.input, parsed,
+			autocompleteItems(c.cfg, c.input, c.parsed,
 				autocompleteIssueItem, autocompleteUserIssueItem, openEndedIssueItem)...)
 	case "p":
-		if parsed.HasOwner() && (parsed.HasIssue() || parsed.EmptyQuery()) {
-			if parsed.HasRepo() {
-				item := repoProjectsItem(parsed)
-				if parsed.HasIssue() {
-					shouldRetry = retrieveRepoProjectName(&item, duration, parsed, c.cfg)
+		if c.parsed.HasOwner() && (c.parsed.HasIssue() || c.parsed.EmptyQuery()) {
+			if c.parsed.HasRepo() {
+				item := repoProjectsItem(c.parsed)
+				if c.parsed.HasIssue() {
+					c.retry = retrieveRepoProjectName(&item, c.env.Duration(), c.parsed, c.cfg)
 					c.result.AppendItems(item)
 				} else {
-					retry, projects := retrieveRepoProjects(&item, duration, parsed, c.cfg)
-					shouldRetry = retry
+					retry, projects := retrieveRepoProjects(&item, c.env.Duration(), c.parsed, c.cfg)
+					c.retry = retry
 					c.result.AppendItems(item)
 					c.result.AppendItems(projects...)
 				}
 			} else {
-				item := orgProjectsItem(parsed)
-				if parsed.HasIssue() {
-					shouldRetry = retrieveOrgProjectName(&item, duration, parsed, c.cfg)
+				item := orgProjectsItem(c.parsed)
+				if c.parsed.HasIssue() {
+					c.retry = retrieveOrgProjectName(&item, c.env.Duration(), c.parsed, c.cfg)
 					c.result.AppendItems(item)
 				} else {
-					retry, projects := retrieveOrgProjects(&item, duration, parsed, c.cfg)
-					shouldRetry = retry
+					retry, projects := retrieveOrgProjects(&item, c.env.Duration(), c.parsed, c.cfg)
+					c.retry = retry
 					c.result.AppendItems(item)
 					c.result.AppendItems(projects...)
 				}
@@ -233,19 +237,19 @@ func (c *completion) appendParsedItems() {
 			c.result.AppendItems(
 				autocompleteRepoItems(c.cfg, c.input, autocompleteProjectItem)...)
 			c.result.AppendItems(
-				autocompleteUserItems(c.cfg, c.input, parsed, false, autocompleteOrgProjectItem)...)
-			if len(c.input) == 0 || parsed.Repo() != c.input {
+				autocompleteUserItems(c.cfg, c.input, c.parsed, false, autocompleteOrgProjectItem)...)
+			if len(c.input) == 0 || c.parsed.Repo() != c.input {
 				c.result.AppendItems(openEndedProjectItem(c.input))
 			}
 		}
 	case "n":
 		// repo required
-		if parsed.HasRepo() {
-			c.result.AppendItems(newIssueItem(parsed))
+		if c.parsed.HasRepo() {
+			c.result.AppendItems(newIssueItem(c.parsed))
 		}
 
 		c.result.AppendItems(
-			autocompleteItems(c.cfg, c.input, parsed,
+			autocompleteItems(c.cfg, c.input, c.parsed,
 				autocompleteNewIssueItem, autocompleteUserNewIssueItem, openEndedNewIssueItem)...)
 	case "e":
 		c.result.AppendItems(
@@ -255,18 +259,10 @@ func (c *completion) appendParsedItems() {
 			projectItems(c.cfg.ProjectDirMap(), c.input, modeTerm)...)
 	case "s":
 		searchItem := globalIssueSearchItem(c.input)
-		retry, matches := retrieveIssueSearchItems(&searchItem, duration, "", c.input, c.cfg, true)
-		shouldRetry = retry
+		retry, matches := retrieveIssueSearchItems(&searchItem, c.env.Duration(), "", c.input, c.cfg, true)
+		c.retry = retry
 		c.result.AppendItems(searchItem)
 		c.result.AppendItems(matches...)
-	}
-
-	// if any RPC-decorated items require a re-invocation of the script, save that
-	// information in the environment for the next time
-	if shouldRetry {
-		c.result.SetVariable("query", fullInput)
-		c.result.SetVariable("s", fmt.Sprintf("%d", c.env.Start.Unix()))
-		c.result.SetVariable("ns", fmt.Sprintf("%d", c.env.Start.Nanosecond()))
 	}
 
 }
@@ -1070,7 +1066,12 @@ func (c *completion) finalizeResult() {
 		}
 	}
 
-	if c.result.Variables != nil && len(*c.result.Variables) > 0 {
+	// if any RPC-decorated items require a re-invocation of the script, save that
+	// information in the environment for the next time
+	if c.retry {
+		c.result.SetVariable("query", c.env.Query)
+		c.result.SetVariable("s", fmt.Sprintf("%d", c.env.Start.Unix()))
+		c.result.SetVariable("ns", fmt.Sprintf("%d", c.env.Start.Nanosecond()))
 		c.result.Rerun = rerunAfter
 	}
 }
