@@ -175,9 +175,9 @@ func (c *completion) appendParsedItems() {
 			(c.parsed.HasIssue() || c.parsed.HasPath() || c.parsed.EmptyQuery()) {
 			item := openRepoItem(c.parsed)
 			if c.parsed.HasIssue() {
-				c.retry = retrieveIssueTitle(&item, c.env.Duration(), c.parsed, c.cfg)
+				c.retrieveIssueTitle(&item)
 			} else {
-				c.retry = retrieveRepoDescription(&item, c.env.Duration(), c.parsed, c.cfg)
+				c.retrieveRepoDescription(&item)
 			}
 			c.result.AppendItems(item)
 		}
@@ -194,15 +194,13 @@ func (c *completion) appendParsedItems() {
 		if c.parsed.HasRepo() {
 			if c.parsed.EmptyQuery() {
 				issuesItem := openIssuesItem(c.parsed)
-				retry, matches := retrieveIssueList(&issuesItem, c.env.Duration(), c.parsed, c.cfg)
-				c.retry = retry
+				matches := c.retrieveIssueList(&issuesItem)
 				c.result.AppendItems(issuesItem)
 				c.result.AppendItems(searchIssuesItem(c.parsed, fullInput))
 				c.result.AppendItems(matches...)
 			} else {
 				searchItem := searchIssuesItem(c.parsed, fullInput)
-				retry, matches := retrieveIssueSearchItems(&searchItem, c.env.Duration(), c.parsed.Repo(), c.parsed.Query, c.cfg, false)
-				c.retry = retry
+				matches := c.retrieveIssueSearchItems(&searchItem, c.parsed.Repo(), c.parsed.Query, false)
 				c.result.AppendItems(searchItem)
 				c.result.AppendItems(matches...)
 			}
@@ -216,22 +214,20 @@ func (c *completion) appendParsedItems() {
 			if c.parsed.HasRepo() {
 				item := repoProjectsItem(c.parsed)
 				if c.parsed.HasIssue() {
-					c.retry = retrieveRepoProjectName(&item, c.env.Duration(), c.parsed, c.cfg)
+					c.retrieveRepoProjectName(&item)
 					c.result.AppendItems(item)
 				} else {
-					retry, projects := retrieveRepoProjects(&item, c.env.Duration(), c.parsed, c.cfg)
-					c.retry = retry
+					projects := c.retrieveRepoProjects(&item)
 					c.result.AppendItems(item)
 					c.result.AppendItems(projects...)
 				}
 			} else {
 				item := orgProjectsItem(c.parsed)
 				if c.parsed.HasIssue() {
-					c.retry = retrieveOrgProjectName(&item, c.env.Duration(), c.parsed, c.cfg)
+					c.retrieveOrgProjectName(&item)
 					c.result.AppendItems(item)
 				} else {
-					retry, projects := retrieveOrgProjects(&item, c.env.Duration(), c.parsed, c.cfg)
-					c.retry = retry
+					projects := c.retrieveOrgProjects(&item)
 					c.result.AppendItems(item)
 					c.result.AppendItems(projects...)
 				}
@@ -264,8 +260,7 @@ func (c *completion) appendParsedItems() {
 			projectItems(c.cfg.ProjectDirMap(), c.input, modeTerm)...)
 	case "s":
 		searchItem := globalIssueSearchItem(c.input)
-		retry, matches := retrieveIssueSearchItems(&searchItem, c.env.Duration(), "", c.input, c.cfg, true)
-		c.retry = retry
+		matches := c.retrieveIssueSearchItems(&searchItem, "", c.input, true)
 		c.result.AppendItems(searchItem)
 		c.result.AppendItems(matches...)
 	}
@@ -764,23 +759,21 @@ func ellipsis(prefix string, duration time.Duration) string {
 
 // retrieveRepoDescription adds the repo description to the "open repo" item
 // using an RPC call.
-func retrieveRepoDescription(item *alfred.Item, duration time.Duration, parsed parser.Result, cfg config.Config) (shouldRetry bool) {
-	if duration.Seconds() < delay {
-		shouldRetry = true
+func (c *completion) retrieveRepoDescription(item *alfred.Item) {
+	if c.env.Duration().Seconds() < delay {
+		c.retry = true
 		return
 	}
 
-	retry, results, err := rpcRequest("repo:"+parsed.Repo(), cfg)
-	shouldRetry = retry
+	retry, results, err := rpcRequest("repo:"+c.parsed.Repo(), c.cfg)
+	c.retry = retry
 	if err != nil {
 		item.Subtitle = err.Error()
-	} else if shouldRetry {
-		item.Subtitle = ellipsis("Retrieving description", duration)
+	} else if retry {
+		item.Subtitle = ellipsis("Retrieving description", c.env.Duration())
 	} else if len(results) > 0 {
 		item.Subtitle = results[0]
 	}
-
-	return
 }
 
 func annotateQuery(query string, item *alfred.Item, duration time.Duration, cfg config.Config) bool {
@@ -813,18 +806,18 @@ func annotateQuery(query string, item *alfred.Item, duration time.Duration, cfg 
 }
 
 // retrieveIssueTitle adds the title to the "open issue" item using an RPC call
-func retrieveIssueTitle(item *alfred.Item, duration time.Duration, parsed parser.Result, cfg config.Config) (shouldRetry bool) {
-	if duration.Seconds() < delay {
-		shouldRetry = true
+func (c *completion) retrieveIssueTitle(item *alfred.Item) {
+	if c.env.Duration().Seconds() < delay {
+		c.retry = true
 		return
 	}
 
-	retry, results, err := rpcRequest("issue:"+parsed.Repo()+"#"+parsed.Issue(), cfg)
-	shouldRetry = retry
+	retry, results, err := rpcRequest("issue:"+c.parsed.Repo()+"#"+c.parsed.Issue(), c.cfg)
+	c.retry = retry
 	if err != nil {
 		item.Subtitle = err.Error()
-	} else if shouldRetry {
-		item.Subtitle = ellipsis("Retrieving issue title", duration)
+	} else if retry {
+		item.Subtitle = ellipsis("Retrieving issue title", c.env.Duration())
 	} else if len(results) > 0 {
 		parts := strings.SplitN(results[0], ":", 3)
 		if len(parts) != 3 {
@@ -835,22 +828,20 @@ func retrieveIssueTitle(item *alfred.Item, duration time.Duration, parsed parser
 		item.Title = title
 		item.Icon = issueStateIcon(kind, state)
 	}
-
-	return
 }
 
-func retrieveRepoProjectName(item *alfred.Item, duration time.Duration, parsed parser.Result, cfg config.Config) (shouldRetry bool) {
-	if duration.Seconds() < delay {
-		shouldRetry = true
+func (c *completion) retrieveRepoProjectName(item *alfred.Item) {
+	if c.env.Duration().Seconds() < delay {
+		c.retry = true
 		return
 	}
 
-	retry, results, err := rpcRequest("repo_project:"+parsed.Repo()+"/"+parsed.Issue(), cfg)
-	shouldRetry = retry
+	retry, results, err := rpcRequest("repo_project:"+c.parsed.Repo()+"/"+c.parsed.Issue(), c.cfg)
+	c.retry = retry
 	if err != nil {
 		item.Subtitle = err.Error()
-	} else if shouldRetry {
-		item.Subtitle = ellipsis("Retrieving project name", duration)
+	} else if retry {
+		item.Subtitle = ellipsis("Retrieving project name", c.env.Duration())
 	} else if len(results) > 0 {
 		parts := strings.SplitN(results[0], ":", 2)
 		if len(parts) != 2 {
@@ -865,18 +856,18 @@ func retrieveRepoProjectName(item *alfred.Item, duration time.Duration, parsed p
 	return
 }
 
-func retrieveOrgProjectName(item *alfred.Item, duration time.Duration, parsed parser.Result, cfg config.Config) (shouldRetry bool) {
-	if duration.Seconds() < delay {
-		shouldRetry = true
+func (c *completion) retrieveOrgProjectName(item *alfred.Item) {
+	if c.env.Duration().Seconds() < delay {
+		c.retry = true
 		return
 	}
 
-	retry, results, err := rpcRequest("org_project:"+parsed.User+"/"+parsed.Issue(), cfg)
-	shouldRetry = retry
+	retry, results, err := rpcRequest("org_project:"+c.parsed.User+"/"+c.parsed.Issue(), c.cfg)
+	c.retry = retry
 	if err != nil {
 		item.Subtitle = err.Error()
-	} else if shouldRetry {
-		item.Subtitle = ellipsis("Retrieving project name", duration)
+	} else if retry {
+		item.Subtitle = ellipsis("Retrieving project name", c.env.Duration())
 	} else if len(results) > 0 {
 		parts := strings.SplitN(results[0], ":", 2)
 		if len(parts) != 2 {
@@ -891,38 +882,38 @@ func retrieveOrgProjectName(item *alfred.Item, duration time.Duration, parsed pa
 	return
 }
 
-func retrieveOrgProjects(item *alfred.Item, duration time.Duration, parsed parser.Result, cfg config.Config) (shouldRetry bool, projects alfred.Items) {
-	if duration.Seconds() < delay {
-		shouldRetry = true
+func (c *completion) retrieveOrgProjects(item *alfred.Item) (projects alfred.Items) {
+	if c.env.Duration().Seconds() < delay {
+		c.retry = true
 		return
 	}
 
-	retry, results, err := rpcRequest("org_projects:"+parsed.User, cfg)
-	shouldRetry = retry
+	retry, results, err := rpcRequest("org_projects:"+c.parsed.User, c.cfg)
+	c.retry = retry
 	if err != nil {
 		item.Subtitle = err.Error()
-	} else if shouldRetry {
-		item.Subtitle = ellipsis("Retrieving projects", duration)
+	} else if retry {
+		item.Subtitle = ellipsis("Retrieving projects", c.env.Duration())
 	} else if len(results) > 0 {
-		projects = append(projects, projectItemsFromResults(results, "for "+parsed.User)...)
+		projects = append(projects, projectItemsFromResults(results, "for "+c.parsed.User)...)
 	}
 	return
 }
 
-func retrieveRepoProjects(item *alfred.Item, duration time.Duration, parsed parser.Result, cfg config.Config) (shouldRetry bool, projects alfred.Items) {
-	if duration.Seconds() < delay {
-		shouldRetry = true
+func (c *completion) retrieveRepoProjects(item *alfred.Item) (projects alfred.Items) {
+	if c.env.Duration().Seconds() < delay {
+		c.retry = true
 		return
 	}
 
-	retry, results, err := rpcRequest("repo_projects:"+parsed.Repo(), cfg)
-	shouldRetry = retry
+	retry, results, err := rpcRequest("repo_projects:"+c.parsed.Repo(), c.cfg)
+	c.retry = retry
 	if err != nil {
 		item.Subtitle = err.Error()
-	} else if shouldRetry {
-		item.Subtitle = ellipsis("Retrieving projects", duration)
+	} else if retry {
+		item.Subtitle = ellipsis("Retrieving projects", c.env.Duration())
 	} else if len(results) > 0 {
-		projects = append(projects, projectItemsFromResults(results, "in "+parsed.Repo())...)
+		projects = append(projects, projectItemsFromResults(results, "in "+c.parsed.Repo())...)
 	}
 	return
 }
@@ -947,12 +938,12 @@ func projectItemsFromResults(results []string, desc string) (items alfred.Items)
 	return
 }
 
-func retrieveIssueSearchItems(item *alfred.Item, duration time.Duration, repo, query string, cfg config.Config, includeRepo bool) (shouldRetry bool, matches alfred.Items) {
+func (c *completion) retrieveIssueSearchItems(item *alfred.Item, repo, query string, includeRepo bool) (matches alfred.Items) {
 	if !item.Valid {
 		return
 	}
-	if duration.Seconds() < searchDelay {
-		shouldRetry = true
+	if c.env.Duration().Seconds() < searchDelay {
+		c.retry = true
 		return
 	}
 
@@ -961,12 +952,12 @@ func retrieveIssueSearchItems(item *alfred.Item, duration time.Duration, repo, q
 		rpcQuery += "repo:" + repo + " "
 	}
 	rpcQuery += query
-	retry, results, err := rpcRequest(rpcQuery, cfg)
-	shouldRetry = retry
+	retry, results, err := rpcRequest(rpcQuery, c.cfg)
+	c.retry = retry
 	if err != nil {
 		item.Subtitle = err.Error()
-	} else if shouldRetry {
-		item.Subtitle = ellipsis("Searching issues", duration)
+	} else if retry {
+		item.Subtitle = ellipsis("Searching issues", c.env.Duration())
 	} else if len(results) > 0 {
 		matches = append(matches, issueItemsFromResults(results, includeRepo)...)
 	}
@@ -974,22 +965,21 @@ func retrieveIssueSearchItems(item *alfred.Item, duration time.Duration, repo, q
 	return
 }
 
-func retrieveIssueList(item *alfred.Item, duration time.Duration, parsed parser.Result, cfg config.Config) (shouldRetry bool, matches alfred.Items) {
-	if duration.Seconds() < issueListDelay {
-		shouldRetry = true
+func (c *completion) retrieveIssueList(item *alfred.Item) (matches alfred.Items) {
+	if c.env.Duration().Seconds() < issueListDelay {
+		c.retry = true
 		return
 	}
 
-	retry, results, err := rpcRequest("issuesearch:repo:"+parsed.Repo()+" sort:updated-desc", cfg)
-	shouldRetry = retry
+	retry, results, err := rpcRequest("issuesearch:repo:"+c.parsed.Repo()+" sort:updated-desc", c.cfg)
+	c.retry = retry
 	if err != nil {
 		item.Subtitle = err.Error()
-	} else if shouldRetry {
-		item.Subtitle = ellipsis("Retrieving recent issues", duration)
+	} else if retry {
+		item.Subtitle = ellipsis("Retrieving recent issues", c.env.Duration())
 	} else if len(results) > 0 {
 		matches = append(matches, issueItemsFromResults(results, false)...)
 	}
-
 	return
 }
 
