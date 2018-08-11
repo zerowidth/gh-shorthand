@@ -44,6 +44,7 @@ const (
 	modeTerm
 )
 
+// Used internally to collect the input and output for completion
 type completion struct {
 	cfg    config.Config
 	env    Environment
@@ -87,6 +88,10 @@ type Environment struct {
 }
 
 // LoadAlfredEnvironment extracts the runtime environment from the OS environment
+//
+// The result of a script filter can set environment variables along with a
+// "rerun this" timer for another invocation, and this retrieves and stores that
+// information.
 func LoadAlfredEnvironment(input string) Environment {
 	e := Environment{
 		Query: input,

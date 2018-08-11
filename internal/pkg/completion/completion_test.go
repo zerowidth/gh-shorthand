@@ -750,16 +750,8 @@ func findMatchingItem(uid, title string, items alfred.Items) (alfred.Item, bool)
 
 func TestFinalizeResult(t *testing.T) {
 	t.Parallel()
-	result := alfred.NewFilterResult()
-	result.AppendItems(
-		alfred.Item{Title: "bother, invalid", Valid: false},
-		alfred.Item{Title: "valid", Valid: true},
-		alfred.Item{Title: "also valid", Valid: true},
-		alfred.Item{Title: "an invalid item", Valid: false},
-	)
-
 	c := completion{
-		result: result,
+		result: alfred.NewFilterResult(),
 	}
 	c.finalizeResult()
 
@@ -768,9 +760,7 @@ func TestFinalizeResult(t *testing.T) {
 		t.Errorf("expected result %#v to not have a Rerun value", c.result)
 	}
 
-	result = alfred.NewFilterResult()
-	result.SetVariable("foo", "bar")
-	c.result = result
+	c.retry = true
 	c.finalizeResult()
 	if c.result.Rerun != rerunAfter {
 		t.Errorf("expected result %#v to have Rerun of %f", c.result, rerunAfter)
