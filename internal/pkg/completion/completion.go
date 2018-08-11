@@ -700,24 +700,34 @@ func findProjectDirs(root string) (dirs []string, err error) {
 }
 
 // Issue the given query string to the RPC backend.
+//
 // If RPC is not configured, the results will be empty.
-func rpcRequest(query string, cfg config.Config) (shouldRetry bool, results []string, err error) {
-	if len(cfg.SocketPath) == 0 {
-		return false, results, nil // RPC isn't enabled, don't worry about it
+//
+// If the RPC request should be repeated (either not enough time has passed, or
+// the remote request is still pending) c.retry is set to true.
+func (c *completion) rpcRequest(query string, delay float64) (results []string, err error) {
+	if len(c.cfg.SocketPath) == 0 {
+		return results, nil // RPC isn't enabled, don't worry about it
 	}
-	sock, err := net.Dial("unix", cfg.SocketPath)
+	if c.env.Duration().Seconds() < delay {
+		c.retry = true
+		return
+	}
+	sock, err := net.Dial("unix", c.cfg.SocketPath)
 	if err != nil {
-		return false, results, err
+		return results, err
 	}
 	defer sock.Close()
 	if err := sock.SetDeadline(time.Now().Add(socketTimeout)); err != nil {
-		return false, results, err
+		return results, err
 	}
+
 	// write query to socket:
 	if _, err := sock.Write([]byte(query + "\n")); err != nil {
-		return false, results, err
+		return results, err
 	}
-	// now, read results:
+
+	// read results:
 	scanner := bufio.NewScanner(sock)
 	if scanner.Scan() {
 		status := scanner.Text()
@@ -726,9 +736,10 @@ func rpcRequest(query string, cfg config.Config) (shouldRetry bool, results []st
 			for scanner.Scan() {
 				results = append(results, scanner.Text())
 			}
-			return false, results, nil
+			return results, nil
 		case "PENDING":
-			return true, results, nil
+			c.retry = true
+			return results, nil
 		case "ERROR":
 			for scanner.Scan() {
 				results = append(results, scanner.Text())
@@ -738,18 +749,18 @@ func rpcRequest(query string, cfg config.Config) (shouldRetry bool, results []st
 			} else {
 				err = errors.New("unknown RPC error")
 			}
-			return false, results, err
+			return results, err
 		default:
 			if err := scanner.Err(); err != nil {
-				return false, results, errors.Wrap(err, "Could not read RPC response")
+				return results, errors.Wrap(err, "Could not read RPC response")
 			}
-			return false, results, errors.Wrap(err, "Unexpected RPC response status")
+			return results, errors.Wrap(err, "Unexpected RPC response status")
 		}
 	} else {
 		if err := scanner.Err(); err != nil {
-			return false, results, errors.Wrap(err, "Could not read RPC response")
+			return results, errors.Wrap(err, "Could not read RPC response")
 		}
-		return false, results, errors.Wrap(err, "No response from RPC backend")
+		return results, errors.Wrap(err, "No response from RPC backend")
 	}
 }
 
@@ -760,16 +771,10 @@ func ellipsis(prefix string, duration time.Duration) string {
 // retrieveRepoDescription adds the repo description to the "open repo" item
 // using an RPC call.
 func (c *completion) retrieveRepoDescription(item *alfred.Item) {
-	if c.env.Duration().Seconds() < delay {
-		c.retry = true
-		return
-	}
-
-	retry, results, err := rpcRequest("repo:"+c.parsed.Repo(), c.cfg)
-	c.retry = retry
+	results, err := c.rpcRequest("repo:"+c.parsed.Repo(), delay)
 	if err != nil {
 		item.Subtitle = err.Error()
-	} else if retry {
+	} else if c.retry {
 		item.Subtitle = ellipsis("Retrieving description", c.env.Duration())
 	} else if len(results) > 0 {
 		item.Subtitle = results[0]
@@ -807,16 +812,10 @@ func annotateQuery(query string, item *alfred.Item, duration time.Duration, cfg 
 
 // retrieveIssueTitle adds the title to the "open issue" item using an RPC call
 func (c *completion) retrieveIssueTitle(item *alfred.Item) {
-	if c.env.Duration().Seconds() < delay {
-		c.retry = true
-		return
-	}
-
-	retry, results, err := rpcRequest("issue:"+c.parsed.Repo()+"#"+c.parsed.Issue(), c.cfg)
-	c.retry = retry
+	results, err := c.rpcRequest("issue:"+c.parsed.Repo()+"#"+c.parsed.Issue(), delay)
 	if err != nil {
 		item.Subtitle = err.Error()
-	} else if retry {
+	} else if c.retry {
 		item.Subtitle = ellipsis("Retrieving issue title", c.env.Duration())
 	} else if len(results) > 0 {
 		parts := strings.SplitN(results[0], ":", 3)
@@ -831,16 +830,10 @@ func (c *completion) retrieveIssueTitle(item *alfred.Item) {
 }
 
 func (c *completion) retrieveRepoProjectName(item *alfred.Item) {
-	if c.env.Duration().Seconds() < delay {
-		c.retry = true
-		return
-	}
-
-	retry, results, err := rpcRequest("repo_project:"+c.parsed.Repo()+"/"+c.parsed.Issue(), c.cfg)
-	c.retry = retry
+	results, err := c.rpcRequest("repo_project:"+c.parsed.Repo()+"/"+c.parsed.Issue(), delay)
 	if err != nil {
 		item.Subtitle = err.Error()
-	} else if retry {
+	} else if c.retry {
 		item.Subtitle = ellipsis("Retrieving project name", c.env.Duration())
 	} else if len(results) > 0 {
 		parts := strings.SplitN(results[0], ":", 2)
@@ -857,16 +850,10 @@ func (c *completion) retrieveRepoProjectName(item *alfred.Item) {
 }
 
 func (c *completion) retrieveOrgProjectName(item *alfred.Item) {
-	if c.env.Duration().Seconds() < delay {
-		c.retry = true
-		return
-	}
-
-	retry, results, err := rpcRequest("org_project:"+c.parsed.User+"/"+c.parsed.Issue(), c.cfg)
-	c.retry = retry
+	results, err := c.rpcRequest("org_project:"+c.parsed.User+"/"+c.parsed.Issue(), delay)
 	if err != nil {
 		item.Subtitle = err.Error()
-	} else if retry {
+	} else if c.retry {
 		item.Subtitle = ellipsis("Retrieving project name", c.env.Duration())
 	} else if len(results) > 0 {
 		parts := strings.SplitN(results[0], ":", 2)
@@ -883,16 +870,10 @@ func (c *completion) retrieveOrgProjectName(item *alfred.Item) {
 }
 
 func (c *completion) retrieveOrgProjects(item *alfred.Item) (projects alfred.Items) {
-	if c.env.Duration().Seconds() < delay {
-		c.retry = true
-		return
-	}
-
-	retry, results, err := rpcRequest("org_projects:"+c.parsed.User, c.cfg)
-	c.retry = retry
+	results, err := c.rpcRequest("org_projects:"+c.parsed.User, delay)
 	if err != nil {
 		item.Subtitle = err.Error()
-	} else if retry {
+	} else if c.retry {
 		item.Subtitle = ellipsis("Retrieving projects", c.env.Duration())
 	} else if len(results) > 0 {
 		projects = append(projects, projectItemsFromResults(results, "for "+c.parsed.User)...)
@@ -901,16 +882,10 @@ func (c *completion) retrieveOrgProjects(item *alfred.Item) (projects alfred.Ite
 }
 
 func (c *completion) retrieveRepoProjects(item *alfred.Item) (projects alfred.Items) {
-	if c.env.Duration().Seconds() < delay {
-		c.retry = true
-		return
-	}
-
-	retry, results, err := rpcRequest("repo_projects:"+c.parsed.Repo(), c.cfg)
-	c.retry = retry
+	results, err := c.rpcRequest("repo_projects:"+c.parsed.Repo(), delay)
 	if err != nil {
 		item.Subtitle = err.Error()
-	} else if retry {
+	} else if c.retry {
 		item.Subtitle = ellipsis("Retrieving projects", c.env.Duration())
 	} else if len(results) > 0 {
 		projects = append(projects, projectItemsFromResults(results, "in "+c.parsed.Repo())...)
@@ -942,21 +917,16 @@ func (c *completion) retrieveIssueSearchItems(item *alfred.Item, repo, query str
 	if !item.Valid {
 		return
 	}
-	if c.env.Duration().Seconds() < searchDelay {
-		c.retry = true
-		return
-	}
 
 	rpcQuery := "issuesearch:"
 	if len(repo) > 0 {
 		rpcQuery += "repo:" + repo + " "
 	}
 	rpcQuery += query
-	retry, results, err := rpcRequest(rpcQuery, c.cfg)
-	c.retry = retry
+	results, err := c.rpcRequest(rpcQuery, searchDelay)
 	if err != nil {
 		item.Subtitle = err.Error()
-	} else if retry {
+	} else if c.retry {
 		item.Subtitle = ellipsis("Searching issues", c.env.Duration())
 	} else if len(results) > 0 {
 		matches = append(matches, issueItemsFromResults(results, includeRepo)...)
@@ -966,16 +936,10 @@ func (c *completion) retrieveIssueSearchItems(item *alfred.Item, repo, query str
 }
 
 func (c *completion) retrieveIssueList(item *alfred.Item) (matches alfred.Items) {
-	if c.env.Duration().Seconds() < issueListDelay {
-		c.retry = true
-		return
-	}
-
-	retry, results, err := rpcRequest("issuesearch:repo:"+c.parsed.Repo()+" sort:updated-desc", c.cfg)
-	c.retry = retry
+	results, err := c.rpcRequest("issuesearch:repo:"+c.parsed.Repo()+" sort:updated-desc", issueListDelay)
 	if err != nil {
 		item.Subtitle = err.Error()
-	} else if retry {
+	} else if c.retry {
 		item.Subtitle = ellipsis("Retrieving recent issues", c.env.Duration())
 	} else if len(results) > 0 {
 		matches = append(matches, issueItemsFromResults(results, false)...)
