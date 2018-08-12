@@ -90,13 +90,13 @@ func (h *Handler) makeRequest(query string) {
 		log.Println("RPC request error")
 		ttl = errorTTL
 	} else {
-		desc, err := h.client.GetRepoDescription(query)
+		repo, err := h.client.GetRepo(query)
 		if err != nil {
 			res.Error = err.Error()
 			ttl = errorTTL
 		}
-		res.Value = desc
-		log.Println("RPC result: ", desc)
+		res.Repos = append(res.Repos, repo)
+		log.Println("RPC result: ", res)
 	}
 
 	h.m.Lock()

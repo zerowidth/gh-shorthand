@@ -796,8 +796,12 @@ func (c *completion) retrieveRepoDescription(item *alfred.Item) {
 		item.Subtitle = ellipsis("Retrieving description", c.env.Duration())
 		return
 	}
+	if len(res.Repos) == 0 {
+		item.Subtitle = "rpc error: missing repo in result"
+		return
+	}
 
-	item.Subtitle = res.Value
+	item.Subtitle = res.Repos[0].Description
 }
 
 // retrieveIssueTitle adds the title to the "open issue" item using an RPC call
