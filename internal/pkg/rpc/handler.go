@@ -21,7 +21,7 @@ const (
 // Handler is a set of RPC http handlers
 type Handler struct {
 	cache   *cache.Cache
-	client  *GitHubClient
+	github  *GitHubClient
 	m       sync.Mutex
 	pending map[string]struct{}
 }
@@ -81,20 +81,12 @@ func (h *Handler) makeRequest(query string) {
 	ttl := resultTTL
 
 	log.Println("RPC request: ", query)
-	if query == "error" {
-		<-time.After(1 * time.Second)
-		res.Error = "an error occurred in the RPC service"
-		log.Println("RPC request error")
+	err := h.github.GetRepo(&res, query)
+	if err != nil {
+		res.Error = err.Error()
 		ttl = errorTTL
-	} else {
-		repo, err := h.client.GetRepo(query)
-		if err != nil {
-			res.Error = err.Error()
-			ttl = errorTTL
-		}
-		res.Repos = append(res.Repos, repo)
-		log.Println("RPC result: ", res)
 	}
+	log.Println("RPC result: ", res)
 
 	h.m.Lock()
 	delete(h.pending, query)

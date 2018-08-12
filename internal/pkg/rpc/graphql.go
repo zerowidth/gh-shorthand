@@ -28,11 +28,11 @@ func NewGitHubClient(cfg config.Config) *GitHubClient {
 }
 
 // GetRepo retrieves a repo's information
-func (g *GitHubClient) GetRepo(repo string) (Repo, error) {
+func (g *GitHubClient) GetRepo(res *Result, repo string) error {
 	r := Repo{}
 	owner, name, err := splitRepo(repo)
 	if err != nil {
-		return r, err
+		return err
 	}
 	var query struct {
 		Repository struct {
@@ -47,7 +47,8 @@ func (g *GitHubClient) GetRepo(repo string) (Repo, error) {
 	defer cancel()
 	err = g.client.Query(ctx, &query, vars)
 	r.Description = query.Repository.Description
-	return r, err
+	res.Repos = append(res.Repos, r)
+	return err
 }
 
 func splitRepo(nameWithOwner string) (string, string, error) {
