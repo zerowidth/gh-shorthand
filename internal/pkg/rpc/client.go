@@ -3,12 +3,14 @@ package rpc
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net"
 	"net/http"
 	"net/url"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/zerowidth/gh-shorthand/internal/pkg/config"
 )
 
@@ -38,7 +40,7 @@ func Query(cfg config.Config, endpoint, query string) (Result, error) {
 
 	u, err := url.Parse("http://gh-shorthand" + endpoint)
 	if err != nil {
-		return res, err
+		return res, errors.Wrap(err, "url parsing error:")
 	}
 	v := url.Values{}
 	v.Set("q", query)
@@ -46,17 +48,20 @@ func Query(cfg config.Config, endpoint, query string) (Result, error) {
 
 	resp, err := c.Get(u.String())
 	if err != nil {
-		return res, err
+		return res, errors.Wrap(err, "RPC service error:")
+	}
+	if resp.StatusCode >= 400 {
+		return res, fmt.Errorf("RPC service error: %s", resp.Status)
 	}
 	defer resp.Body.Close()
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return res, err
+		return res, errors.Wrap(err, "RPC response error:")
 	}
 	err = json.Unmarshal(body, &res)
 	if err != nil {
-		return res, err
+		return res, errors.Wrap(err, "unmarshal error:")
 	}
 
 	return res, nil

@@ -709,7 +709,7 @@ func (c *completion) rpcRequest(path, query string, delay float64) (rpc.Result, 
 
 	// wrap result errors as real errors, for simpler handling by the caller
 	if len(res.Error) > 0 {
-		return res, fmt.Errorf(res.Error)
+		return res, fmt.Errorf("RPC service error: %s", res.Error)
 	}
 
 	return res, err
@@ -789,7 +789,7 @@ func ellipsis(prefix string, duration time.Duration) string {
 func (c *completion) retrieveRepoDescription(item *alfred.Item) {
 	res, err := c.rpcRequest("/", c.parsed.Repo(), delay)
 	if err != nil {
-		item.Subtitle = "rpc error: " + err.Error()
+		item.Subtitle = err.Error()
 		return
 	}
 	if !res.Complete {

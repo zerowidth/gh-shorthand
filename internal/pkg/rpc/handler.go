@@ -61,9 +61,6 @@ func (h *Handler) testHandler(w http.ResponseWriter, r *http.Request) {
 	if _, pending := h.pending[query]; !pending {
 		if cr, ok := h.cache.Get(query); ok {
 			res = cr.(Result)
-			if len(res.Error) > 0 {
-				w.WriteHeader(500) // internal server error
-			}
 		} else {
 			// this will wait on the mutex immediately, but we're returning soon anyway
 			go h.makeRequest(query)
