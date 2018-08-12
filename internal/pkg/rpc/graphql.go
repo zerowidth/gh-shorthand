@@ -19,7 +19,7 @@ type GitHubClient struct {
 // NewGitHubClient returns a GitHub graphqlv4 client wrapper from a config
 func NewGitHubClient(cfg config.Config) *GitHubClient {
 	src := oauth2.StaticTokenSource(
-		&oauth2.Token{AccessToken: cfg.ApiToken},
+		&oauth2.Token{AccessToken: cfg.APIToken},
 	)
 	httpClient := oauth2.NewClient(context.Background(), src)
 	return &GitHubClient{

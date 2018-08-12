@@ -22,7 +22,7 @@ func Run(cfg config.Config) {
 		log.Fatalf("no socket_path configured in %s", config.Filename)
 	}
 
-	if len(cfg.ApiToken) == 0 {
+	if len(cfg.APIToken) == 0 {
 		log.Fatalf("no api_token configured in %s", config.Filename)
 	}
 

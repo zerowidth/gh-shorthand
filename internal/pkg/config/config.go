@@ -20,7 +20,7 @@ type Config struct {
 	UserMap     map[string]string `yaml:"users"`
 	DefaultRepo string            `yaml:"default_repo"`
 	ProjectDirs []string          `yaml:"project_dirs"`
-	ApiToken    string            `yaml:"api_token"`
+	APIToken    string            `yaml:"api_token"`
 	SocketPath  string            `yaml:"socket_path"`
 }
 
