@@ -798,14 +798,17 @@ func ellipsis(prefix string, duration time.Duration) string {
 // retrieveRepoDescription adds the repo description to the "open repo" item
 // using an RPC call.
 func (c *completion) retrieveRepoDescription(item *alfred.Item) {
-	results, err := c.oldRPCRequest("repo:"+c.parsed.Repo(), delay)
+	res, err := c.rpcRequest("/", c.parsed.Repo(), delay)
 	if err != nil {
-		item.Subtitle = err.Error()
-	} else if c.retry {
-		item.Subtitle = ellipsis("Retrieving description", c.env.Duration())
-	} else if len(results) > 0 {
-		item.Subtitle = results[0]
+		item.Subtitle = "rpc error: " + err.Error()
+		return
 	}
+	if !res.Complete {
+		item.Subtitle = ellipsis("Retrieving description", c.env.Duration())
+		return
+	}
+
+	item.Subtitle = res.Value
 }
 
 func (c *completion) annotateQuery(item *alfred.Item) {
