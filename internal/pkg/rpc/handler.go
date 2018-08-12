@@ -26,53 +26,59 @@ type Handler struct {
 	pending map[string]struct{}
 }
 
+type rpcCall func(result *Result, query string) error
+
 // NewHandler creates a new RPC handler with the given config
 func NewHandler(cfg config.Config) *Handler {
 	handler := Handler{
 		cache:   cache.New(resultTTL, sweepInterval),
 		pending: make(map[string]struct{}),
-		client:  NewGitHubClient(cfg),
+		github:  NewGitHubClient(cfg),
 	}
 	return &handler
 }
 
 // Mount routes the RPC handlers on a mux
 func (h *Handler) Mount(mux *chi.Mux) {
-	mux.Get("/", h.testHandler)
+	mux.Get("/repo", h.rpcHandler(h.github.GetRepo))
 }
 
-func (h *Handler) testHandler(w http.ResponseWriter, r *http.Request) {
-	if err := r.ParseForm(); err != nil {
-		http.Error(w, http.StatusText(400), 400)
-		return
-	}
+// rpcHandler creates an http handler func to wrap a GitHub API call with
+// asynchronous execution and caching of its result.
+func (h *Handler) rpcHandler(rpc rpcCall) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if err := r.ParseForm(); err != nil {
+			http.Error(w, http.StatusText(400), 400)
+			return
+		}
 
-	query := r.Form.Get("q")
-	if len(query) == 0 {
-		return
-	}
+		query := r.Form.Get("q")
+		if len(query) == 0 {
+			return
+		}
 
-	// Now that basic checks are done, lock the cache and pending map to see
-	// if the request is already in flight. If not, kick it off.
-	h.m.Lock()
-	defer h.m.Unlock()
-	var res Result
+		// Now that basic checks are done, lock the cache and pending map to see
+		// if the request is already in flight. If not, kick it off.
+		h.m.Lock()
+		defer h.m.Unlock()
+		var res Result
 
-	if _, pending := h.pending[query]; !pending {
-		if cr, ok := h.cache.Get(query); ok {
-			res = cr.(Result)
-		} else {
-			// this will wait on the mutex immediately, but we're returning soon anyway
-			go h.makeRequest(query)
+		if _, pending := h.pending[query]; !pending {
+			if cr, ok := h.cache.Get(query); ok {
+				res = cr.(Result)
+			} else {
+				// this will wait on the mutex immediately, but we're returning soon anyway
+				go h.makeRequest(rpc, query)
+			}
+		}
+
+		if err := json.NewEncoder(w).Encode(res); err != nil {
+			log.Fatalf(err.Error())
 		}
 	}
-
-	if err := json.NewEncoder(w).Encode(res); err != nil {
-		log.Fatalf(err.Error())
-	}
 }
 
-func (h *Handler) makeRequest(query string) {
+func (h *Handler) makeRequest(rpc rpcCall, query string) {
 	h.m.Lock()
 	h.pending[query] = struct{}{}
 	h.m.Unlock()
@@ -81,12 +87,12 @@ func (h *Handler) makeRequest(query string) {
 	ttl := resultTTL
 
 	log.Println("RPC request: ", query)
-	err := h.github.GetRepo(&res, query)
+	err := rpc(&res, query)
 	if err != nil {
 		res.Error = err.Error()
 		ttl = errorTTL
 	}
-	log.Println("RPC result: ", res)
+	log.Printf("RPC result: %+v\n", res)
 
 	h.m.Lock()
 	delete(h.pending, query)
