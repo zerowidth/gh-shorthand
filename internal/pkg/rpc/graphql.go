@@ -107,10 +107,7 @@ func (g *GitHubClient) GetProject(res *Result, query string) error {
 func (g *GitHubClient) getOrgProject(res *Result, org string, number int) error {
 	var q struct {
 		Organization struct {
-			Project struct {
-				Name  string
-				State string
-			} `graphql:"project(number:$number)"`
+			Project projectFragment `graphql:"project(number:$number)"`
 		} `graphql:"organization(login:$login)"`
 	}
 	vars := map[string]interface{}{
@@ -118,36 +115,69 @@ func (g *GitHubClient) getOrgProject(res *Result, org string, number int) error 
 		"number": githubv4.Int(number),
 	}
 	err := g.query(&q, vars)
-
-	var project Project
-	project.Name = q.Organization.Project.Name
-	project.State = q.Organization.Project.State
-	res.Projects = append(res.Projects, project)
-
+	res.Projects = append(res.Projects, q.Organization.Project.toProject())
 	return err
 }
 
-func (g *GitHubClient) getRepoProject(res *Result, user, repo string, number int) error {
+func (g *GitHubClient) getRepoProject(res *Result, owner, name string, number int) error {
 	var q struct {
 		Repository struct {
-			Project struct {
-				Name  string
-				State string
-			} `graphql:"project(number:$number)"`
+			Project projectFragment `graphql:"project(number:$number)"`
 		} `graphql:"repository(owner:$owner,name:$name)"`
 	}
 	vars := map[string]interface{}{
-		"owner":  githubv4.String(user),
-		"name":   githubv4.String(repo),
+		"owner":  githubv4.String(owner),
+		"name":   githubv4.String(name),
 		"number": githubv4.Int(number),
 	}
 	err := g.query(&q, vars)
+	res.Projects = append(res.Projects, q.Repository.Project.toProject())
+	return err
+}
 
-	var project Project
-	project.Name = q.Repository.Project.Name
-	project.State = q.Repository.Project.State
-	res.Projects = append(res.Projects, project)
+// GetProjects retrieves a list of projects
+func (g *GitHubClient) GetProjects(res *Result, query string) error {
+	split := strings.SplitN(query, "/", 2)
+	if len(split) == 1 {
+		return g.getOrgProjects(res, split[0])
+	}
+	return g.getRepoProjects(res, split[0], split[1])
+}
 
+func (g *GitHubClient) getOrgProjects(res *Result, org string) error {
+	var q struct {
+		Organization struct {
+			Projects struct {
+				Nodes []projectFragment
+			} `graphql:"projects(first:20, orderBy:{field:UPDATED_AT,direction:DESC})"`
+		} `graphql:"organization(login:$login)"`
+	}
+	vars := map[string]interface{}{
+		"login": githubv4.String(org),
+	}
+	err := g.query(&q, vars)
+	for _, project := range q.Organization.Projects.Nodes {
+		res.Projects = append(res.Projects, project.toProject())
+	}
+	return err
+}
+
+func (g *GitHubClient) getRepoProjects(res *Result, owner, name string) error {
+	var q struct {
+		Repository struct {
+			Projects struct {
+				Nodes []projectFragment
+			} `graphql:"projects(first:20, orderBy:{field:UPDATED_AT,direction:DESC})"`
+		} `graphql:"repository(owner:$owner,name:$name)"`
+	}
+	vars := map[string]interface{}{
+		"owner": githubv4.String(owner),
+		"name":  githubv4.String(name),
+	}
+	err := g.query(&q, vars)
+	for _, project := range q.Repository.Projects.Nodes {
+		res.Projects = append(res.Projects, project.toProject())
+	}
 	return err
 }
 
@@ -174,6 +204,22 @@ type issueOrPullRequest struct {
 	Type        string        `graphql:"__typename"`
 	Issue       issueFragment `graphql:"...on Issue"`
 	PullRequest issueFragment `graphql:"...on PullRequest"`
+}
+
+type projectFragment struct {
+	Number int
+	Name   string
+	State  string
+	URL    string
+}
+
+func (p projectFragment) toProject() Project {
+	return Project{
+		Number: p.Number,
+		Name:   p.Name,
+		State:  p.State,
+		URL:    p.URL,
+	}
 }
 
 func (ip issueOrPullRequest) toIssue() Issue {

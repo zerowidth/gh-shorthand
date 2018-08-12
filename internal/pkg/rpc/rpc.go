@@ -26,6 +26,8 @@ type Issue struct {
 
 // Project is a project in an RPC result
 type Project struct {
-	Name  string `json:"name"`
-	State string `json:"state"`
+	Number int    `json:"number"`
+	URL    string `json:"url"`
+	Name   string `json:"name"`
+	State  string `json:"state"`
 }

@@ -865,26 +865,35 @@ func (c *completion) retrieveOrgProjectName(item *alfred.Item) {
 }
 
 func (c *completion) retrieveOrgProjects(item *alfred.Item) (projects alfred.Items) {
-	results, err := c.oldRPCRequest("org_projects:"+c.parsed.User, delay)
+	res, err := c.rpcRequest("/projects", c.parsed.User, delay)
 	if err != nil {
 		item.Subtitle = err.Error()
+		return
 	} else if c.retry {
 		item.Subtitle = ellipsis("Retrieving projects", c.env.Duration())
-	} else if len(results) > 0 {
-		projects = append(projects, projectItemsFromResults(results, "for "+c.parsed.User)...)
+		return
+	} else if len(res.Projects) == 0 {
+		item.Subtitle = "No projects found"
+		return
 	}
+
+	projects = append(projects, projectItemsFromProjects(res.Projects, "for "+c.parsed.User)...)
 	return
 }
 
 func (c *completion) retrieveRepoProjects(item *alfred.Item) (projects alfred.Items) {
-	results, err := c.oldRPCRequest("repo_projects:"+c.parsed.Repo(), delay)
+	res, err := c.rpcRequest("/projects", c.parsed.Repo(), delay)
 	if err != nil {
 		item.Subtitle = err.Error()
+		return
 	} else if c.retry {
 		item.Subtitle = ellipsis("Retrieving projects", c.env.Duration())
-	} else if len(results) > 0 {
-		projects = append(projects, projectItemsFromResults(results, "in "+c.parsed.Repo())...)
+		return
+	} else if len(res.Projects) == 0 {
+		item.Subtitle = "No projects found"
+		return
 	}
+	projects = append(projects, projectItemsFromProjects(res.Projects, "in "+c.parsed.Repo())...)
 	return
 }
 
@@ -906,6 +915,21 @@ func projectItemsFromResults(results []string, desc string) (items alfred.Items)
 		})
 	}
 	return
+}
+
+func projectItemsFromProjects(projects []rpc.Project, desc string) alfred.Items {
+	var items alfred.Items
+	for _, project := range projects {
+		// no UID so alfred doesn't remember these
+		items = append(items, alfred.Item{
+			Title:    project.Name,
+			Subtitle: fmt.Sprintf("Open project #%d %s", project.Number, desc),
+			Valid:    true,
+			Arg:      "open " + project.URL,
+			Icon:     projectStateIcon(project.State),
+		})
+	}
+	return items
 }
 
 func (c *completion) retrieveIssueSearchItems(item *alfred.Item, repo, query string, includeRepo bool) alfred.Items {
