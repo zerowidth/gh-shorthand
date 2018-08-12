@@ -160,9 +160,9 @@ func (c *completion) appendParsedItems() {
 			(c.parsed.HasIssue() || c.parsed.HasPath() || c.parsed.EmptyQuery()) {
 			item := openRepoItem(c.parsed)
 			if c.parsed.HasIssue() {
-				c.retrieveIssueTitle(&item)
+				c.retrieveIssue(&item)
 			} else {
-				c.retrieveRepoDescription(&item)
+				c.retrieveRepo(&item)
 			}
 			c.result.AppendItems(item)
 		}
@@ -713,9 +713,9 @@ func ellipsis(prefix string, duration time.Duration) string {
 	return prefix + strings.Repeat(".", int((duration.Nanoseconds()/250000000)%4))
 }
 
-// retrieveRepoDescription adds the repo description to the "open repo" item
+// retrieveRepo adds the repo description to the "open repo" item
 // using an RPC call.
-func (c *completion) retrieveRepoDescription(item *alfred.Item) {
+func (c *completion) retrieveRepo(item *alfred.Item) {
 	res, err := c.rpcRequest("/repo", c.parsed.Repo(), delay)
 	if err != nil {
 		item.Subtitle = err.Error()
@@ -733,8 +733,8 @@ func (c *completion) retrieveRepoDescription(item *alfred.Item) {
 	item.Subtitle = res.Repos[0].Description
 }
 
-// retrieveIssueTitle adds the title and state to an "open issue" item
-func (c *completion) retrieveIssueTitle(item *alfred.Item) {
+// retrieveIssue adds the title and state to an "open issue" item
+func (c *completion) retrieveIssue(item *alfred.Item) {
 	res, err := c.rpcRequest("/issue", c.parsed.Repo()+"#"+c.parsed.Issue(), delay)
 	if err != nil {
 		item.Subtitle = err.Error()
