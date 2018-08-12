@@ -804,23 +804,24 @@ func (c *completion) retrieveRepoDescription(item *alfred.Item) {
 	item.Subtitle = res.Repos[0].Description
 }
 
-// retrieveIssueTitle adds the title to the "open issue" item using an RPC call
+// retrieveIssueTitle adds the title and state to an "open issue" item
 func (c *completion) retrieveIssueTitle(item *alfred.Item) {
-	results, err := c.oldRPCRequest("issue:"+c.parsed.Repo()+"#"+c.parsed.Issue(), delay)
+	res, err := c.rpcRequest("/issue", c.parsed.Repo()+"#"+c.parsed.Issue(), delay)
 	if err != nil {
 		item.Subtitle = err.Error()
+		return
 	} else if c.retry {
 		item.Subtitle = ellipsis("Retrieving issue title", c.env.Duration())
-	} else if len(results) > 0 {
-		parts := strings.SplitN(results[0], ":", 3)
-		if len(parts) != 3 {
-			return
-		}
-		kind, state, title := parts[0], parts[1], parts[2]
-		item.Subtitle = item.Title
-		item.Title = title
-		item.Icon = issueStateIcon(kind, state)
+		return
+	} else if len(res.Issues) == 0 {
+		item.Subtitle = "rpc error: missing issue in result"
+		return
 	}
+
+	issue := res.Issues[0]
+	item.Subtitle = item.Title
+	item.Title = issue.Title
+	item.Icon = issueStateIcon(issue.Type, issue.State)
 }
 
 func (c *completion) retrieveRepoProjectName(item *alfred.Item) {
