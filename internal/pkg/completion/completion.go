@@ -150,17 +150,6 @@ func (c *completion) appendParsedItems() {
 	}
 
 	switch c.mode {
-	case "x": // test mode for new RPC
-		item := alfred.Item{
-			Title: fmt.Sprintf("x query test: %#v", c.input),
-			Valid: false,
-		}
-
-		if c.parsed.HasRepo() && len(c.parsed.Query) == 0 {
-			c.annotateQuery(&item)
-		}
-		c.result.AppendItems(item)
-
 	case "": // no input, show default items
 		c.result.AppendItems(
 			repoDefaultItem,
@@ -809,20 +798,6 @@ func (c *completion) retrieveRepoDescription(item *alfred.Item) {
 	}
 
 	item.Subtitle = res.Value
-}
-
-func (c *completion) annotateQuery(item *alfred.Item) {
-	res, err := c.rpcRequest("/", c.parsed.Repo(), delay)
-	if err != nil {
-		item.Subtitle = "rpc error: " + err.Error()
-		return
-	}
-	if !res.Complete {
-		item.Subtitle = ellipsis("RPC query", c.env.Duration())
-		return
-	}
-
-	item.Subtitle = fmt.Sprintf("rpc response: %s", res.Value)
 }
 
 // retrieveIssueTitle adds the title to the "open issue" item using an RPC call
