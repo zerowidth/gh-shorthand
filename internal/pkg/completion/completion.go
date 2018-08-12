@@ -185,7 +185,7 @@ func (c *completion) appendParsedItems() {
 		if c.parsed.HasRepo() {
 			if c.parsed.EmptyQuery() {
 				issuesItem := openIssuesItem(c.parsed)
-				matches := c.retrieveIssueList(&issuesItem)
+				matches := c.retrieveRecentIssues(&issuesItem)
 				c.result.AppendItems(issuesItem)
 				c.result.AppendItems(searchIssuesItem(c.parsed, fullInput))
 				c.result.AppendItems(matches...)
@@ -936,17 +936,21 @@ func (c *completion) retrieveIssueSearchItems(item *alfred.Item, repo, query str
 	if len(repo) > 0 {
 		query += "repo:" + repo + " "
 	}
-	return c.searchIssues(item, query, includeRepo)
+	return c.searchIssues(item, query, includeRepo, searchDelay)
 }
 
-func (c *completion) searchIssues(item *alfred.Item, query string, includeRepo bool) alfred.Items {
+func (c *completion) retrieveRecentIssues(item *alfred.Item) alfred.Items {
+	return c.searchIssues(item, "repo:"+c.parsed.Repo()+" sort:updated-desc", false, issueListDelay)
+}
+
+func (c *completion) searchIssues(item *alfred.Item, query string, includeRepo bool, delay float64) alfred.Items {
 	var items alfred.Items
 
 	if !item.Valid {
 		return items
 	}
 
-	res, err := c.rpcRequest("/issues", query, searchDelay)
+	res, err := c.rpcRequest("/issues", query, delay)
 	if err != nil {
 		item.Subtitle = err.Error()
 		return items
