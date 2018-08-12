@@ -199,7 +199,7 @@ func (c *completion) appendParsedItems() {
 			if c.parsed.HasRepo() {
 				item := repoProjectsItem(c.parsed)
 				if c.parsed.HasIssue() {
-					c.retrieveRepoProjectName(&item)
+					c.retrieveRepoProject(&item)
 					c.result.AppendItems(item)
 				} else {
 					projects := c.retrieveRepoProjects(&item)
@@ -209,7 +209,7 @@ func (c *completion) appendParsedItems() {
 			} else {
 				item := orgProjectsItem(c.parsed)
 				if c.parsed.HasIssue() {
-					c.retrieveOrgProjectName(&item)
+					c.retrieveOrgProject(&item)
 					c.result.AppendItems(item)
 				} else {
 					projects := c.retrieveOrgProjects(&item)
@@ -753,8 +753,16 @@ func (c *completion) retrieveIssueTitle(item *alfred.Item) {
 	item.Icon = issueStateIcon(issue.Type, issue.State)
 }
 
-func (c *completion) retrieveRepoProjectName(item *alfred.Item) {
-	res, err := c.rpcRequest("/project", c.parsed.Repo()+"/"+c.parsed.Issue(), delay)
+func (c *completion) retrieveRepoProject(item *alfred.Item) {
+	c.retrieveProject(item, c.parsed.Repo()+"/"+c.parsed.Issue())
+}
+
+func (c *completion) retrieveOrgProject(item *alfred.Item) {
+	c.retrieveProject(item, c.parsed.User+"/"+c.parsed.Issue())
+}
+
+func (c *completion) retrieveProject(item *alfred.Item, query string) {
+	res, err := c.rpcRequest("/project", query, delay)
 	if err != nil {
 		item.Subtitle = err.Error()
 		return
@@ -772,44 +780,16 @@ func (c *completion) retrieveRepoProjectName(item *alfred.Item) {
 	item.Icon = projectStateIcon(project.State)
 }
 
-func (c *completion) retrieveOrgProjectName(item *alfred.Item) {
-	res, err := c.rpcRequest("/project", c.parsed.User+"/"+c.parsed.Issue(), delay)
-	if err != nil {
-		item.Subtitle = err.Error()
-		return
-	} else if c.retry {
-		item.Subtitle = ellipsis("Retrieving project name", c.env.Duration())
-		return
-	} else if len(res.Projects) == 0 {
-		item.Subtitle = "rpc error: missing project in result"
-		return
-	}
-
-	project := res.Projects[0]
-	item.Subtitle = item.Title
-	item.Title = project.Name
-	item.Icon = projectStateIcon(project.State)
+func (c *completion) retrieveOrgProjects(item *alfred.Item) alfred.Items {
+	return c.retrieveProjects(item, c.parsed.User)
 }
 
-func (c *completion) retrieveOrgProjects(item *alfred.Item) (projects alfred.Items) {
-	res, err := c.rpcRequest("/projects", c.parsed.User, delay)
-	if err != nil {
-		item.Subtitle = err.Error()
-		return
-	} else if c.retry {
-		item.Subtitle = ellipsis("Retrieving projects", c.env.Duration())
-		return
-	} else if len(res.Projects) == 0 {
-		item.Subtitle = "No projects found"
-		return
-	}
-
-	projects = append(projects, projectItemsFromProjects(res.Projects, "for "+c.parsed.User)...)
-	return
+func (c *completion) retrieveRepoProjects(item *alfred.Item) alfred.Items {
+	return c.retrieveProjects(item, c.parsed.Repo())
 }
 
-func (c *completion) retrieveRepoProjects(item *alfred.Item) (projects alfred.Items) {
-	res, err := c.rpcRequest("/projects", c.parsed.Repo(), delay)
+func (c *completion) retrieveProjects(item *alfred.Item, query string) (projects alfred.Items) {
+	res, err := c.rpcRequest("/projects", query, delay)
 	if err != nil {
 		item.Subtitle = err.Error()
 		return
