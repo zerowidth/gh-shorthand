@@ -152,11 +152,11 @@ func (c *completion) appendParsedItems() {
 	switch c.mode {
 	case "x": // test mode for new RPC
 		item := alfred.Item{
-			Title: fmt.Sprintf("x query test: %#v", input),
+			Title: fmt.Sprintf("x query test: %#v", c.input),
 			Valid: false,
 		}
 
-		// c.retry = annotateQuery(input, &item, c.env.Duration(), c.cfg)
+		c.annotateQuery(&item)
 		c.result.AppendItems(item)
 
 	case "": // no input, show default items
@@ -781,33 +781,34 @@ func (c *completion) retrieveRepoDescription(item *alfred.Item) {
 	}
 }
 
-func annotateQuery(query string, item *alfred.Item, duration time.Duration, cfg config.Config) bool {
-	if len(query) == 0 {
-		return false
+func (c *completion) annotateQuery(item *alfred.Item) {
+	if !c.parsed.HasRepo() {
+		return
 	}
 
-	if duration.Seconds() < delay {
-		return true
+	if c.env.Duration().Seconds() < delay {
+		c.retry = true
+		return
 	}
 
-	res, err := rpc.Query(cfg, "/", query)
+	res, err := rpc.Query(c.cfg, "/", c.parsed.Repo())
 	if err != nil {
 		item.Subtitle = err.Error()
-		return false
+		return
 	}
 
-	if res.Complete {
-		if len(res.Error) > 0 {
-			item.Subtitle = fmt.Sprintf("rpc error: %s", res.Error)
-		} else {
-			item.Subtitle = fmt.Sprintf("rpc response: %s", res.Value)
-		}
-
-		return false
+	if !res.Complete {
+		item.Subtitle = ellipsis("RPC query", c.env.Duration())
+		c.retry = true
+		return
 	}
 
-	item.Subtitle = ellipsis("RPC query", duration)
-	return true
+	if len(res.Error) > 0 {
+		item.Subtitle = fmt.Sprintf("rpc error: %s", res.Error)
+	} else {
+		item.Subtitle = fmt.Sprintf("rpc response: %s", res.Value)
+	}
+
 }
 
 // retrieveIssueTitle adds the title to the "open issue" item using an RPC call
