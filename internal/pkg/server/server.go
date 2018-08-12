@@ -22,6 +22,10 @@ func Run(cfg config.Config) {
 		log.Fatalf("no socket_path configured in %s", config.Filename)
 	}
 
+	if len(cfg.APIToken) == 0 {
+		log.Fatalf("no api_token configured in %s", config.Filename)
+	}
+
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 
@@ -48,7 +52,9 @@ func Run(cfg config.Config) {
 	go func() {
 		log.Printf("server started on %s\n", cfg.SocketPath)
 		if err := server.Serve(sock); err != nil {
-			log.Fatal("server error", err)
+			if err != http.ErrServerClosed {
+				log.Fatal("server error", err)
+			}
 		}
 	}()
 

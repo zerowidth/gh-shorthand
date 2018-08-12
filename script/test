@@ -9,4 +9,4 @@ if [ $# -gt 0 ]; then
   fi
 fi
 
-make test TESTSUITE="$suite"
+make -s build test TESTSUITE="$suite"

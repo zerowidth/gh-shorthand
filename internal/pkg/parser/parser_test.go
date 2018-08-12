@@ -3,6 +3,8 @@ package parser
 import (
 	"fmt"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 var repoMap = map[string]string{
@@ -19,7 +21,9 @@ type testCase struct {
 	bare          bool   // allow bare user
 	ignoreNumeric bool   // whether or not to ignore numeric bare usernames
 	repo          string // the expected repo match or expansion
-	owner         string // the expected user match or expansion
+	user          string // the expected user match or expansion
+	hasRepo       bool   // should the parser have matched a repo?
+	hasUser       bool   // should the parser have matched as a user?
 	repoMatch     string // the matched repo shorthand
 	userMatch     string // the matched user shorthand
 	issue         string // the expected issue match
@@ -28,12 +32,14 @@ type testCase struct {
 }
 
 func (tc *testCase) assert(t *testing.T) {
+	t.Parallel()
 	result := Parse(repoMap, userMap, tc.input, tc.bare, tc.ignoreNumeric)
+
 	if result.Repo() != tc.repo {
 		t.Errorf("expected Repo %#v, got %#v", tc.repo, result.Repo())
 	}
-	if len(tc.owner) > 0 && result.Owner != tc.owner {
-		t.Errorf("expected Owner %#v, got %#v", tc.owner, result.Owner)
+	if len(tc.user) > 0 && result.User != tc.user {
+		t.Errorf("expected Owner %#v, got %#v", tc.user, result.User)
 	}
 	if result.RepoMatch != tc.repoMatch {
 		t.Errorf("expected RepoMatch %#v, got %#v", tc.repoMatch, result.RepoMatch)
@@ -108,7 +114,7 @@ func TestParse(t *testing.T) {
 			repoMatch: "df2",
 			query:     "34",
 		},
-		"fully qualified repo": {
+		"fully qualified repo and issue": {
 			input:     "foo/bar 123",
 			repo:      "foo/bar",
 			issue:     "123",
@@ -122,7 +128,7 @@ func TestParse(t *testing.T) {
 			repoMatch: "df",
 			query:     "0123",
 		},
-		"retrieve query after expansion": {
+		"matches query after repo expansion": {
 			input:     "df foo",
 			repo:      "zerowidth/dotfiles",
 			repoMatch: "df",
@@ -172,27 +178,25 @@ func TestParse(t *testing.T) {
 			input: "123 /foo",
 			query: "123 /foo",
 		},
-		"parses repo, not path": {
+		"parses as repo, not path": {
 			input: "foo/bar",
 			repo:  "foo/bar",
 		},
-		"expands user": {
+		"expands user with empty repo name": {
 			input:     "zw/",
-			owner:     "zerowidth",
+			user:      "zerowidth",
 			userMatch: "zw",
-			path:      "/",
-			query:     "/",
 		},
 		"expands user in repo declaration": {
 			input:     "zw/foo",
-			owner:     "zerowidth",
+			user:      "zerowidth",
 			repo:      "zerowidth/foo",
 			userMatch: "zw",
 		},
-		"does not match non-shorthand user": {
+		"matches non-shorthand user with empty repo": {
 			input: "foo/",
-			owner: "",
-			query: "foo/",
+			user:  "foo",
+			query: "",
 		},
 		"strips whitespace from query": {
 			input: " x    ",
@@ -200,42 +204,40 @@ func TestParse(t *testing.T) {
 		},
 		"requires exact match for repo shorthand expansion": {
 			input: "dfx/foo",
-			owner: "dfx",
+			user:  "dfx",
 			repo:  "dfx/foo",
 		},
 		"requires exact match for user shorthand expansion": {
 			input: "zwx/foo",
-			owner: "zwx",
+			user:  "zwx",
 			repo:  "zwx/foo",
 		},
 		"matches bare user when allowed": {
 			input: "foo",
 			bare:  true,
-			owner: "foo",
+			user:  "foo",
 		},
 		"matches bare user and leaves the remainder as a query": {
 			input: "foo bar",
 			bare:  true,
-			owner: "foo",
+			user:  "foo",
 			query: "bar",
 		},
 		"allows trailing separator on bare user": {
 			input: "foo/",
 			bare:  true,
-			owner: "foo",
-			path:  "/",
-			query: "/",
+			user:  "foo",
 		},
 		"expands bare user shorthand": {
 			input:     "zw",
 			bare:      true,
-			owner:     "zerowidth",
+			user:      "zerowidth",
 			userMatch: "zw",
 		},
 		"expands bare user with query": {
 			input:     "zw foo",
 			bare:      true,
-			owner:     "zerowidth",
+			user:      "zerowidth",
 			userMatch: "zw",
 			query:     "foo",
 		},
@@ -243,7 +245,7 @@ func TestParse(t *testing.T) {
 			input:         "1234",
 			bare:          true,
 			ignoreNumeric: true,
-			owner:         "",
+			user:          "",
 			issue:         "1234",
 			query:         "1234",
 		},
@@ -254,19 +256,8 @@ func TestParse(t *testing.T) {
 }
 
 func TestSetRepo(t *testing.T) {
+	t.Parallel()
 	result := &Result{}
-
-	err := result.SetRepo("foo")
-	if err == nil {
-		t.Errorf("Expected error when setting invalid repo")
-	}
-
-	err = result.SetRepo("foo/bar")
-	if err != nil {
-		t.Errorf("Expected no error")
-	}
-	if result.Repo() != "foo/bar" {
-		t.Errorf("Expected result repo to be foo/bar, got %q:\n%+v", result.Repo(), result)
-	}
-
+	result.SetRepo("foo/bar")
+	assert.Equal(t, "foo/bar", result.Repo())
 }

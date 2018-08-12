@@ -60,27 +60,24 @@ type completeTestCase struct {
 }
 
 func (tc *completeTestCase) testItem(t *testing.T) {
-	if tc.cfg == nil {
-		tc.cfg = defaultCfg
+	t.Parallel()
+	cfg := tc.cfg
+	if cfg == nil {
+		cfg = defaultCfg
 	}
 
-	c := completion{
-		env: Environment{
-			Query: tc.input,
-			Start: time.Now(),
-		},
-		cfg:    *tc.cfg,
-		result: alfred.NewFilterResult(),
+	env := Environment{
+		Query: tc.input,
+		Start: time.Now(),
 	}
 
-	c.appendParsedItems()
-
-	validateItems(t, c.result.Items)
+	result := Complete(*cfg, env)
+	validateItems(t, result.Items)
 
 	if len(tc.exclude) > 0 {
-		_, ok := findMatchingItem(tc.exclude, tc.exclude, c.result.Items)
+		_, ok := findMatchingItem(tc.exclude, tc.exclude, result.Items)
 		if ok {
-			t.Errorf("%s\nexpected no item with UID or Title %q", c.result.Items, tc.exclude)
+			t.Errorf("%s\nexpected no item with UID or Title %q", result.Items, tc.exclude)
 		}
 		return
 	}
@@ -89,9 +86,9 @@ func (tc *completeTestCase) testItem(t *testing.T) {
 		t.Skip("skipping, uid/title/exclude not specified")
 	}
 
-	item, ok := findMatchingItem(tc.uid, tc.title, c.result.Items)
+	item, ok := findMatchingItem(tc.uid, tc.title, result.Items)
 	if !ok {
-		t.Errorf("expected item with uid %q and/or title %q in %s", tc.uid, tc.title, c.result.Items)
+		t.Errorf("expected item with uid %q and/or title %q in %s", tc.uid, tc.title, result.Items)
 	}
 	if len(tc.uid) > 0 && item.UID != tc.uid {
 		t.Errorf("%+v\nexpected UID %q to be %q", item, item.UID, tc.uid)
@@ -702,7 +699,7 @@ func TestCompleteItems(t *testing.T) {
 			exclude: "ghe:../../../test/fixtures/projects/project-bar",
 		},
 	} {
-		t.Run(fmt.Sprintf("appendParsedItems(%#v): %s", tc.input, desc), tc.testItem)
+		t.Run(fmt.Sprintf("Complete(%#v): %s", tc.input, desc), tc.testItem)
 	}
 }
 
@@ -752,16 +749,9 @@ func findMatchingItem(uid, title string, items alfred.Items) (alfred.Item, bool)
 }
 
 func TestFinalizeResult(t *testing.T) {
-	result := alfred.NewFilterResult()
-	result.AppendItems(
-		alfred.Item{Title: "bother, invalid", Valid: false},
-		alfred.Item{Title: "valid", Valid: true},
-		alfred.Item{Title: "also valid", Valid: true},
-		alfred.Item{Title: "an invalid item", Valid: false},
-	)
-
+	t.Parallel()
 	c := completion{
-		result: result,
+		result: alfred.NewFilterResult(),
 	}
 	c.finalizeResult()
 
@@ -770,9 +760,7 @@ func TestFinalizeResult(t *testing.T) {
 		t.Errorf("expected result %#v to not have a Rerun value", c.result)
 	}
 
-	result = alfred.NewFilterResult()
-	result.SetVariable("foo", "bar")
-	c.result = result
+	c.retry = true
 	c.finalizeResult()
 	if c.result.Rerun != rerunAfter {
 		t.Errorf("expected result %#v to have Rerun of %f", c.result, rerunAfter)
@@ -780,6 +768,7 @@ func TestFinalizeResult(t *testing.T) {
 }
 
 func TestFindProjectDirs(t *testing.T) {
+	t.Parallel()
 	fixturePath, _ := filepath.Abs("../../../test/fixtures/projects")
 	dirList, err := findProjectDirs(fixturePath)
 	dirs := make(map[string]struct{}, len(dirList))
