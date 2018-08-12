@@ -42,6 +42,8 @@ func NewHandler(cfg config.Config) *Handler {
 func (h *Handler) Mount(mux *chi.Mux) {
 	mux.Get("/repo", h.rpcHandler(h.github.GetRepo))
 	mux.Get("/issue", h.rpcHandler(h.github.GetIssue))
+	mux.Get("/issues", h.rpcHandler(h.github.GetIssues))
+	mux.Get("/project", h.rpcHandler(h.github.GetProject))
 }
 
 // rpcHandler creates an http handler func to wrap a GitHub API call with

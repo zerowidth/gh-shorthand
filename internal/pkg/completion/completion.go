@@ -825,42 +825,42 @@ func (c *completion) retrieveIssueTitle(item *alfred.Item) {
 }
 
 func (c *completion) retrieveRepoProjectName(item *alfred.Item) {
-	results, err := c.oldRPCRequest("repo_project:"+c.parsed.Repo()+"/"+c.parsed.Issue(), delay)
+	res, err := c.rpcRequest("/project", c.parsed.Repo()+"/"+c.parsed.Issue(), delay)
 	if err != nil {
 		item.Subtitle = err.Error()
+		return
 	} else if c.retry {
 		item.Subtitle = ellipsis("Retrieving project name", c.env.Duration())
-	} else if len(results) > 0 {
-		parts := strings.SplitN(results[0], ":", 2)
-		if len(parts) != 2 {
-			return
-		}
-		state, name := parts[0], parts[1]
-		item.Subtitle = item.Title
-		item.Title = name
-		item.Icon = projectStateIcon(state)
+		return
+	} else if len(res.Projects) == 0 {
+		item.Subtitle = "rpc error: missing project in result"
+		return
 	}
 
+	project := res.Projects[0]
+	item.Subtitle = item.Title
+	item.Title = project.Name
+	item.Icon = projectStateIcon(project.State)
 	return
 }
 
 func (c *completion) retrieveOrgProjectName(item *alfred.Item) {
-	results, err := c.oldRPCRequest("org_project:"+c.parsed.User+"/"+c.parsed.Issue(), delay)
+	res, err := c.rpcRequest("/project", c.parsed.User+"/"+c.parsed.Issue(), delay)
 	if err != nil {
 		item.Subtitle = err.Error()
+		return
 	} else if c.retry {
 		item.Subtitle = ellipsis("Retrieving project name", c.env.Duration())
-	} else if len(results) > 0 {
-		parts := strings.SplitN(results[0], ":", 2)
-		if len(parts) != 2 {
-			return
-		}
-		state, name := parts[0], parts[1]
-		item.Subtitle = item.Title
-		item.Title = name
-		item.Icon = projectStateIcon(state)
+		return
+	} else if len(res.Projects) == 0 {
+		item.Subtitle = "rpc error: missing project in result"
+		return
 	}
 
+	project := res.Projects[0]
+	item.Subtitle = item.Title
+	item.Title = project.Name
+	item.Icon = projectStateIcon(project.State)
 	return
 }
 
@@ -908,26 +908,34 @@ func projectItemsFromResults(results []string, desc string) (items alfred.Items)
 	return
 }
 
-func (c *completion) retrieveIssueSearchItems(item *alfred.Item, repo, query string, includeRepo bool) (matches alfred.Items) {
+func (c *completion) retrieveIssueSearchItems(item *alfred.Item, repo, query string, includeRepo bool) alfred.Items {
+	if len(repo) > 0 {
+		query += "repo:" + repo + " "
+	}
+	return c.searchIssues(item, query, includeRepo)
+}
+
+func (c *completion) searchIssues(item *alfred.Item, query string, includeRepo bool) alfred.Items {
+	var items alfred.Items
+
 	if !item.Valid {
-		return
+		return items
 	}
 
-	rpcQuery := "issuesearch:"
-	if len(repo) > 0 {
-		rpcQuery += "repo:" + repo + " "
-	}
-	rpcQuery += query
-	results, err := c.oldRPCRequest(rpcQuery, searchDelay)
+	res, err := c.rpcRequest("/issues", query, searchDelay)
 	if err != nil {
 		item.Subtitle = err.Error()
+		return items
 	} else if c.retry {
 		item.Subtitle = ellipsis("Searching issues", c.env.Duration())
-	} else if len(results) > 0 {
-		matches = append(matches, issueItemsFromResults(results, includeRepo)...)
+		return items
+	} else if len(res.Issues) == 0 {
+		item.Subtitle = "No issues found"
+		return items
 	}
 
-	return
+	items = append(items, issueItemsFromIssues(res.Issues, includeRepo)...)
+	return items
 }
 
 func (c *completion) retrieveIssueList(item *alfred.Item) (matches alfred.Items) {
@@ -940,6 +948,35 @@ func (c *completion) retrieveIssueList(item *alfred.Item) (matches alfred.Items)
 		matches = append(matches, issueItemsFromResults(results, false)...)
 	}
 	return
+}
+
+func issueItemsFromIssues(issues []rpc.Issue, includeRepo bool) alfred.Items {
+	var items alfred.Items
+
+	for _, issue := range issues {
+		itemTitle := fmt.Sprintf("#%s %s", issue.Number, issue.Title)
+		if includeRepo {
+			itemTitle = issue.Repo + itemTitle
+		}
+		arg := ""
+		if issue.Type == "Issue" {
+			arg = "open https://github.com/" + issue.Repo + "/issues/" + issue.Number
+		} else {
+			arg = "open https://github.com/" + issue.Repo + "/pull/" + issue.Number
+		}
+
+		// no UID so alfred doesn't remember these
+		items = append(items, alfred.Item{
+			Title:    itemTitle,
+			Subtitle: fmt.Sprintf("Open %s#%s", issue.Repo, issue.Number),
+			Valid:    true,
+			Arg:      arg,
+			Icon:     issueStateIcon(issue.Type, issue.State),
+			Mods:     issueMods(issue.Repo, issue.Number),
+		})
+	}
+
+	return items
 }
 
 func issueItemsFromResults(results []string, includeRepo bool) (matches alfred.Items) {
