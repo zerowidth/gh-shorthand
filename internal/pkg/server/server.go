@@ -52,7 +52,9 @@ func Run(cfg config.Config) {
 	go func() {
 		log.Printf("server started on %s\n", cfg.SocketPath)
 		if err := server.Serve(sock); err != nil {
-			log.Fatal("server error", err)
+			if err != http.ErrServerClosed {
+				log.Fatal("server error", err)
+			}
 		}
 	}()
 
