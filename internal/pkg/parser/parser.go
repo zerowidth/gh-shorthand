@@ -22,7 +22,7 @@ func (r *Result) HasOwner() bool {
 // HasRepo checks if the result has a fully qualified repo, either from a
 // matched repo shorthand, or from an explicit owner/name.
 func (r *Result) HasRepo() bool {
-	return len(r.Name) > 0
+	return len(r.User) > 0 && len(r.Name) > 0
 }
 
 // Repo returns the repo defined in the result, either from a matched repo

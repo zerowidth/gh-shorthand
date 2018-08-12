@@ -156,7 +156,9 @@ func (c *completion) appendParsedItems() {
 			Valid: false,
 		}
 
-		c.annotateQuery(&item)
+		if c.parsed.HasRepo() && len(c.parsed.Query) == 0 {
+			c.annotateQuery(&item)
+		}
 		c.result.AppendItems(item)
 
 	case "": // no input, show default items
@@ -699,13 +701,38 @@ func findProjectDirs(root string) (dirs []string, err error) {
 	return dirs, nil
 }
 
+func (c *completion) rpcRequest(path, query string, delay float64) (rpc.Result, error) {
+	var result rpc.Result
+
+	if len(c.cfg.SocketPath) == 0 {
+		return result, nil // RPC isn't enabled, don't worry about it
+	}
+	if c.env.Duration().Seconds() < delay {
+		c.retry = true
+		return result, nil
+	}
+
+	res, err := rpc.Query(c.cfg, path, query)
+
+	if err == nil && !res.Complete {
+		c.retry = true
+	}
+
+	// wrap result errors as real errors, for simpler handling by the caller
+	if len(res.Error) > 0 {
+		return res, fmt.Errorf(res.Error)
+	}
+
+	return res, err
+}
+
 // Issue the given query string to the RPC backend.
 //
 // If RPC is not configured, the results will be empty.
 //
 // If the RPC request should be repeated (either not enough time has passed, or
 // the remote request is still pending) c.retry is set to true.
-func (c *completion) rpcRequest(query string, delay float64) (results []string, err error) {
+func (c *completion) oldRPCRequest(query string, delay float64) (results []string, err error) {
 	if len(c.cfg.SocketPath) == 0 {
 		return results, nil // RPC isn't enabled, don't worry about it
 	}
@@ -771,7 +798,7 @@ func ellipsis(prefix string, duration time.Duration) string {
 // retrieveRepoDescription adds the repo description to the "open repo" item
 // using an RPC call.
 func (c *completion) retrieveRepoDescription(item *alfred.Item) {
-	results, err := c.rpcRequest("repo:"+c.parsed.Repo(), delay)
+	results, err := c.oldRPCRequest("repo:"+c.parsed.Repo(), delay)
 	if err != nil {
 		item.Subtitle = err.Error()
 	} else if c.retry {
@@ -782,38 +809,22 @@ func (c *completion) retrieveRepoDescription(item *alfred.Item) {
 }
 
 func (c *completion) annotateQuery(item *alfred.Item) {
-	if !c.parsed.HasRepo() {
-		return
-	}
-
-	if c.env.Duration().Seconds() < delay {
-		c.retry = true
-		return
-	}
-
-	res, err := rpc.Query(c.cfg, "/", c.parsed.Repo())
+	res, err := c.rpcRequest("/", c.parsed.Repo(), delay)
 	if err != nil {
-		item.Subtitle = err.Error()
+		item.Subtitle = "rpc error: " + err.Error()
 		return
 	}
-
 	if !res.Complete {
 		item.Subtitle = ellipsis("RPC query", c.env.Duration())
-		c.retry = true
 		return
 	}
 
-	if len(res.Error) > 0 {
-		item.Subtitle = fmt.Sprintf("rpc error: %s", res.Error)
-	} else {
-		item.Subtitle = fmt.Sprintf("rpc response: %s", res.Value)
-	}
-
+	item.Subtitle = fmt.Sprintf("rpc response: %s", res.Value)
 }
 
 // retrieveIssueTitle adds the title to the "open issue" item using an RPC call
 func (c *completion) retrieveIssueTitle(item *alfred.Item) {
-	results, err := c.rpcRequest("issue:"+c.parsed.Repo()+"#"+c.parsed.Issue(), delay)
+	results, err := c.oldRPCRequest("issue:"+c.parsed.Repo()+"#"+c.parsed.Issue(), delay)
 	if err != nil {
 		item.Subtitle = err.Error()
 	} else if c.retry {
@@ -831,7 +842,7 @@ func (c *completion) retrieveIssueTitle(item *alfred.Item) {
 }
 
 func (c *completion) retrieveRepoProjectName(item *alfred.Item) {
-	results, err := c.rpcRequest("repo_project:"+c.parsed.Repo()+"/"+c.parsed.Issue(), delay)
+	results, err := c.oldRPCRequest("repo_project:"+c.parsed.Repo()+"/"+c.parsed.Issue(), delay)
 	if err != nil {
 		item.Subtitle = err.Error()
 	} else if c.retry {
@@ -851,7 +862,7 @@ func (c *completion) retrieveRepoProjectName(item *alfred.Item) {
 }
 
 func (c *completion) retrieveOrgProjectName(item *alfred.Item) {
-	results, err := c.rpcRequest("org_project:"+c.parsed.User+"/"+c.parsed.Issue(), delay)
+	results, err := c.oldRPCRequest("org_project:"+c.parsed.User+"/"+c.parsed.Issue(), delay)
 	if err != nil {
 		item.Subtitle = err.Error()
 	} else if c.retry {
@@ -871,7 +882,7 @@ func (c *completion) retrieveOrgProjectName(item *alfred.Item) {
 }
 
 func (c *completion) retrieveOrgProjects(item *alfred.Item) (projects alfred.Items) {
-	results, err := c.rpcRequest("org_projects:"+c.parsed.User, delay)
+	results, err := c.oldRPCRequest("org_projects:"+c.parsed.User, delay)
 	if err != nil {
 		item.Subtitle = err.Error()
 	} else if c.retry {
@@ -883,7 +894,7 @@ func (c *completion) retrieveOrgProjects(item *alfred.Item) (projects alfred.Ite
 }
 
 func (c *completion) retrieveRepoProjects(item *alfred.Item) (projects alfred.Items) {
-	results, err := c.rpcRequest("repo_projects:"+c.parsed.Repo(), delay)
+	results, err := c.oldRPCRequest("repo_projects:"+c.parsed.Repo(), delay)
 	if err != nil {
 		item.Subtitle = err.Error()
 	} else if c.retry {
@@ -924,7 +935,7 @@ func (c *completion) retrieveIssueSearchItems(item *alfred.Item, repo, query str
 		rpcQuery += "repo:" + repo + " "
 	}
 	rpcQuery += query
-	results, err := c.rpcRequest(rpcQuery, searchDelay)
+	results, err := c.oldRPCRequest(rpcQuery, searchDelay)
 	if err != nil {
 		item.Subtitle = err.Error()
 	} else if c.retry {
@@ -937,7 +948,7 @@ func (c *completion) retrieveIssueSearchItems(item *alfred.Item, repo, query str
 }
 
 func (c *completion) retrieveIssueList(item *alfred.Item) (matches alfred.Items) {
-	results, err := c.rpcRequest("issuesearch:repo:"+c.parsed.Repo()+" sort:updated-desc", issueListDelay)
+	results, err := c.oldRPCRequest("issuesearch:repo:"+c.parsed.Repo()+" sort:updated-desc", issueListDelay)
 	if err != nil {
 		item.Subtitle = err.Error()
 	} else if c.retry {
