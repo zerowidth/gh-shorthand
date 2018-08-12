@@ -1,10 +1,8 @@
 package completion
 
 import (
-	"bufio"
 	"fmt"
 	"io/ioutil"
-	"net"
 	"net/url"
 	"os"
 	"path"
@@ -13,7 +11,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pkg/errors"
 	"github.com/sahilm/fuzzy"
 	"github.com/zerowidth/gh-shorthand/internal/pkg/config"
 	"github.com/zerowidth/gh-shorthand/internal/pkg/parser"
@@ -32,9 +29,6 @@ const (
 	searchDelay = 0.5
 	// how long to wait before listing recent issues in a repo
 	issueListDelay = 1.0
-
-	// how long to wait before giving up on the backend
-	socketTimeout = 100 * time.Millisecond
 )
 
 type projectMode int
@@ -715,71 +709,6 @@ func (c *completion) rpcRequest(path, query string, delay float64) (rpc.Result, 
 	return res, err
 }
 
-// Issue the given query string to the RPC backend.
-//
-// If RPC is not configured, the results will be empty.
-//
-// If the RPC request should be repeated (either not enough time has passed, or
-// the remote request is still pending) c.retry is set to true.
-func (c *completion) oldRPCRequest(query string, delay float64) (results []string, err error) {
-	if len(c.cfg.SocketPath) == 0 {
-		return results, nil // RPC isn't enabled, don't worry about it
-	}
-	if c.env.Duration().Seconds() < delay {
-		c.retry = true
-		return
-	}
-	sock, err := net.Dial("unix", c.cfg.SocketPath)
-	if err != nil {
-		return results, err
-	}
-	defer sock.Close()
-	if err := sock.SetDeadline(time.Now().Add(socketTimeout)); err != nil {
-		return results, err
-	}
-
-	// write query to socket:
-	if _, err := sock.Write([]byte(query + "\n")); err != nil {
-		return results, err
-	}
-
-	// read results:
-	scanner := bufio.NewScanner(sock)
-	if scanner.Scan() {
-		status := scanner.Text()
-		switch status {
-		case "OK":
-			for scanner.Scan() {
-				results = append(results, scanner.Text())
-			}
-			return results, nil
-		case "PENDING":
-			c.retry = true
-			return results, nil
-		case "ERROR":
-			for scanner.Scan() {
-				results = append(results, scanner.Text())
-			}
-			if len(results) > 0 {
-				err = errors.New(results[0])
-			} else {
-				err = errors.New("unknown RPC error")
-			}
-			return results, err
-		default:
-			if err := scanner.Err(); err != nil {
-				return results, errors.Wrap(err, "Could not read RPC response")
-			}
-			return results, errors.Wrap(err, "Unexpected RPC response status")
-		}
-	} else {
-		if err := scanner.Err(); err != nil {
-			return results, errors.Wrap(err, "Could not read RPC response")
-		}
-		return results, errors.Wrap(err, "No response from RPC backend")
-	}
-}
-
 func ellipsis(prefix string, duration time.Duration) string {
 	return prefix + strings.Repeat(".", int((duration.Nanoseconds()/250000000)%4))
 }
@@ -841,7 +770,6 @@ func (c *completion) retrieveRepoProjectName(item *alfred.Item) {
 	item.Subtitle = item.Title
 	item.Title = project.Name
 	item.Icon = projectStateIcon(project.State)
-	return
 }
 
 func (c *completion) retrieveOrgProjectName(item *alfred.Item) {
@@ -861,7 +789,6 @@ func (c *completion) retrieveOrgProjectName(item *alfred.Item) {
 	item.Subtitle = item.Title
 	item.Title = project.Name
 	item.Icon = projectStateIcon(project.State)
-	return
 }
 
 func (c *completion) retrieveOrgProjects(item *alfred.Item) (projects alfred.Items) {
@@ -894,26 +821,6 @@ func (c *completion) retrieveRepoProjects(item *alfred.Item) (projects alfred.It
 		return
 	}
 	projects = append(projects, projectItemsFromProjects(res.Projects, "in "+c.parsed.Repo())...)
-	return
-}
-
-func projectItemsFromResults(results []string, desc string) (items alfred.Items) {
-	for _, result := range results {
-		parts := strings.SplitN(result, "#", 4)
-		if len(parts) != 4 {
-			continue
-		}
-		number, state, url, name := parts[0], parts[1], parts[2], parts[3]
-
-		// no UID so alfred doesn't remember these
-		items = append(items, alfred.Item{
-			Title:    name,
-			Subtitle: fmt.Sprintf("Open project #%s %s", number, desc),
-			Valid:    true,
-			Arg:      "open " + url,
-			Icon:     projectStateIcon(state),
-		})
-	}
 	return
 }
 
@@ -966,18 +873,6 @@ func (c *completion) searchIssues(item *alfred.Item, query string, includeRepo b
 	return items
 }
 
-func (c *completion) retrieveIssueList(item *alfred.Item) (matches alfred.Items) {
-	results, err := c.oldRPCRequest("issuesearch:repo:"+c.parsed.Repo()+" sort:updated-desc", issueListDelay)
-	if err != nil {
-		item.Subtitle = err.Error()
-	} else if c.retry {
-		item.Subtitle = ellipsis("Retrieving recent issues", c.env.Duration())
-	} else if len(results) > 0 {
-		matches = append(matches, issueItemsFromResults(results, false)...)
-	}
-	return
-}
-
 func issueItemsFromIssues(issues []rpc.Issue, includeRepo bool) alfred.Items {
 	var items alfred.Items
 
@@ -1005,37 +900,6 @@ func issueItemsFromIssues(issues []rpc.Issue, includeRepo bool) alfred.Items {
 	}
 
 	return items
-}
-
-func issueItemsFromResults(results []string, includeRepo bool) (matches alfred.Items) {
-	for _, result := range results {
-		parts := strings.SplitN(result, ":", 5)
-		if len(parts) != 5 {
-			continue
-		}
-		repo, number, kind, state, title := parts[0], parts[1], parts[2], parts[3], parts[4]
-		itemTitle := fmt.Sprintf("#%s %s", number, title)
-		if includeRepo {
-			itemTitle = repo + itemTitle
-		}
-		arg := ""
-		if kind == "Issue" {
-			arg = "open https://github.com/" + repo + "/issues/" + number
-		} else {
-			arg = "open https://github.com/" + repo + "/pull/" + number
-		}
-
-		// no UID so alfred doesn't remember these
-		matches = append(matches, alfred.Item{
-			Title:    itemTitle,
-			Subtitle: fmt.Sprintf("Open %s#%s", repo, number),
-			Valid:    true,
-			Arg:      arg,
-			Icon:     issueStateIcon(kind, state),
-			Mods:     issueMods(repo, number),
-		})
-	}
-	return
 }
 
 func repoMods(repo string) *alfred.Mods {
