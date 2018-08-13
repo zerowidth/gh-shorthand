@@ -38,6 +38,22 @@
 
 [[projects]]
   branch = "master"
+  digest = "1:263f9b0a0bcbfff9d5e7d9f2aa11f53995d98214fe0fb97e429e7a5f4534a0f9"
+  name = "github.com/kardianos/osext"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "ae77be60afb1dcacde03767a8c37337fad28ac14"
+
+[[projects]]
+  branch = "master"
+  digest = "1:320c5a199bdfddb72c3c53786f16734279ea73fd3fccad51a753728413189cbf"
+  name = "github.com/kardianos/service"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "615a14ed75099c9eaac6949e22ac2341bf9d3197"
+
+[[projects]]
+  branch = "master"
   digest = "1:b62c4f18ad6eb454ac5253e7791ded3d7867330015ca4b37b6336e57f514585e"
   name = "github.com/mitchellh/go-homedir"
   packages = ["."]
@@ -151,6 +167,20 @@
   revision = "3d292e4d0cdc3a0113e6d207bb137145ef1de42f"
 
 [[projects]]
+  branch = "master"
+  digest = "1:7d7bdf7eb4458522556aaf4a9b535eed3de0b19118ab928330d0c685df006fdf"
+  name = "golang.org/x/sys"
+  packages = [
+    "windows",
+    "windows/registry",
+    "windows/svc",
+    "windows/svc/eventlog",
+    "windows/svc/mgr",
+  ]
+  pruneopts = "NUT"
+  revision = "98c5dad5d1a0e8a73845ecc8897d0bd56586511d"
+
+[[projects]]
   digest = "1:af71cb57ffcbc389c2f8af1e6a763c0d2e6f08d2ceb64140c0fd4c57fdbc2898"
   name = "google.golang.org/appengine"
   packages = [
@@ -180,6 +210,7 @@
   input-imports = [
     "github.com/go-chi/chi",
     "github.com/go-chi/chi/middleware",
+    "github.com/kardianos/service",
     "github.com/mitchellh/go-homedir",
     "github.com/patrickmn/go-cache",
     "github.com/pkg/errors",
