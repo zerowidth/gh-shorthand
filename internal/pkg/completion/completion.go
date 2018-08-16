@@ -823,7 +823,7 @@ func projectItemsFromProjects(projects []rpc.Project, desc string) alfred.Items 
 
 func (c *completion) retrieveIssueSearchItems(item *alfred.Item, repo, query string, includeRepo bool) alfred.Items {
 	if len(repo) > 0 {
-		query += "repo:" + repo + " "
+		query += " repo:" + repo + " "
 	}
 	return c.searchIssues(item, query, includeRepo, searchDelay)
 }
