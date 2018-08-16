@@ -27,7 +27,7 @@ var completeCommand = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		input := strings.Join(args, " ")
 
-		cfg, cfgErr := config.LoadFromFile(config.Filename)
+		cfg, cfgErr := config.LoadFromDefault()
 		env := completion.LoadAlfredEnvironment(input)
 		result := completion.Complete(cfg, env)
 
@@ -42,10 +42,31 @@ var completeCommand = &cobra.Command{
 	},
 }
 
+var markdownDescription bool
 var markdownCommand = &cobra.Command{
-	Use: "markdown-link",
+	Use:   "markdown-link",
+	Short: "Generate a markdown link from the given input",
+	Long: `Generates a markdown link for an issue or PR.
+
+For example:
+
+	github.com/zerowidth/gh-shorthand/issues/1
+
+will generate a markdown link:
+
+	[zerowidth/gh-shorthand#1](...)
+
+If --description is set and RPC is configured, the markdown link will include a
+description from the issue or PR's title.
+`,
+	Aliases: []string{"ml"},
 	Run: func(cmd *cobra.Command, args []string) {
-		link := snippets.MarkdownLink(strings.Join(args, " "))
+		cfg, err := config.LoadFromDefault()
+		input := strings.Join(args, " ")
+		if err != nil {
+			fmt.Fprintf(os.Stdout, "%s (error: %s)", input, err.Error())
+		}
+		link := snippets.MarkdownLink(cfg, input, markdownDescription)
 		fmt.Fprintf(os.Stdout, link)
 	},
 }
@@ -67,7 +88,7 @@ var serverRun = &cobra.Command{
 	Use:   "run",
 	Short: "Run a gh-shorthand server in the foreground",
 	Run: func(cmd *cobra.Command, args []string) {
-		cfg := config.LoadFromDefault()
+		cfg := config.MustLoadFromDefault()
 		svc := server.Service(cfg)
 		err := svc.Run()
 		if err != nil {
@@ -80,7 +101,7 @@ var serverInstall = &cobra.Command{
 	Use:   "install",
 	Short: "Install the gh-shorthand server",
 	Run: func(cmd *cobra.Command, args []string) {
-		cfg := config.LoadFromDefault()
+		cfg := config.MustLoadFromDefault()
 		svc := server.Service(cfg)
 		err := service.Control(svc, "install")
 		if err != nil {
@@ -92,7 +113,7 @@ var serverRemove = &cobra.Command{
 	Use:   "remove",
 	Short: "Remove the gh-shorthand server",
 	Run: func(cmd *cobra.Command, args []string) {
-		cfg := config.LoadFromDefault()
+		cfg := config.MustLoadFromDefault()
 		svc := server.Service(cfg)
 		err := service.Control(svc, "uninstall")
 		if err != nil {
@@ -104,7 +125,7 @@ var serverStart = &cobra.Command{
 	Use:   "start",
 	Short: "Start the gh-shorthand server in the background",
 	Run: func(cmd *cobra.Command, args []string) {
-		cfg := config.LoadFromDefault()
+		cfg := config.MustLoadFromDefault()
 		svc := server.Service(cfg)
 		err := service.Control(svc, "start")
 		if err != nil {
@@ -117,7 +138,7 @@ var serverStop = &cobra.Command{
 	Use:   "stop",
 	Short: "Stop the gh-shorthand server",
 	Run: func(cmd *cobra.Command, args []string) {
-		cfg := config.LoadFromDefault()
+		cfg := config.MustLoadFromDefault()
 		svc := server.Service(cfg)
 		err := service.Control(svc, "stop")
 		if err != nil {
@@ -130,7 +151,7 @@ var serverRestart = &cobra.Command{
 	Use:   "restart",
 	Short: "Restart the gh-shorthand server",
 	Run: func(cmd *cobra.Command, args []string) {
-		cfg := config.LoadFromDefault()
+		cfg := config.MustLoadFromDefault()
 		svc := server.Service(cfg)
 		err := service.Control(svc, "restart")
 		if err != nil {
@@ -140,6 +161,11 @@ var serverRestart = &cobra.Command{
 }
 
 func init() {
+	markdownCommand.PersistentFlags().BoolVarP(
+		&markdownDescription,
+		"description", "d", false,
+		"include description of the issue or PR. Requires RPC.")
+
 	rootCmd.AddCommand(completeCommand)
 	rootCmd.AddCommand(serverCommand)
 	rootCmd.AddCommand(markdownCommand)

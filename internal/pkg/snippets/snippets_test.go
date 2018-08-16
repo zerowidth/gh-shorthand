@@ -1,8 +1,11 @@
 package snippets
 
-import "testing"
+import (
+	"testing"
 
-import "github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/assert"
+	"github.com/zerowidth/gh-shorthand/internal/pkg/config"
+)
 
 type urlTestCase struct {
 	input  string
@@ -42,7 +45,7 @@ func TestMarkdownLink(t *testing.T) {
 
 	for desc, tc := range tests {
 		t.Run(desc, func(t *testing.T) {
-			assert.Equal(t, tc.output, MarkdownLink(tc.input))
+			assert.Equal(t, tc.output, MarkdownLink(config.Config{}, tc.input, false))
 		})
 	}
 }

@@ -85,7 +85,13 @@ func LoadFromFile(path string) (Config, error) {
 //
 // This is a convenience for the server subcommands. Exits with an error if
 // config can't be loaded.
-func LoadFromDefault() Config {
+func LoadFromDefault() (Config, error) {
+	return LoadFromFile(Filename)
+}
+
+// MustLoadFromDefault loads from the default config location, and exits if
+// there's an error.
+func MustLoadFromDefault() Config {
 	cfg, err := LoadFromFile(Filename)
 	if err != nil {
 		log.Fatal("couldn't load config", err)

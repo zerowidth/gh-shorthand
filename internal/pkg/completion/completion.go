@@ -686,29 +686,22 @@ func findProjectDirs(root string) (dirs []string, err error) {
 	return dirs, nil
 }
 
-func (c *completion) rpcRequest(path, query string, delay float64) (rpc.Result, error) {
-	var result rpc.Result
-
+func (c *completion) rpcRequest(path, query string, delay float64) rpc.Result {
 	if len(c.cfg.SocketPath) == 0 {
-		return result, nil // RPC isn't enabled, don't worry about it
+		return rpc.Result{Complete: true} // RPC isn't enabled, don't worry about it
 	}
 	if c.env.Duration().Seconds() < delay {
 		c.retry = true
-		return result, nil
+		return rpc.Result{Complete: false}
 	}
 
-	res, err := rpc.Query(c.cfg, path, query)
+	res := rpc.Query(c.cfg, path, query)
 
-	if err == nil && !res.Complete {
+	if !res.Complete && len(res.Error) == 0 {
 		c.retry = true
 	}
 
-	// wrap result errors as real errors, for simpler handling by the caller
-	if len(res.Error) > 0 {
-		return res, fmt.Errorf("RPC service error: %s", res.Error)
-	}
-
-	return res, err
+	return res
 }
 
 func ellipsis(prefix string, duration time.Duration) string {
@@ -718,9 +711,9 @@ func ellipsis(prefix string, duration time.Duration) string {
 // retrieveRepo adds the repo description to the "open repo" item
 // using an RPC call.
 func (c *completion) retrieveRepo(item *alfred.Item) {
-	res, err := c.rpcRequest("/repo", c.parsed.Repo(), delay)
-	if err != nil {
-		item.Subtitle = err.Error()
+	res := c.rpcRequest("/repo", c.parsed.Repo(), delay)
+	if len(res.Error) > 0 {
+		item.Subtitle = res.Error
 		return
 	}
 	if !res.Complete {
@@ -737,9 +730,9 @@ func (c *completion) retrieveRepo(item *alfred.Item) {
 
 // retrieveIssue adds the title and state to an "open issue" item
 func (c *completion) retrieveIssue(item *alfred.Item) {
-	res, err := c.rpcRequest("/issue", c.parsed.Repo()+"#"+c.parsed.Issue(), delay)
-	if err != nil {
-		item.Subtitle = err.Error()
+	res := c.rpcRequest("/issue", c.parsed.Repo()+"#"+c.parsed.Issue(), delay)
+	if len(res.Error) > 0 {
+		item.Subtitle = res.Error
 		return
 	} else if c.retry {
 		item.Subtitle = ellipsis("Retrieving issue title", c.env.Duration())
@@ -753,6 +746,16 @@ func (c *completion) retrieveIssue(item *alfred.Item) {
 	item.Subtitle = item.Title
 	item.Title = issue.Title
 	item.Icon = issueStateIcon(issue.Type, issue.State)
+	if item.Mods != nil {
+		item.Mods.Ctrl = &alfred.ModItem{
+			Valid: true,
+			Arg: fmt.Sprintf("paste [%s#%s: %s](https://github.com/%s/issues/%s)",
+				c.parsed.Repo(), c.parsed.Issue(), issue.Title, c.parsed.Repo(), c.parsed.Issue()),
+			Subtitle: fmt.Sprintf("Insert Markdown link with description to %s#%s",
+				c.parsed.Repo(), c.parsed.Issue()),
+			Icon: markdownIcon,
+		}
+	}
 }
 
 func (c *completion) retrieveRepoProject(item *alfred.Item) {
@@ -764,9 +767,9 @@ func (c *completion) retrieveOrgProject(item *alfred.Item) {
 }
 
 func (c *completion) retrieveProject(item *alfred.Item, query string) {
-	res, err := c.rpcRequest("/project", query, delay)
-	if err != nil {
-		item.Subtitle = err.Error()
+	res := c.rpcRequest("/project", query, delay)
+	if len(res.Error) > 0 {
+		item.Subtitle = res.Error
 		return
 	} else if c.retry {
 		item.Subtitle = ellipsis("Retrieving project name", c.env.Duration())
@@ -791,9 +794,9 @@ func (c *completion) retrieveRepoProjects(item *alfred.Item) alfred.Items {
 }
 
 func (c *completion) retrieveProjects(item *alfred.Item, query string) (projects alfred.Items) {
-	res, err := c.rpcRequest("/projects", query, delay)
-	if err != nil {
-		item.Subtitle = err.Error()
+	res := c.rpcRequest("/projects", query, delay)
+	if len(res.Error) > 0 {
+		item.Subtitle = res.Error
 		return
 	} else if c.retry {
 		item.Subtitle = ellipsis("Retrieving projects", c.env.Duration())
@@ -839,9 +842,9 @@ func (c *completion) searchIssues(item *alfred.Item, query string, includeRepo b
 		return items
 	}
 
-	res, err := c.rpcRequest("/issues", query, delay)
-	if err != nil {
-		item.Subtitle = err.Error()
+	res := c.rpcRequest("/issues", query, delay)
+	if len(res.Error) > 0 {
+		item.Subtitle = res.Error
 		return items
 	} else if c.retry {
 		item.Subtitle = ellipsis("Searching issues", c.env.Duration())

@@ -3,14 +3,12 @@ package rpc
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"net"
 	"net/http"
 	"net/url"
 	"time"
 
-	"github.com/pkg/errors"
 	"github.com/zerowidth/gh-shorthand/internal/pkg/config"
 )
 
@@ -21,11 +19,11 @@ const socketTimeout = 100 * time.Millisecond
 //
 // Returns a Result if the RPC call completed successfully, regardless of
 // whether the ultimate value is ready or not.
-func Query(cfg config.Config, endpoint, query string) (Result, error) {
+func Query(cfg config.Config, endpoint, query string) Result {
 	var res Result
 
 	if len(cfg.SocketPath) == 0 {
-		return Result{Complete: true}, nil // RPC isn't enabled, don't worry about it
+		return Result{Complete: true} // RPC isn't enabled, don't worry about it
 	}
 
 	c := http.Client{
@@ -40,7 +38,9 @@ func Query(cfg config.Config, endpoint, query string) (Result, error) {
 
 	u, err := url.Parse("http://gh-shorthand" + endpoint)
 	if err != nil {
-		return res, errors.Wrap(err, "url parsing error:")
+		res.Complete = true
+		res.Error = "url parsing error: " + err.Error()
+		return res
 	}
 	v := url.Values{}
 	v.Set("q", query)
@@ -48,21 +48,29 @@ func Query(cfg config.Config, endpoint, query string) (Result, error) {
 
 	resp, err := c.Get(u.String())
 	if err != nil {
-		return res, errors.Wrap(err, "RPC service error:")
+		res.Error = "RPC service error: " + err.Error()
+		res.Complete = true
+		return res
 	}
 	if resp.StatusCode >= 400 {
-		return res, fmt.Errorf("RPC service error: %s", resp.Status)
+		res.Error = "RPC service error: " + resp.Status
+		res.Complete = true
+		return res
 	}
 	defer resp.Body.Close()
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return res, errors.Wrap(err, "RPC response error:")
+		res.Error = "RPC response error: " + err.Error()
+		res.Complete = true
+		return res
 	}
 	err = json.Unmarshal(body, &res)
 	if err != nil {
-		return res, errors.Wrap(err, "unmarshal error:")
+		res.Error = "unmarshal error: " + err.Error()
+		res.Complete = true
+		return res
 	}
 
-	return res, nil
+	return res
 }
