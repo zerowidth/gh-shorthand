@@ -27,7 +27,7 @@ var completeCommand = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		input := strings.Join(args, " ")
 
-		cfg, cfgErr := config.LoadFromFile(config.Filename)
+		cfg, cfgErr := config.LoadFromDefault()
 		env := completion.LoadAlfredEnvironment(input)
 		result := completion.Complete(cfg, env)
 
@@ -67,7 +67,7 @@ var serverRun = &cobra.Command{
 	Use:   "run",
 	Short: "Run a gh-shorthand server in the foreground",
 	Run: func(cmd *cobra.Command, args []string) {
-		cfg := config.LoadFromDefault()
+		cfg := config.MustLoadFromDefault()
 		svc := server.Service(cfg)
 		err := svc.Run()
 		if err != nil {
@@ -80,7 +80,7 @@ var serverInstall = &cobra.Command{
 	Use:   "install",
 	Short: "Install the gh-shorthand server",
 	Run: func(cmd *cobra.Command, args []string) {
-		cfg := config.LoadFromDefault()
+		cfg := config.MustLoadFromDefault()
 		svc := server.Service(cfg)
 		err := service.Control(svc, "install")
 		if err != nil {
@@ -92,7 +92,7 @@ var serverRemove = &cobra.Command{
 	Use:   "remove",
 	Short: "Remove the gh-shorthand server",
 	Run: func(cmd *cobra.Command, args []string) {
-		cfg := config.LoadFromDefault()
+		cfg := config.MustLoadFromDefault()
 		svc := server.Service(cfg)
 		err := service.Control(svc, "uninstall")
 		if err != nil {
@@ -104,7 +104,7 @@ var serverStart = &cobra.Command{
 	Use:   "start",
 	Short: "Start the gh-shorthand server in the background",
 	Run: func(cmd *cobra.Command, args []string) {
-		cfg := config.LoadFromDefault()
+		cfg := config.MustLoadFromDefault()
 		svc := server.Service(cfg)
 		err := service.Control(svc, "start")
 		if err != nil {
@@ -117,7 +117,7 @@ var serverStop = &cobra.Command{
 	Use:   "stop",
 	Short: "Stop the gh-shorthand server",
 	Run: func(cmd *cobra.Command, args []string) {
-		cfg := config.LoadFromDefault()
+		cfg := config.MustLoadFromDefault()
 		svc := server.Service(cfg)
 		err := service.Control(svc, "stop")
 		if err != nil {
@@ -130,7 +130,7 @@ var serverRestart = &cobra.Command{
 	Use:   "restart",
 	Short: "Restart the gh-shorthand server",
 	Run: func(cmd *cobra.Command, args []string) {
-		cfg := config.LoadFromDefault()
+		cfg := config.MustLoadFromDefault()
 		svc := server.Service(cfg)
 		err := service.Control(svc, "restart")
 		if err != nil {
