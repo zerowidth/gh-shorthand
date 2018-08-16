@@ -64,3 +64,7 @@
 [[constraint]]
   name = "github.com/shurcooL/githubv4"
   branch = "master"
+
+[[constraint]]
+  name = "github.com/kardianos/service"
+  branch = "master"

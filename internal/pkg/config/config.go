@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"io/ioutil"
+	"log"
 	"path/filepath"
 	"strings"
 
@@ -78,6 +79,18 @@ func LoadFromFile(path string) (Config, error) {
 	}
 
 	return Load(string(yml))
+}
+
+// LoadFromDefault loads and validates a config.
+//
+// This is a convenience for the server subcommands. Exits with an error if
+// config can't be loaded.
+func LoadFromDefault() Config {
+	cfg, err := LoadFromFile(Filename)
+	if err != nil {
+		log.Fatal("couldn't load config", err)
+	}
+	return cfg
 }
 
 func validRepoFormat(s string) bool {

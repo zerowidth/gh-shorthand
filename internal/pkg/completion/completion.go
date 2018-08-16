@@ -301,6 +301,7 @@ func projectItems(dirs map[string]string, search string, mode projectMode) (item
 		if mode == modeEdit {
 			item.UID = "ghe:" + short
 			item.Subtitle = "Edit " + short
+			item.Arg = "edit " + projects[short]
 			item.Icon = editorIcon
 			item.Mods.Cmd = &alfred.ModItem{
 				Valid:    true,
@@ -311,6 +312,7 @@ func projectItems(dirs map[string]string, search string, mode projectMode) (item
 		} else {
 			item.UID = "ght:" + short
 			item.Subtitle = "Open terminal in " + short
+			item.Arg = "term " + projects[short]
 			item.Icon = terminalIcon
 			item.Mods.Cmd = &alfred.ModItem{
 				Valid:    true,
@@ -821,7 +823,7 @@ func projectItemsFromProjects(projects []rpc.Project, desc string) alfred.Items 
 
 func (c *completion) retrieveIssueSearchItems(item *alfred.Item, repo, query string, includeRepo bool) alfred.Items {
 	if len(repo) > 0 {
-		query += "repo:" + repo + " "
+		query += " repo:" + repo + " "
 	}
 	return c.searchIssues(item, query, includeRepo, searchDelay)
 }

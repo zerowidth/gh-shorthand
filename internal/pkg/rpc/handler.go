@@ -2,12 +2,12 @@ package rpc
 
 import (
 	"encoding/json"
-	"log"
 	"net/http"
 	"sync"
 	"time"
 
 	"github.com/go-chi/chi"
+	"github.com/kardianos/service"
 	cache "github.com/patrickmn/go-cache"
 	"github.com/zerowidth/gh-shorthand/internal/pkg/config"
 )
@@ -22,6 +22,7 @@ const (
 type Handler struct {
 	cache   *cache.Cache
 	github  *GitHubClient
+	logger  service.Logger
 	m       sync.Mutex
 	pending map[string]struct{}
 }
@@ -29,11 +30,12 @@ type Handler struct {
 type rpcCall func(result *Result, query string) error
 
 // NewHandler creates a new RPC handler with the given config
-func NewHandler(cfg config.Config) *Handler {
+func NewHandler(cfg config.Config, lg service.Logger) *Handler {
 	handler := Handler{
 		cache:   cache.New(resultTTL, sweepInterval),
 		pending: make(map[string]struct{}),
 		github:  NewGitHubClient(cfg),
+		logger:  lg,
 	}
 	return &handler
 }
@@ -77,7 +79,7 @@ func (h *Handler) rpcHandler(rpc rpcCall) http.HandlerFunc {
 		}
 
 		if err := json.NewEncoder(w).Encode(res); err != nil {
-			log.Fatalf(err.Error())
+			_ = h.logger.Error("encoding error", err)
 		}
 	}
 }
@@ -90,17 +92,17 @@ func (h *Handler) makeRequest(rpc rpcCall, query string) {
 	var res Result
 	ttl := resultTTL
 
-	log.Println("RPC request: ", query)
+	_ = h.logger.Infof("RPC request: %s", query)
 	err := rpc(&res, query)
 	if err != nil {
 		res.Error = err.Error()
 		ttl = errorTTL
 	}
-	log.Printf("RPC result: %+v\n", res)
+	res.Complete = true
+	_ = h.logger.Infof("RPC result: %+v\n", res)
 
 	h.m.Lock()
 	delete(h.pending, query)
-	res.Complete = true
 	h.cache.Set(query, res, ttl)
 	h.m.Unlock()
 }
