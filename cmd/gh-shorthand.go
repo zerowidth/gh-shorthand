@@ -42,10 +42,31 @@ var completeCommand = &cobra.Command{
 	},
 }
 
+var markdownDescription bool
 var markdownCommand = &cobra.Command{
-	Use: "markdown-link",
+	Use:   "markdown-link",
+	Short: "Generate a markdown link from the given input",
+	Long: `Generates a markdown link for an issue or PR.
+
+For example:
+
+	github.com/zerowidth/gh-shorthand/issues/1
+
+will generate a markdown link:
+
+	[zerowidth/gh-shorthand#1](...)
+
+If --description is set and RPC is configured, the markdown link will include a
+description from the issue or PR's title.
+`,
+	Aliases: []string{"ml"},
 	Run: func(cmd *cobra.Command, args []string) {
-		link := snippets.MarkdownLink(strings.Join(args, " "))
+		cfg, err := config.LoadFromDefault()
+		input := strings.Join(args, " ")
+		if err != nil {
+			fmt.Fprintf(os.Stdout, "%s (error: %s)", input, err.Error())
+		}
+		link := snippets.MarkdownLink(cfg, input, markdownDescription)
 		fmt.Fprintf(os.Stdout, link)
 	},
 }
@@ -140,6 +161,11 @@ var serverRestart = &cobra.Command{
 }
 
 func init() {
+	markdownCommand.PersistentFlags().BoolVarP(
+		&markdownDescription,
+		"description", "d", false,
+		"include description of the issue or PR. Requires RPC.")
+
 	rootCmd.AddCommand(completeCommand)
 	rootCmd.AddCommand(serverCommand)
 	rootCmd.AddCommand(markdownCommand)

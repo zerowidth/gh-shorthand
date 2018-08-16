@@ -746,6 +746,16 @@ func (c *completion) retrieveIssue(item *alfred.Item) {
 	item.Subtitle = item.Title
 	item.Title = issue.Title
 	item.Icon = issueStateIcon(issue.Type, issue.State)
+	if item.Mods != nil {
+		item.Mods.Ctrl = &alfred.ModItem{
+			Valid: true,
+			Arg: fmt.Sprintf("paste [%s#%s: %s](https://github.com/%s/issues/%s)",
+				c.parsed.Repo(), c.parsed.Issue(), issue.Title, c.parsed.Repo(), c.parsed.Issue()),
+			Subtitle: fmt.Sprintf("Insert Markdown link with description to %s#%s",
+				c.parsed.Repo(), c.parsed.Issue()),
+			Icon: markdownIcon,
+		}
+	}
 }
 
 func (c *completion) retrieveRepoProject(item *alfred.Item) {

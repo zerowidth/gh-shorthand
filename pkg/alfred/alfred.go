@@ -83,8 +83,9 @@ type ModItem struct {
 
 // Mods define alternate actions for an item, with alt or cmd held down
 type Mods struct {
-	Alt *ModItem `json:"alt,omitempty"`
-	Cmd *ModItem `json:"cmd,omitempty"`
+	Alt  *ModItem `json:"alt,omitempty"`
+	Cmd  *ModItem `json:"cmd,omitempty"`
+	Ctrl *ModItem `json:"ctrl,omitempty"`
 }
 
 func (t *Text) String() string {
