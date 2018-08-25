@@ -9,7 +9,8 @@ GOLINT = $(GOBIN)/golangci-lint
 V = 0
 Q = $(if $(filter 1,$V),,@)
 
-default: build test lint
+default: build
+all: build test lint
 
 $(GOPATH): ; $(info setting GOPATH...)
 	$Q mkdir -p $@
