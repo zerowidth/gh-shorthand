@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/kardianos/service"
 	"github.com/spf13/cobra"
@@ -22,6 +23,7 @@ var rootCmd = &cobra.Command{
 	},
 }
 
+var includeRPC bool
 var completeCommand = &cobra.Command{
 	Use: "complete 'input string'",
 	Run: func(cmd *cobra.Command, args []string) {
@@ -29,6 +31,11 @@ var completeCommand = &cobra.Command{
 
 		cfg, cfgErr := config.LoadFromDefault()
 		env := completion.LoadAlfredEnvironment(input)
+		if includeRPC {
+			// override start time so it's in the past
+			env.Start = time.Now().Add(-time.Minute)
+		}
+
 		result := completion.Complete(cfg, env)
 
 		// only include config loading error result if there was any input
@@ -165,6 +172,11 @@ func init() {
 		&markdownDescription,
 		"description", "d", false,
 		"include description of the issue or PR. Requires RPC.")
+
+	completeCommand.PersistentFlags().BoolVarP(
+		&includeRPC,
+		"include-rpc", "r", false,
+		"force an RPC request for the input (used for debugging)")
 
 	rootCmd.AddCommand(completeCommand)
 	rootCmd.AddCommand(serverCommand)
