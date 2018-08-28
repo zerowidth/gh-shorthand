@@ -340,7 +340,7 @@ func openRepoItem(parsed parser.Result) alfred.Item {
 		title += "#" + parsed.Issue()
 		arg += "/issues/" + parsed.Issue()
 		icon = issueIcon
-		mods = issueMods(parsed.Repo(), parsed.Issue())
+		mods = issueMods(parsed.Repo(), parsed.Issue(), "")
 	}
 
 	if parsed.HasPath() {
@@ -749,8 +749,8 @@ func (c *completion) retrieveIssue(item *alfred.Item) {
 	if item.Mods != nil {
 		item.Mods.Ctrl = &alfred.ModItem{
 			Valid: true,
-			Arg: fmt.Sprintf("paste [%s#%s: %s](https://github.com/%s/issues/%s)",
-				c.parsed.Repo(), c.parsed.Issue(), issue.Title, c.parsed.Repo(), c.parsed.Issue()),
+			Arg: fmt.Sprintf("paste [%s#%s](https://github.com/%s/issues/%s): %s",
+				c.parsed.Repo(), c.parsed.Issue(), c.parsed.Repo(), c.parsed.Issue(), issue.Title),
 			Subtitle: fmt.Sprintf("Insert Markdown link with description to %s#%s",
 				c.parsed.Repo(), c.parsed.Issue()),
 			Icon: markdownIcon,
@@ -880,7 +880,7 @@ func issueItemsFromIssues(issues []rpc.Issue, includeRepo bool) alfred.Items {
 			Valid:    true,
 			Arg:      arg,
 			Icon:     issueStateIcon(issue.Type, issue.State),
-			Mods:     issueMods(issue.Repo, issue.Number),
+			Mods:     issueMods(issue.Repo, issue.Number, issue.Title),
 		})
 	}
 
@@ -898,8 +898,8 @@ func repoMods(repo string) *alfred.Mods {
 	}
 }
 
-func issueMods(repo, number string) *alfred.Mods {
-	return &alfred.Mods{
+func issueMods(repo, number, title string) *alfred.Mods {
+	mods := &alfred.Mods{
 		Cmd: &alfred.ModItem{
 			Valid:    true,
 			Arg:      fmt.Sprintf("paste [%s#%s](https://github.com/%s/issues/%s)", repo, number, repo, number),
@@ -913,6 +913,15 @@ func issueMods(repo, number string) *alfred.Mods {
 			Icon:     issueIcon,
 		},
 	}
+	if len(title) > 0 {
+		mods.Ctrl = &alfred.ModItem{
+			Valid:    true,
+			Arg:      fmt.Sprintf("paste [%s#%s](https://github.com/%s/issues/%s): %s", repo, number, repo, number, title),
+			Subtitle: fmt.Sprintf("Insert Markdown link with description to %s#%s", repo, number),
+			Icon:     markdownIcon,
+		}
+	}
+	return mods
 }
 
 // ErrorItem returns an error message entry to display in alfred
