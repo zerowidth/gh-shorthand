@@ -25,6 +25,11 @@ lint: | $(GOLINT); $(info running linters...)
 		--enable dupl \
 		--enable interfacer
 
+$(GOLINT): $(TOOLS)
+
+$(TOOLS): ; $(info installing tools...)
+	$Q script/bootstrap
+
 TESTFLAGS = -race
 TESTSUITE = ./...
 .PHONY: test
