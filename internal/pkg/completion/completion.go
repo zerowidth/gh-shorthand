@@ -749,8 +749,8 @@ func (c *completion) retrieveIssue(item *alfred.Item) {
 	if item.Mods != nil {
 		item.Mods.Ctrl = &alfred.ModItem{
 			Valid: true,
-			Arg: fmt.Sprintf("paste [%s#%s](https://github.com/%s/issues/%s): %s",
-				c.parsed.Repo(), c.parsed.Issue(), c.parsed.Repo(), c.parsed.Issue(), issue.Title),
+			Arg: fmt.Sprintf("paste [%s#%s: %s](https://github.com/%s/issues/%s)",
+				c.parsed.Repo(), c.parsed.Issue(), issue.Title, c.parsed.Repo(), c.parsed.Issue()),
 			Subtitle: fmt.Sprintf("Insert Markdown link with description to %s#%s",
 				c.parsed.Repo(), c.parsed.Issue()),
 			Icon: markdownIcon,
@@ -916,7 +916,7 @@ func issueMods(repo, number, title string) *alfred.Mods {
 	if len(title) > 0 {
 		mods.Ctrl = &alfred.ModItem{
 			Valid:    true,
-			Arg:      fmt.Sprintf("paste [%s#%s](https://github.com/%s/issues/%s): %s", repo, number, repo, number, title),
+			Arg:      fmt.Sprintf("paste [%s#%s: %s](https://github.com/%s/issues/%s)", repo, number, title, repo, number),
 			Subtitle: fmt.Sprintf("Insert Markdown link with description to %s#%s", repo, number),
 			Icon:     markdownIcon,
 		}

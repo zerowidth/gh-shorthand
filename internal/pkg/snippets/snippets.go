@@ -54,7 +54,7 @@ func MarkdownLink(cfg config.Config, input string, includeDesc bool) string {
 			if len(res.Error) > 0 {
 				mdLink = fmt.Sprintf("%s (rpc error: %s)", mdLink, res.Error)
 			} else if len(res.Issues) > 0 {
-				mdLink = fmt.Sprintf("[%s#%s](%s): %s", repo, issue, issueMatches[1], res.Issues[0].Title)
+				mdLink = fmt.Sprintf("[%s#%s: %s](%s)", repo, issue, res.Issues[0].Title, issueMatches[1])
 			} else {
 				mdLink += " (rpc error: no issue returned)"
 			}
