@@ -36,3 +36,4 @@ test: ; $(info -> running tests...)
 .PHONY: clean
 clean:
 	$Q rm -rf $(APP) $(TOOLS)
+	$Q go clean -testcache ./...
