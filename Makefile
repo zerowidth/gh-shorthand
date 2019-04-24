@@ -1,50 +1,38 @@
-GOPATH = $(CURDIR)/.gopath
-GOBIN  = $(GOPATH)/bin
-BASE   = $(GOPATH)/src/github.com/zerowidth/gh-shorthand
-APP    = $(BASE)/bin/gh-shorthand
-GOSRC  = $(shell find . -type f -name '*.go' | grep -v .gopath)
-GODEP  = $(GOBIN)/dep
-GOLINT = $(GOBIN)/golangci-lint
+TOOLS  = _tools/bin
+APP    = bin/gh-shorthand
+GOSRC  = $(shell find . -type f -name '*.go')
+GOLINT = $(TOOLS)/golangci-lint
 
+# V=1 for verbose
 V = 0
 Q = $(if $(filter 1,$V),,@)
 
 default: build
 all: build test lint
 
-$(GOPATH): ; $(info setting GOPATH...)
-	$Q mkdir -p $@
-
-$(BASE): | $(GOPATH)
-	$Q mkdir -p $(dir $@)
-	$Q ln -s $(CURDIR) $@
-
-$(APP): $(GOSRC) | $(BASE); $(info building gh-shorthand...)
-	$Q cd $(BASE) && GOPATH=$(GOPATH) go build -o $(APP) ./cmd
+$(APP): $(GOSRC) go.mod go.sum; $(info -> building gh-shorthand...)
+	$Q go build -o $(APP) ./cmd
 
 build: $(APP)
 
-lint: | $(GOLINT) $(BASE); $(info running linters...)
-	$Q cd $(BASE) && GOPATH=$(GOPATH) $(GOLINT) run \
+lint: | $(GOLINT); $(info -> running linters...)
+	$Q $(GOLINT) run \
 		--enable goimports \
 		--enable unparam \
 		--enable dupl \
 		--enable interfacer
 
+$(GOLINT): $(TOOLS)
+
+$(TOOLS): ; $(info -> installing tools...)
+	$Q script/bootstrap
+
 TESTFLAGS = -race
 TESTSUITE = ./...
 .PHONY: test
-test: | $(BASE); $(info running tests...)
-	$Q cd $(BASE) && GOPATH=$(GOPATH) go test $(TESTFLAGS) $(TESTSUITE)
-
-$(GOLINT): | $(GOPATH); $(info installing golangci-lint...)
-	$Q GOPATH=$(GOPATH) go get github.com/golangci/golangci-lint/cmd/golangci-lint
-
-$(GODEP): | $(GOPATH); $(info installing dep...)
-	$Q GOPATH=$(GOPATH) go get github.com/golang/dep/cmd/dep
-.PHONY: dep
-dep: | $(GODEP)
+test: ; $(info -> running tests...)
+	$Q go test $(TESTFLAGS) $(TESTSUITE)
 
 .PHONY: clean
 clean:
-	$Q rm -rf $(APP) $(GOPATH)
+	$Q rm -rf $(APP) $(TOOLS)

@@ -1,0 +1,15 @@
+#!/bin/bash
+
+set -e
+
+TOOLS=$(pwd)/_tools
+export GOBIN=$TOOLS/bin
+
+mkdir -p _tools/bin
+cd $TOOLS
+
+if [ ! -f go.mod ]; then
+    go mod init tools
+fi
+
+go get github.com/golangci/golangci-lint/cmd/golangci-lint@v1.16.0
