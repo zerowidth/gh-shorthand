@@ -22,8 +22,6 @@ type testCase struct {
 	ignoreNumeric bool   // whether or not to ignore numeric bare usernames
 	repo          string // the expected repo match or expansion
 	user          string // the expected user match or expansion
-	hasRepo       bool   // should the parser have matched a repo?
-	hasUser       bool   // should the parser have matched as a user?
 	repoMatch     string // the matched repo shorthand
 	userMatch     string // the matched user shorthand
 	issue         string // the expected issue match
