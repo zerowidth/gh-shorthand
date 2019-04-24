@@ -27,7 +27,6 @@ $(GOLINT): $(TOOLS)
 $(TOOLS): ; $(info -> installing tools...)
 	$Q script/bootstrap
 
-TESTFLAGS = -race
 TESTSUITE = ./...
 .PHONY: test
 test: ; $(info -> running tests...)
