@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/zerowidth/gh-shorthand/internal/pkg/config"
 	"github.com/zerowidth/gh-shorthand/pkg/alfred"
 )
@@ -89,53 +90,40 @@ func (tc *completeTestCase) testItem(t *testing.T) {
 	if !ok {
 		t.Errorf("expected item with uid %q and/or title %q in %s", tc.uid, tc.title, result.Items)
 	}
-	if len(tc.uid) > 0 && item.UID != tc.uid {
-		t.Errorf("%+v\nexpected UID %q to be %q", item, item.UID, tc.uid)
+	if len(tc.uid) > 0 {
+		assert.Equal(t, tc.uid, item.UID, "item.UID in\n%+v", item)
+	} else {
+		t.Logf("no uid check for %#v", tc)
 	}
 
-	if len(tc.title) > 0 && item.Title != tc.title {
-		t.Errorf("%+v\nexpected Title %q to be %q", item, item.Title, tc.title)
+	if len(tc.title) > 0 {
+		assert.Equal(t, tc.title, item.Title, "item.Title in\n%#v", item)
 	}
 
-	if item.Valid != tc.valid {
-		t.Errorf("%+v\nexpected Valid %t to be %t", item, item.Valid, tc.valid)
+	assert.Equal(t, tc.valid, item.Valid, "item.Valid in\n%#v", item)
+
+	if len(tc.arg) > 0 {
+		assert.Equal(t, tc.arg, item.Arg, "item.Arg in\n%+v", item)
 	}
 
-	if len(tc.arg) > 0 && item.Arg != tc.arg {
-		t.Errorf("%+v\nexpected Arg %q to be %q", item, item.Arg, tc.arg)
+	if len(tc.auto) > 0 {
+		assert.Equal(t, tc.auto, item.Autocomplete, "item.Autocomplete in\n%#v", item)
 	}
 
-	if len(tc.auto) > 0 && item.Autocomplete != tc.auto {
-		t.Errorf("%+v\nexpected Autocomplete %q to be %q", item, item.Autocomplete, tc.auto)
-	}
-
-	if len(tc.copy) > 0 && (item.Text == nil || item.Text.Copy != tc.copy) {
-		t.Errorf("%+v\nexpected Text.Copy %+v to be %q", item, item.Text, tc.copy)
+	if len(tc.copy) > 0 {
+		if assert.NotNil(t, item.Text, "item.Text in\n%#v", item) {
+			assert.Equal(t, tc.copy, item.Text.Copy, "item.Text.Copy in\n%#v", item)
+		}
 	}
 
 	if len(tc.cmdMod) > 0 || len(tc.altMod) > 0 {
-		if item.Mods == nil {
-			t.Errorf("%+v\nexpected Mods to be have a value", item)
-		} else {
-
-			if len(tc.cmdMod) > 0 {
-				if item.Mods.Cmd == nil {
-					t.Errorf("%+v\nexpected Mods.Cmd to have a value", item)
-				} else {
-					if tc.cmdMod != item.Mods.Cmd.Arg {
-						t.Errorf("%+v\nexpected Mods.Cmd.Arg to be %s, was %+v", item, tc.cmdMod, item.Mods.Cmd.Arg)
-					}
-				}
+		if assert.NotNil(t, item.Mods, "item.Mods in\n#%v", item) {
+			if len(tc.cmdMod) > 0 && assert.NotNil(t, item.Mods.Cmd, "item.Mods.Cmd") {
+				assert.Equal(t, tc.cmdMod, item.Mods.Cmd.Arg, "item.Mods.Cmd.Arg")
 			}
 
-			if len(tc.altMod) > 0 {
-				if item.Mods.Alt == nil {
-					t.Errorf("%+v\nexpected Mods.Alt to have a value", item)
-				} else {
-					if tc.altMod != item.Mods.Alt.Arg {
-						t.Errorf("%+v\nexpected Mods.Alt.Arg to be %s, was %+v", item, tc.altMod, item.Mods.Alt.Arg)
-					}
-				}
+			if len(tc.altMod) > 0 && assert.NotNil(t, item.Mods.Alt, "item.Mods.Alt") {
+				assert.Equal(t, tc.altMod, item.Mods.Alt.Arg, "items.Mods.Alt.Arg")
 			}
 		}
 	}
@@ -707,18 +695,12 @@ func TestCompleteItems(t *testing.T) {
 func validateItems(t *testing.T, items alfred.Items) {
 	uids := map[string]bool{}
 	for _, item := range items {
-		if len(item.Title) == 0 {
-			t.Errorf("%+v is missing a title", item)
-		}
+		assert.NotEmpty(t, item.Title, "item.Title in\n%#v", item)
 		if item.Valid {
-			if len(item.UID) == 0 {
-				t.Errorf("%+v is valid but missing its uid", item)
-			}
-			if len(item.Arg) == 0 {
-				t.Errorf("%+v is valid but missing its arg", item)
-			}
-		} else if len(item.UID) > 0 {
-			t.Errorf("%+v is not valid but has a UID", item)
+			assert.NotEmpty(t, item.UID, "item.UID in valid\n%#v", item)
+			assert.NotEmpty(t, item.Arg, "item.Arg in valid\n%#v", item)
+		} else {
+			assert.Empty(t, item.UID, "item.UID should not be set unless item is valid\n%#v", item)
 		}
 		if len(item.UID) > 0 {
 			if _, ok := uids[item.UID]; ok {
@@ -729,8 +711,8 @@ func validateItems(t *testing.T, items alfred.Items) {
 		}
 		if strings.HasPrefix(item.Arg, "open ") {
 			url := item.Arg[5:]
-			if item.Text == nil || item.Text.Copy != url {
-				t.Errorf("expected item text to have url %s in %+v", url, item.Text)
+			if assert.NotNil(t, item.Text, "item.Text in\n%#v", item) {
+				assert.Equal(t, url, item.Text.Copy, "item.Text.Copy in\n%#v", item)
 			}
 		}
 	}
@@ -754,15 +736,11 @@ func TestFinalizeResult(t *testing.T) {
 	c.finalizeResult()
 
 	// test that Rerun only gets set if a variable's been set
-	if c.result.Rerun != 0 {
-		t.Errorf("expected result %#v to not have a Rerun value", c.result)
-	}
+	assert.Zero(t, c.result.Rerun, "c.result.Rerun should not have a value")
 
 	c.retry = true
 	c.finalizeResult()
-	if c.result.Rerun != rerunAfter {
-		t.Errorf("expected result %#v to have Rerun of %f", c.result, rerunAfter)
-	}
+	assert.Equal(t, rerunAfter, c.result.Rerun, "c.result.Rerun in result\n%#v", c.result)
 }
 
 func TestFindProjectDirs(t *testing.T) {
@@ -775,16 +753,7 @@ func TestFindProjectDirs(t *testing.T) {
 	for _, d := range dirList {
 		dirs[d] = struct{}{}
 	}
-
-	if _, ok := dirs["project-bar"]; !ok {
-		t.Errorf("expected normal directory to be found in %+v", dirList)
-	}
-
-	if _, ok := dirs["linked"]; !ok {
-		t.Errorf("expected symlinked directory to be found in %+v", dirList)
-	}
-
-	if _, ok := dirs["linked-file"]; ok {
-		t.Errorf("did not expect symlinked file to be found in %+v", dirList)
-	}
+	assert.Contains(t, dirs, "project-bar", "normal directory in\n%v", dirList)
+	assert.Contains(t, dirs, "linked", "symlinked directory in\n%v", dirList)
+	assert.NotContains(t, dirs, "linked-file", "symlinked file in\n%v", dirList)
 }
