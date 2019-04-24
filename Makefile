@@ -10,15 +10,12 @@ Q = $(if $(filter 1,$V),,@)
 default: build
 all: build test lint
 
-$(GOPATH): ; $(info setting GOPATH...)
-	$Q mkdir -p $@
-
-$(APP): $(GOSRC); $(info building gh-shorthand...)
+$(APP): $(GOSRC) go.mod go.sum; $(info -> building gh-shorthand...)
 	$Q go build -o $(APP) ./cmd
 
 build: $(APP)
 
-lint: | $(GOLINT); $(info running linters...)
+lint: | $(GOLINT); $(info -> running linters...)
 	$Q $(GOLINT) run \
 		--enable goimports \
 		--enable unparam \
@@ -27,13 +24,13 @@ lint: | $(GOLINT); $(info running linters...)
 
 $(GOLINT): $(TOOLS)
 
-$(TOOLS): ; $(info installing tools...)
+$(TOOLS): ; $(info -> installing tools...)
 	$Q script/bootstrap
 
 TESTFLAGS = -race
 TESTSUITE = ./...
 .PHONY: test
-test: ; $(info running tests...)
+test: ; $(info -> running tests...)
 	$Q go test $(TESTFLAGS) $(TESTSUITE)
 
 .PHONY: clean
