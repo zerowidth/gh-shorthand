@@ -30,7 +30,6 @@ type testCase struct {
 }
 
 func (tc *testCase) assert(t *testing.T) {
-	t.Parallel()
 	result := Parse(repoMap, userMap, tc.input, tc.bare, tc.ignoreNumeric)
 
 	assert.Equal(t, tc.repo, result.Repo(), "result.Repo() with input %#v", tc.input)
@@ -242,7 +241,6 @@ func TestParse(t *testing.T) {
 }
 
 func TestSetRepo(t *testing.T) {
-	t.Parallel()
 	result := &Result{}
 	result.SetRepo("foo/bar")
 	assert.Equal(t, "foo/bar", result.Repo())
