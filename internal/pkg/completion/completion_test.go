@@ -60,7 +60,6 @@ type completeTestCase struct {
 }
 
 func (tc *completeTestCase) testItem(t *testing.T) {
-	t.Parallel()
 	cfg := tc.cfg
 	if cfg == nil {
 		cfg = defaultCfg
@@ -749,7 +748,6 @@ func findMatchingItem(uid, title string, items alfred.Items) (alfred.Item, bool)
 }
 
 func TestFinalizeResult(t *testing.T) {
-	t.Parallel()
 	c := completion{
 		result: alfred.NewFilterResult(),
 	}
@@ -768,7 +766,6 @@ func TestFinalizeResult(t *testing.T) {
 }
 
 func TestFindProjectDirs(t *testing.T) {
-	t.Parallel()
 	fixturePath, _ := filepath.Abs("../../../test/fixtures/projects")
 	dirList, err := findProjectDirs(fixturePath)
 	dirs := make(map[string]struct{}, len(dirList))
