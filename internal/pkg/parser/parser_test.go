@@ -33,27 +33,15 @@ func (tc *testCase) assert(t *testing.T) {
 	t.Parallel()
 	result := Parse(repoMap, userMap, tc.input, tc.bare, tc.ignoreNumeric)
 
-	if result.Repo() != tc.repo {
-		t.Errorf("expected Repo %#v, got %#v", tc.repo, result.Repo())
+	assert.Equal(t, tc.repo, result.Repo(), "result.Repo() with input %#v", tc.input)
+	if len(tc.user) > 0 {
+		assert.Equal(t, tc.user, result.User, "result.User with input %#v", tc.input)
 	}
-	if len(tc.user) > 0 && result.User != tc.user {
-		t.Errorf("expected Owner %#v, got %#v", tc.user, result.User)
-	}
-	if result.RepoMatch != tc.repoMatch {
-		t.Errorf("expected RepoMatch %#v, got %#v", tc.repoMatch, result.RepoMatch)
-	}
-	if result.UserMatch != tc.userMatch {
-		t.Errorf("expected UserMatch %#v, got %#v", tc.userMatch, result.UserMatch)
-	}
-	if result.Issue() != tc.issue {
-		t.Errorf("expected Issue %#v, got %#v", tc.issue, result.Issue())
-	}
-	if result.Path() != tc.path {
-		t.Errorf("expected Path %#v, got %#v", tc.path, result.Path())
-	}
-	if result.Query != tc.query {
-		t.Errorf("expected Query %#v, got %#v", tc.query, result.Query)
-	}
+	assert.Equal(t, tc.repoMatch, result.RepoMatch, "result.RepoMatch with input %#v", tc.input)
+	assert.Equal(t, tc.userMatch, result.UserMatch, "result.UserMatch with input %#v", tc.input)
+	assert.Equal(t, tc.issue, result.Issue(), "result.Issue() with input %#v", tc.input)
+	assert.Equal(t, tc.path, result.Path(), "result.Path() with input %#v", tc.input)
+	assert.Equal(t, tc.query, result.Query, "result.Query with input %#v", tc.input)
 }
 
 func TestParse(t *testing.T) {
