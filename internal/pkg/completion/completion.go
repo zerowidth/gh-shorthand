@@ -174,6 +174,7 @@ func (c *completion) appendParsedItems() {
 		c.result.AppendItems(
 			autocompleteItems(c.cfg, c.input, c.parsed,
 				autocompleteOpenItem, autocompleteUserOpenItem, openEndedOpenItem)...)
+
 	case "i":
 		// repo required
 		if c.parsed.HasRepo() {
@@ -194,6 +195,7 @@ func (c *completion) appendParsedItems() {
 		c.result.AppendItems(
 			autocompleteItems(c.cfg, c.input, c.parsed,
 				autocompleteIssueItem, autocompleteUserIssueItem, openEndedIssueItem)...)
+
 	case "p":
 		if c.parsed.HasOwner() && (c.parsed.HasIssue() || c.parsed.EmptyQuery()) {
 			if c.parsed.HasRepo() {
@@ -228,6 +230,7 @@ func (c *completion) appendParsedItems() {
 				c.result.AppendItems(openEndedProjectItem(c.input))
 			}
 		}
+
 	case "n":
 		// repo required
 		if c.parsed.HasRepo() {
@@ -237,19 +240,21 @@ func (c *completion) appendParsedItems() {
 		c.result.AppendItems(
 			autocompleteItems(c.cfg, c.input, c.parsed,
 				autocompleteNewIssueItem, autocompleteUserNewIssueItem, openEndedNewIssueItem)...)
+
 	case "e":
 		c.result.AppendItems(
 			projectItems(c.cfg.ProjectDirMap(), c.input, modeEdit)...)
+
 	case "t":
 		c.result.AppendItems(
 			projectItems(c.cfg.ProjectDirMap(), c.input, modeTerm)...)
+
 	case "s":
 		searchItem := globalIssueSearchItem(c.input)
 		matches := c.retrieveIssueSearchItems(&searchItem, "", c.input, true)
 		c.result.AppendItems(searchItem)
 		c.result.AppendItems(matches...)
 	}
-
 }
 
 func projectItems(dirs map[string]string, search string, mode projectMode) (items alfred.Items) {
