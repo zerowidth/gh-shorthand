@@ -13,8 +13,6 @@ type urlTestCase struct {
 }
 
 func TestMarkdownLink(t *testing.T) {
-	t.Parallel()
-
 	tests := map[string]urlTestCase{
 		"issue url": {
 			input:  "https://github.com/zw/df/issues/1",
@@ -51,8 +49,6 @@ func TestMarkdownLink(t *testing.T) {
 }
 
 func TestIssueReference(t *testing.T) {
-	t.Parallel()
-
 	tests := map[string]urlTestCase{
 		"issue url": {
 			input:  "https://github.com/zw/df/issues/1",

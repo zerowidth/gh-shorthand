@@ -8,12 +8,14 @@ import (
 )
 
 var repoMap = map[string]string{
-	"df":  "zerowidth/dotfiles",
-	"df2": "zerowidth/dotfiles2", // prefix collision
+	"df":   "zerowidth/dotfiles",
+	"df2":  "zerowidth/dotfiles2", // prefix collision
+	"dupe": "dupe-repo/stuff",     // duplicate shorthand in userMap
 }
 
 var userMap = map[string]string{
-	"zw": "zerowidth",
+	"zw":   "zerowidth",
+	"dupe": "dupe-user",
 }
 
 type testCase struct {
@@ -30,30 +32,17 @@ type testCase struct {
 }
 
 func (tc *testCase) assert(t *testing.T) {
-	t.Parallel()
 	result := Parse(repoMap, userMap, tc.input, tc.bare, tc.ignoreNumeric)
 
-	if result.Repo() != tc.repo {
-		t.Errorf("expected Repo %#v, got %#v", tc.repo, result.Repo())
+	assert.Equal(t, tc.repo, result.Repo(), "result.Repo() with input %#v", tc.input)
+	if len(tc.user) > 0 {
+		assert.Equal(t, tc.user, result.User, "result.User with input %#v", tc.input)
 	}
-	if len(tc.user) > 0 && result.User != tc.user {
-		t.Errorf("expected Owner %#v, got %#v", tc.user, result.User)
-	}
-	if result.RepoMatch != tc.repoMatch {
-		t.Errorf("expected RepoMatch %#v, got %#v", tc.repoMatch, result.RepoMatch)
-	}
-	if result.UserMatch != tc.userMatch {
-		t.Errorf("expected UserMatch %#v, got %#v", tc.userMatch, result.UserMatch)
-	}
-	if result.Issue() != tc.issue {
-		t.Errorf("expected Issue %#v, got %#v", tc.issue, result.Issue())
-	}
-	if result.Path() != tc.path {
-		t.Errorf("expected Path %#v, got %#v", tc.path, result.Path())
-	}
-	if result.Query != tc.query {
-		t.Errorf("expected Query %#v, got %#v", tc.query, result.Query)
-	}
+	assert.Equal(t, tc.repoMatch, result.RepoMatch, "result.RepoMatch with input %#v", tc.input)
+	assert.Equal(t, tc.userMatch, result.UserMatch, "result.UserMatch with input %#v", tc.input)
+	assert.Equal(t, tc.issue, result.Issue(), "result.Issue() with input %#v", tc.input)
+	assert.Equal(t, tc.path, result.Path(), "result.Path() with input %#v", tc.input)
+	assert.Equal(t, tc.query, result.Query, "result.Query with input %#v", tc.input)
 }
 
 func TestParse(t *testing.T) {
@@ -172,6 +161,12 @@ func TestParse(t *testing.T) {
 			path:  "/baz",
 			query: "/baz",
 		},
+		"extracts path component after repo without space": {
+			input: "foo/bar/baz",
+			repo:  "foo/bar",
+			path:  "/baz",
+			query: "/baz",
+		},
 		"ignores path after issue number": {
 			input: "123 /foo",
 			query: "123 /foo",
@@ -209,6 +204,23 @@ func TestParse(t *testing.T) {
 			input: "zwx/foo",
 			user:  "zwx",
 			repo:  "zwx/foo",
+		},
+		"expands duplicate repo with shorthand by itself": {
+			input:     "dupe",
+			user:      "dupe-repo",
+			repo:      "dupe-repo/stuff",
+			repoMatch: "dupe",
+		},
+		"expands duplicate user with trailing slash": {
+			input:     "dupe/",
+			user:      "dupe-user",
+			userMatch: "dupe",
+		},
+		"expands duplicate user with repo appended to shorthand": {
+			input:     "dupe/foo",
+			user:      "dupe-user",
+			userMatch: "dupe",
+			repo:      "dupe-user/foo",
 		},
 		"matches bare user when allowed": {
 			input: "foo",
@@ -254,7 +266,6 @@ func TestParse(t *testing.T) {
 }
 
 func TestSetRepo(t *testing.T) {
-	t.Parallel()
 	result := &Result{}
 	result.SetRepo("foo/bar")
 	assert.Equal(t, "foo/bar", result.Repo())

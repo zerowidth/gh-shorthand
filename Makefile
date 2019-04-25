@@ -27,7 +27,6 @@ $(GOLINT): $(TOOLS)
 $(TOOLS): ; $(info -> installing tools...)
 	$Q script/bootstrap
 
-TESTFLAGS = -race
 TESTSUITE = ./...
 .PHONY: test
 test: ; $(info -> running tests...)
@@ -36,3 +35,4 @@ test: ; $(info -> running tests...)
 .PHONY: clean
 clean:
 	$Q rm -rf $(APP) $(TOOLS)
+	$Q go clean -testcache ./...

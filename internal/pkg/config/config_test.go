@@ -43,7 +43,6 @@ default_repo: foo
 )
 
 func TestLoad(t *testing.T) {
-	t.Parallel()
 	config, err := Load(configYaml)
 	if err != nil {
 		t.Errorf("could not load config yaml: %q", err.Error())
@@ -71,8 +70,6 @@ func TestLoad(t *testing.T) {
 }
 
 func TestLoadInvalidDefault(t *testing.T) {
-	t.Parallel()
-
 	_, err := Load(invalidDefaultRepo)
 	if assert.Error(t, err) {
 		assert.Equal(t, "default repo \"foo\" not in owner/name format", err.Error())
@@ -80,7 +77,6 @@ func TestLoadInvalidDefault(t *testing.T) {
 }
 
 func TestProjectDirMap(t *testing.T) {
-	t.Parallel()
 	config, _ := Load(configYaml)
 	dirs := config.ProjectDirMap()
 	if len(dirs) != 3 {
