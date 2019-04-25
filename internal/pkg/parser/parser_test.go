@@ -159,6 +159,12 @@ func TestParse(t *testing.T) {
 			path:  "/baz",
 			query: "/baz",
 		},
+		"extracts path component after repo without space": {
+			input: "foo/bar/baz",
+			repo:  "foo/bar",
+			path:  "/baz",
+			query: "/baz",
+		},
 		"ignores path after issue number": {
 			input: "123 /foo",
 			query: "123 /foo",
