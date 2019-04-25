@@ -36,7 +36,7 @@ var userRepoCollision = &config.Config{
 		"zw": "zerowidth/dotfiles",
 	},
 	UserMap: map[string]string{
-		"zw": "zerowidth",
+		"zw": "zeedub",
 	},
 }
 
@@ -88,7 +88,8 @@ func (tc *completeTestCase) testItem(t *testing.T) {
 
 	item, ok := findMatchingItem(tc.uid, tc.title, result.Items)
 	if !ok {
-		t.Errorf("expected item with uid %q and/or title %q in %s", tc.uid, tc.title, result.Items)
+		t.Logf("expected item with uid %q and/or title %q in %s", tc.uid, tc.title, result.Items)
+		t.FailNow()
 	}
 	if len(tc.uid) > 0 {
 		assert.Equal(t, tc.uid, item.UID, "item.UID in\n%+v", item)
@@ -268,10 +269,16 @@ func TestCompleteItems(t *testing.T) {
 			input:   " zw/",
 			exclude: "gh:/",
 		},
-		"prefer repo shorthand to user prefix": {
+		"prefer colliding repo expansion with shorthand alone": {
+			input: " zw",
+			cfg:   userRepoCollision,
+			uid:   "gh:zerowidth/dotfiles",
+			valid: true,
+		},
+		"prefer colliding user expansion with trailing repo name": {
 			input: " zw/foo",
 			cfg:   userRepoCollision,
-			uid:   "gh:zerowidth/dotfiles/foo",
+			uid:   "gh:zeedub/foo",
 			valid: true,
 		},
 		"requires exact prefix for repo shorthand": {

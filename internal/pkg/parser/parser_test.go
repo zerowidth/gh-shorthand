@@ -8,12 +8,14 @@ import (
 )
 
 var repoMap = map[string]string{
-	"df":  "zerowidth/dotfiles",
-	"df2": "zerowidth/dotfiles2", // prefix collision
+	"df":   "zerowidth/dotfiles",
+	"df2":  "zerowidth/dotfiles2", // prefix collision
+	"dupe": "dupe-repo/stuff",     // duplicate shorthand in userMap
 }
 
 var userMap = map[string]string{
-	"zw": "zerowidth",
+	"zw":   "zerowidth",
+	"dupe": "dupe-user",
 }
 
 type testCase struct {
@@ -202,6 +204,23 @@ func TestParse(t *testing.T) {
 			input: "zwx/foo",
 			user:  "zwx",
 			repo:  "zwx/foo",
+		},
+		"expands duplicate repo with shorthand by itself": {
+			input:     "dupe",
+			user:      "dupe-repo",
+			repo:      "dupe-repo/stuff",
+			repoMatch: "dupe",
+		},
+		"expands duplicate user with trailing slash": {
+			input:     "dupe/",
+			user:      "dupe-user",
+			userMatch: "dupe",
+		},
+		"expands duplicate user with repo appended to shorthand": {
+			input:     "dupe/foo",
+			user:      "dupe-user",
+			userMatch: "dupe",
+			repo:      "dupe-user/foo",
 		},
 		"matches bare user when allowed": {
 			input: "foo",
