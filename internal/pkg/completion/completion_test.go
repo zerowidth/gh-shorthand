@@ -192,6 +192,7 @@ func TestCompleteItems(t *testing.T) {
 			valid:  true,
 			title:  "Open zerowidth/dotfiles (df)",
 			arg:    "open https://github.com/zerowidth/dotfiles",
+			copy:   "https://github.com/zerowidth/dotfiles",
 			cmdMod: "paste [zerowidth/dotfiles](https://github.com/zerowidth/dotfiles)",
 		},
 		"open a shorthand repo and issue": {
@@ -200,6 +201,7 @@ func TestCompleteItems(t *testing.T) {
 			valid:  true,
 			title:  "Open zerowidth/dotfiles#123 (df#123)",
 			arg:    "open https://github.com/zerowidth/dotfiles/issues/123",
+			copy:   "https://github.com/zerowidth/dotfiles/issues/123",
 			altMod: "paste zerowidth/dotfiles#123",
 			cmdMod: "paste [zerowidth/dotfiles#123](https://github.com/zerowidth/dotfiles/issues/123)",
 		},
@@ -209,6 +211,7 @@ func TestCompleteItems(t *testing.T) {
 			valid: true,
 			title: "Open foo/bar",
 			arg:   "open https://github.com/foo/bar",
+			copy:  "https://github.com/foo/bar",
 		},
 		"open a fully qualified repo and issue": {
 			input:  " foo/bar 123",
@@ -216,6 +219,7 @@ func TestCompleteItems(t *testing.T) {
 			valid:  true,
 			title:  "Open foo/bar#123",
 			arg:    "open https://github.com/foo/bar/issues/123",
+			copy:   "https://github.com/foo/bar/issues/123",
 			altMod: "paste foo/bar#123",
 			cmdMod: "paste [foo/bar#123](https://github.com/foo/bar/issues/123)",
 		},
@@ -225,6 +229,7 @@ func TestCompleteItems(t *testing.T) {
 			valid: true,
 			title: "Open zerowidth/foo (zw)",
 			arg:   "open https://github.com/zerowidth/foo",
+			copy:  "https://github.com/zerowidth/foo",
 		},
 		"open a shorthand user with repo and issue": {
 			input: " zw/foo 123",
@@ -232,6 +237,7 @@ func TestCompleteItems(t *testing.T) {
 			valid: true,
 			title: "Open zerowidth/foo#123 (zw)",
 			arg:   "open https://github.com/zerowidth/foo/issues/123",
+			copy:  "https://github.com/zerowidth/foo/issues/123",
 		},
 		"no match if any unparsed query remains after shorthand": {
 			input:   " df foo",
@@ -257,6 +263,7 @@ func TestCompleteItems(t *testing.T) {
 			valid: true,
 			title: "Open zerowidth/dotfiles/foo (df)",
 			arg:   "open https://github.com/zerowidth/dotfiles/foo",
+			copy:  "https://github.com/zerowidth/dotfiles/foo",
 		},
 		"open direct path when not prefixed with repo": {
 			input: " /foo",
@@ -264,6 +271,7 @@ func TestCompleteItems(t *testing.T) {
 			valid: true,
 			title: "Open /foo",
 			arg:   "open https://github.com/foo",
+			copy:  "https://github.com/foo",
 		},
 		"don't open direct path when matching user prefix": {
 			input:   " zw/",
@@ -301,6 +309,7 @@ func TestCompleteItems(t *testing.T) {
 			valid: true,
 			title: "List issues for zerowidth/dotfiles (df)",
 			arg:   "open https://github.com/zerowidth/dotfiles/issues",
+			copy:  "https://github.com/zerowidth/dotfiles/issues",
 		},
 		"open issues index on a repo": {
 			input: "i foo/bar",
@@ -308,6 +317,7 @@ func TestCompleteItems(t *testing.T) {
 			valid: true,
 			title: "List issues for foo/bar",
 			arg:   "open https://github.com/foo/bar/issues",
+			copy:  "https://github.com/foo/bar/issues",
 		},
 		"search issues on a repo": {
 			input: "i a/b foo bar",
@@ -315,6 +325,7 @@ func TestCompleteItems(t *testing.T) {
 			valid: true,
 			title: "Search issues in a/b for foo bar",
 			arg:   "open https://github.com/a/b/search?utf8=✓&type=Issues&q=foo%20bar",
+			copy:  "https://github.com/a/b/search?utf8=✓&type=Issues&q=foo%20bar",
 		},
 		"search issues on a shorhthand repo": {
 			input: "i df foo bar",
@@ -322,6 +333,7 @@ func TestCompleteItems(t *testing.T) {
 			valid: true,
 			title: "Search issues in zerowidth/dotfiles (df) for foo bar",
 			arg:   "open https://github.com/zerowidth/dotfiles/search?utf8=✓&type=Issues&q=foo%20bar",
+			copy:  "https://github.com/zerowidth/dotfiles/search?utf8=✓&type=Issues&q=foo%20bar",
 		},
 		"search issues for a numeric string on a repo": {
 			input: "i a/b 12345",
@@ -337,6 +349,7 @@ func TestCompleteItems(t *testing.T) {
 			valid: true,
 			title: "New issue in zerowidth/dotfiles (df)",
 			arg:   "open https://github.com/zerowidth/dotfiles/issues/new",
+			copy:  "https://github.com/zerowidth/dotfiles/issues/new",
 		},
 		"open a new issue in a repo": {
 			input: "n a/b",
@@ -344,6 +357,7 @@ func TestCompleteItems(t *testing.T) {
 			valid: true,
 			title: "New issue in a/b",
 			arg:   "open https://github.com/a/b/issues/new",
+			copy:  "https://github.com/a/b/issues/new",
 		},
 		"open a new issue with a query": {
 			input: "n df foo bar",
@@ -351,6 +365,7 @@ func TestCompleteItems(t *testing.T) {
 			valid: true,
 			title: "New issue in zerowidth/dotfiles (df): foo bar",
 			arg:   "open https://github.com/zerowidth/dotfiles/issues/new?title=foo%20bar",
+			copy:  "https://github.com/zerowidth/dotfiles/issues/new?title=foo%20bar",
 		},
 		"search issues globally with no query": {
 			input: "s ",
@@ -363,6 +378,7 @@ func TestCompleteItems(t *testing.T) {
 			title: "Search issues for foo bar",
 			valid: true,
 			arg:   "open https://github.com/search?utf8=✓&type=Issues&q=foo%20bar",
+			copy:  "https://github.com/search?utf8=✓&type=Issues&q=foo%20bar",
 		},
 
 		// default repo
@@ -372,6 +388,7 @@ func TestCompleteItems(t *testing.T) {
 			valid: true,
 			title: "Open zerowidth/default#123",
 			arg:   "open https://github.com/zerowidth/default/issues/123",
+			copy:  "https://github.com/zerowidth/default/issues/123",
 		},
 		"open the default repo when default is also in map": {
 			cfg:   defaultInMap,
@@ -380,6 +397,7 @@ func TestCompleteItems(t *testing.T) {
 			valid: true,
 			title: "Open zerowidth/dotfiles",
 			arg:   "open https://github.com/zerowidth/dotfiles",
+			copy:  "https://github.com/zerowidth/dotfiles",
 		},
 		"includes no default if remaining input isn't otherwise valid": {
 			input:   " foo",
@@ -421,6 +439,7 @@ func TestCompleteItems(t *testing.T) {
 			title: "List projects in zerowidth/dotfiles",
 			valid: true,
 			arg:   "open https://github.com/zerowidth/dotfiles/projects",
+			copy:  "https://github.com/zerowidth/dotfiles/projects",
 		},
 		"specific project with explicit repo": {
 			input: "p zerowidth/dotfiles 10",
@@ -428,6 +447,7 @@ func TestCompleteItems(t *testing.T) {
 			title: "Open project #10 in zerowidth/dotfiles",
 			valid: true,
 			arg:   "open https://github.com/zerowidth/dotfiles/projects/10",
+			copy:  "https://github.com/zerowidth/dotfiles/projects/10",
 		},
 		"project listing with shorthand repo": {
 			input: "p df",
@@ -435,6 +455,7 @@ func TestCompleteItems(t *testing.T) {
 			title: "List projects in zerowidth/dotfiles (df)",
 			valid: true,
 			arg:   "open https://github.com/zerowidth/dotfiles/projects",
+			copy:  "https://github.com/zerowidth/dotfiles/projects",
 		},
 		"specific project with shorthand repo": {
 			input: "p df 10",
@@ -442,6 +463,7 @@ func TestCompleteItems(t *testing.T) {
 			title: "Open project #10 in zerowidth/dotfiles (df#10)",
 			valid: true,
 			arg:   "open https://github.com/zerowidth/dotfiles/projects/10",
+			copy:  "https://github.com/zerowidth/dotfiles/projects/10",
 		},
 		"project listing with org": {
 			input: "p zerowidth",
@@ -449,6 +471,7 @@ func TestCompleteItems(t *testing.T) {
 			title: "List projects for zerowidth",
 			valid: true,
 			arg:   "open https://github.com/orgs/zerowidth/projects",
+			copy:  "https://github.com/orgs/zerowidth/projects",
 		},
 		"specific project with org": {
 			input: "p zerowidth 10",
@@ -456,6 +479,7 @@ func TestCompleteItems(t *testing.T) {
 			title: "Open project #10 for zerowidth",
 			valid: true,
 			arg:   "open https://github.com/orgs/zerowidth/projects/10",
+			copy:  "https://github.com/orgs/zerowidth/projects/10",
 		},
 		"project listing with user shorthand": {
 			input: "p zw",
@@ -463,6 +487,7 @@ func TestCompleteItems(t *testing.T) {
 			title: "List projects for zerowidth (zw)",
 			valid: true,
 			arg:   "open https://github.com/orgs/zerowidth/projects",
+			copy:  "https://github.com/orgs/zerowidth/projects",
 		},
 		"specific project with user shorthand": {
 			input: "p zw 10",
@@ -470,6 +495,7 @@ func TestCompleteItems(t *testing.T) {
 			title: "Open project #10 for zerowidth (zw)",
 			valid: true,
 			arg:   "open https://github.com/orgs/zerowidth/projects/10",
+			copy:  "https://github.com/orgs/zerowidth/projects/10",
 		},
 		"specific project with numeric username treated as project": {
 			input: "p 123",
@@ -494,6 +520,7 @@ func TestCompleteItems(t *testing.T) {
 			valid: true,
 			title: "Open zerowidth/dotfiles (df)",
 			arg:   "open https://github.com/zerowidth/dotfiles",
+			copy:  "https://github.com/zerowidth/dotfiles",
 			auto:  " df",
 		},
 		"autocomplete 'd', second match": {
@@ -502,6 +529,7 @@ func TestCompleteItems(t *testing.T) {
 			valid: true,
 			title: "Open zerowidth/df2 (df2)",
 			arg:   "open https://github.com/zerowidth/df2",
+			copy:  "https://github.com/zerowidth/df2",
 			auto:  " df2",
 		},
 		"autocomplete 'z', matching user shorthand": {
@@ -558,6 +586,7 @@ func TestCompleteItems(t *testing.T) {
 			valid: true,
 			title: "List issues for zerowidth/dotfiles (df)",
 			arg:   "open https://github.com/zerowidth/dotfiles/issues",
+			copy:  "https://github.com/zerowidth/dotfiles/issues",
 			auto:  "i df",
 		},
 		"autocompletes issue index with input so far": {
@@ -612,6 +641,7 @@ func TestCompleteItems(t *testing.T) {
 			valid: true,
 			title: "New issue in zerowidth/dotfiles (df)",
 			arg:   "open https://github.com/zerowidth/dotfiles/issues/new",
+			copy:  "https://github.com/zerowidth/dotfiles/issues/new",
 			auto:  "n df",
 		},
 		"autocomplete user for new issue": {
