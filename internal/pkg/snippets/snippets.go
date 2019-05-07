@@ -5,7 +5,6 @@ import (
 	"regexp"
 	"time"
 
-	"github.com/zerowidth/gh-shorthand/internal/pkg/config"
 	"github.com/zerowidth/gh-shorthand/internal/pkg/rpc"
 )
 
@@ -16,54 +15,25 @@ var discussionRegex = regexp.MustCompile(`(https://github\.com/orgs/([^/]+)/team
 //
 // "https://github.com/zerowidth/camper_van/issues/1" becomes a markdown link
 // with link text "zerowidth/camper_van#1".
-func MarkdownLink(cfg config.Config, input string, includeDesc bool) string {
+func MarkdownLink(rpcClient rpc.Client, input string, includeDesc bool) string {
 	issueMatches := issueRegex.FindStringSubmatch(input)
 	discussionMatches := discussionRegex.FindStringSubmatchIndex(input)
-	if issueMatches == nil {
-		if discussionMatches == nil {
-			return input
-		}
 
+	if discussionMatches != nil {
 		template := "[@$2/$3#$4]($1)"
 		result := []byte{}
 		result = discussionRegex.ExpandString(result, template, input, discussionMatches)
 		return string(result)
 	}
 
-	repo := fmt.Sprintf("%s/%s", issueMatches[2], issueMatches[3])
-	issue := issueMatches[5]
-	mdLink := fmt.Sprintf("[%s#%s](%s)", repo, issue, issueMatches[1])
-
-	if includeDesc {
-		rpcc := make(chan (rpc.Result), 1)
-
-		go func() {
-			q := fmt.Sprintf("%s#%s", repo, issue)
-			for {
-				res := rpc.Query(cfg, "/issue", q)
-				if res.Complete {
-					rpcc <- res
-					return
-				}
-				<-time.After(100 * time.Millisecond)
-			}
-		}()
-
-		select {
-		case res := <-rpcc:
-			if len(res.Error) > 0 {
-				mdLink = fmt.Sprintf("%s (rpc error: %s)", mdLink, res.Error)
-			} else if len(res.Issues) > 0 {
-				mdLink = fmt.Sprintf("[%s#%s: %s](%s)", repo, issue, res.Issues[0].Title, issueMatches[1])
-			} else {
-				mdLink += " (rpc error: no issue returned)"
-			}
-		case <-time.After(5 * time.Second):
-			mdLink += " (rpc timed out)"
-		}
+	if issueMatches != nil {
+		url := issueMatches[1]
+		repo := fmt.Sprintf("%s/%s", issueMatches[2], issueMatches[3])
+		issue := issueMatches[5]
+		return formatIssue(rpcClient, url, repo, issue, includeDesc)
 	}
 
-	return mdLink
+	return input
 }
 
 // IssueReference looks for a github issue and converts it to an issue reference.
@@ -80,4 +50,37 @@ func IssueReference(input string) string {
 	result := []byte{}
 	result = issueRegex.ExpandString(result, template, input, matches)
 	return string(result)
+}
+
+func formatIssue(rpcClient rpc.Client, url, repo, issue string, includeDesc bool) string {
+	mdLink := fmt.Sprintf("[%s#%s](%s)", repo, issue, url)
+
+	if includeDesc {
+		resultChan := make(chan (rpc.Result), 1)
+
+		go func() {
+			for {
+				res := rpcClient.Query("/issue", fmt.Sprintf("%s#%s", repo, issue))
+				if res.Complete {
+					resultChan <- res
+					return
+				}
+				<-time.After(100 * time.Millisecond)
+			}
+		}()
+
+		select {
+		case res := <-resultChan:
+			if len(res.Error) > 0 {
+				mdLink = fmt.Sprintf("%s (rpc error: %s)", mdLink, res.Error)
+			} else if len(res.Issues) > 0 {
+				mdLink = fmt.Sprintf("[%s#%s: %s](%s)", repo, issue, res.Issues[0].Title, url)
+			} else {
+				mdLink += " (rpc error: no data returned)"
+			}
+		case <-time.After(5 * time.Second):
+			mdLink += " (rpc timed out)"
+		}
+	}
+	return mdLink
 }

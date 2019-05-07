@@ -12,6 +12,18 @@ import (
 	"github.com/zerowidth/gh-shorthand/internal/pkg/config"
 )
 
+// Client represents an RPC client
+type Client struct {
+	socketPath string
+}
+
+// NewClient creates a new Client from a config
+func NewClient(cfg config.Config) Client {
+	return Client{
+		socketPath: cfg.SocketPath,
+	}
+}
+
 // how long to wait before giving up on the backend
 const socketTimeout = 100 * time.Millisecond
 
@@ -19,18 +31,18 @@ const socketTimeout = 100 * time.Millisecond
 //
 // Returns a Result if the RPC call completed successfully, regardless of
 // whether the ultimate value is ready or not.
-func Query(cfg config.Config, endpoint, query string) Result {
+func (c Client) Query(endpoint, query string) Result {
 	var res Result
 
-	if len(cfg.SocketPath) == 0 {
+	if len(c.socketPath) == 0 {
 		return Result{Complete: true} // RPC isn't enabled, don't worry about it
 	}
 
-	c := http.Client{
+	httpClient := http.Client{
 		Transport: &http.Transport{
 			DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
 				d := net.Dialer{}
-				return d.DialContext(ctx, "unix", cfg.SocketPath)
+				return d.DialContext(ctx, "unix", c.socketPath)
 			},
 		},
 		Timeout: socketTimeout,
@@ -46,7 +58,7 @@ func Query(cfg config.Config, endpoint, query string) Result {
 	v.Set("q", query)
 	u.RawQuery = v.Encode()
 
-	resp, err := c.Get(u.String())
+	resp, err := httpClient.Get(u.String())
 	if err != nil {
 		res.Error = "RPC service error: " + err.Error()
 		res.Complete = true

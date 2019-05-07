@@ -40,13 +40,14 @@ const (
 
 // Used internally to collect the input and output for completion
 type completion struct {
-	cfg    config.Config
-	env    Environment
-	result alfred.FilterResult
-	mode   string
-	input  string
-	parsed parser.Result
-	retry  bool // for RPC calls on idle query input
+	cfg       config.Config
+	env       Environment
+	result    alfred.FilterResult
+	mode      string
+	input     string
+	parsed    parser.Result
+	retry     bool // for RPC calls on idle query input
+	rpcClient rpc.Client
 }
 
 // Complete runs the main completion code
@@ -61,12 +62,13 @@ func Complete(cfg config.Config, env Environment) alfred.FilterResult {
 	parsed := parser.Parse(cfg.RepoMap, cfg.UserMap, input, bareUser, ignoreNumeric)
 
 	c := completion{
-		cfg:    cfg,
-		env:    env,
-		result: alfred.NewFilterResult(),
-		mode:   mode,
-		input:  input,
-		parsed: parsed,
+		cfg:       cfg,
+		env:       env,
+		result:    alfred.NewFilterResult(),
+		mode:      mode,
+		input:     input,
+		parsed:    parsed,
+		rpcClient: rpc.NewClient(cfg),
 	}
 	c.appendParsedItems()
 	c.finalizeResult()
@@ -700,7 +702,7 @@ func (c *completion) rpcRequest(path, query string, delay float64) rpc.Result {
 		return rpc.Result{Complete: false}
 	}
 
-	res := rpc.Query(c.cfg, path, query)
+	res := c.rpcClient.Query(path, query)
 
 	if !res.Complete && len(res.Error) == 0 {
 		c.retry = true
