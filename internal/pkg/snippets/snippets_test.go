@@ -13,6 +13,34 @@ type urlTestCase struct {
 	output string
 }
 
+type rpcTestCase struct {
+	input    string
+	output   string
+	endpoint string    // the endpoint that should be called
+	query    string    // the query that should be used
+	issue    rpc.Issue // an issue to return
+}
+
+type fakeClient struct {
+	endpoint string // to record the endpoint
+	query    string // to record the query used
+	issue    *rpc.Issue
+}
+
+func (fc *fakeClient) Query(endpoint, query string) rpc.Result {
+	// record the input
+	fc.endpoint = endpoint
+	fc.query = query
+
+	// assemble the output
+	issues := []rpc.Issue{}
+	if fc.issue != nil {
+		issues = append(issues, *fc.issue)
+	}
+
+	return rpc.Result{Complete: true, Issues: issues}
+}
+
 func TestMarkdownLink(t *testing.T) {
 	tests := map[string]urlTestCase{
 		"repo url": {
@@ -58,6 +86,36 @@ func TestMarkdownLink(t *testing.T) {
 	}
 }
 
+func TestMarkdownLinkWithDescription(t *testing.T) {
+	tests := map[string]rpcTestCase{
+		"issue url": {
+			input:    "https://github.com/zw/df/issues/1",
+			output:   "[zw/df#1: a dotfiles issue](https://github.com/zw/df/issues/1)",
+			endpoint: "/issue",
+			query:    "zw/df#1",
+			issue:    rpc.Issue{Title: "a dotfiles issue"},
+		},
+		"pull request url": {
+			input:    "https://github.com/zw/df/pull/1",
+			output:   "[zw/df#1: a dotfiles patch](https://github.com/zw/df/pull/1)",
+			endpoint: "/issue",
+			query:    "zw/df#1",
+			issue:    rpc.Issue{Title: "a dotfiles patch"},
+		},
+	}
+
+	for desc, tc := range tests {
+		t.Run(desc, func(t *testing.T) {
+			client := &fakeClient{
+				issue: &tc.issue,
+			}
+			assert.Equal(t, tc.output, MarkdownLink(client, tc.input, true))
+			assert.Equal(t, tc.endpoint, client.endpoint)
+			assert.Equal(t, tc.query, client.query)
+		})
+	}
+}
+
 func TestIssueReference(t *testing.T) {
 	tests := map[string]urlTestCase{
 		"issue url": {
@@ -87,5 +145,4 @@ func TestIssueReference(t *testing.T) {
 			assert.Equal(t, tc.output, IssueReference(tc.input))
 		})
 	}
-
 }
