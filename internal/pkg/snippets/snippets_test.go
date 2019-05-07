@@ -15,6 +15,14 @@ type urlTestCase struct {
 
 func TestMarkdownLink(t *testing.T) {
 	tests := map[string]urlTestCase{
+		"repo url": {
+			input:  "https://github.com/zw/df",
+			output: "[zw/df](https://github.com/zw/df)",
+		},
+		"not a repo-only url": {
+			input:  "https://github.com/zw/df/foo",
+			output: "https://github.com/zw/df/foo",
+		},
 		"issue url": {
 			input:  "https://github.com/zw/df/issues/1",
 			output: "[zw/df#1](https://github.com/zw/df/issues/1)",

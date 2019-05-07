@@ -8,6 +8,7 @@ import (
 	"github.com/zerowidth/gh-shorthand/internal/pkg/rpc"
 )
 
+var repoRegex = regexp.MustCompile(`(https://github\.com/([^/]+)/([^/]+))/?$`)
 var issueRegex = regexp.MustCompile(`(https://github\.com/([^/]+)/([^/]+)/(issues|pull)/(\d+))#?`)
 var discussionRegex = regexp.MustCompile(`(https://github\.com/orgs/([^/]+)/teams/([^/]+)/discussions/(\d+))#?`)
 
@@ -18,6 +19,7 @@ var discussionRegex = regexp.MustCompile(`(https://github\.com/orgs/([^/]+)/team
 func MarkdownLink(rpcClient rpc.Client, input string, includeDesc bool) string {
 	issueMatches := issueRegex.FindStringSubmatch(input)
 	discussionMatches := discussionRegex.FindStringSubmatchIndex(input)
+	repoMatches := repoRegex.FindStringSubmatch(input)
 
 	if discussionMatches != nil {
 		template := "[@$2/$3#$4]($1)"
@@ -31,6 +33,12 @@ func MarkdownLink(rpcClient rpc.Client, input string, includeDesc bool) string {
 		repo := fmt.Sprintf("%s/%s", issueMatches[2], issueMatches[3])
 		issue := issueMatches[5]
 		return formatIssue(rpcClient, url, repo, issue, includeDesc)
+	}
+
+	if repoMatches != nil {
+		url := repoMatches[1]
+		repo := fmt.Sprintf("%s/%s", repoMatches[2], repoMatches[3])
+		return fmt.Sprintf("[%s](%s)", repo, url)
 	}
 
 	return input
