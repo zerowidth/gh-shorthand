@@ -18,12 +18,14 @@ type rpcTestCase struct {
 	output   string
 	endpoint string    // the endpoint that should be called
 	query    string    // the query that should be used
+	repo     rpc.Repo  // a repo to return
 	issue    rpc.Issue // an issue to return
 }
 
 type fakeClient struct {
 	endpoint string // to record the endpoint
 	query    string // to record the query used
+	repo     *rpc.Repo
 	issue    *rpc.Issue
 }
 
@@ -33,12 +35,16 @@ func (fc *fakeClient) Query(endpoint, query string) rpc.Result {
 	fc.query = query
 
 	// assemble the output
+	repos := []rpc.Repo{}
 	issues := []rpc.Issue{}
+	if fc.repo != nil {
+		repos = append(repos, *fc.repo)
+	}
 	if fc.issue != nil {
 		issues = append(issues, *fc.issue)
 	}
 
-	return rpc.Result{Complete: true, Issues: issues}
+	return rpc.Result{Complete: true, Repos: repos, Issues: issues}
 }
 
 func TestMarkdownLink(t *testing.T) {
@@ -88,6 +94,13 @@ func TestMarkdownLink(t *testing.T) {
 
 func TestMarkdownLinkWithDescription(t *testing.T) {
 	tests := map[string]rpcTestCase{
+		"repo url": {
+			input:    "https://github.com/zw/df",
+			output:   "[zw/df: dotfiles](https://github.com/zw/df)",
+			endpoint: "/repo",
+			query:    "zw/df",
+			repo:     rpc.Repo{Description: "dotfiles"},
+		},
 		"issue url": {
 			input:    "https://github.com/zw/df/issues/1",
 			output:   "[zw/df#1: a dotfiles issue](https://github.com/zw/df/issues/1)",
@@ -107,6 +120,7 @@ func TestMarkdownLinkWithDescription(t *testing.T) {
 	for desc, tc := range tests {
 		t.Run(desc, func(t *testing.T) {
 			client := &fakeClient{
+				repo:  &tc.repo,
 				issue: &tc.issue,
 			}
 			assert.Equal(t, tc.output, MarkdownLink(client, tc.input, true))

@@ -38,7 +38,7 @@ func MarkdownLink(rpcClient rpc.Client, input string, includeDesc bool) string {
 	if repoMatches != nil {
 		url := repoMatches[1]
 		repo := fmt.Sprintf("%s/%s", repoMatches[2], repoMatches[3])
-		return fmt.Sprintf("[%s](%s)", repo, url)
+		return formatRepo(rpcClient, url, repo, includeDesc)
 	}
 
 	return input
@@ -90,5 +90,40 @@ func formatIssue(rpcClient rpc.Client, url, repo, issue string, includeDesc bool
 			mdLink += " (rpc timed out)"
 		}
 	}
+
+	return mdLink
+}
+
+func formatRepo(rpcClient rpc.Client, url, repo string, includeDesc bool) string {
+	mdLink := fmt.Sprintf("[%s](%s)", repo, url)
+
+	if includeDesc {
+		resultChan := make(chan (rpc.Result), 1)
+
+		go func() {
+			for {
+				res := rpcClient.Query("/repo", repo)
+				if res.Complete {
+					resultChan <- res
+					return
+				}
+				<-time.After(100 * time.Millisecond)
+			}
+		}()
+
+		select {
+		case res := <-resultChan:
+			if len(res.Error) > 0 {
+				mdLink = fmt.Sprintf("%s (rpc error: %s)", mdLink, res.Error)
+			} else if len(res.Repos) > 0 {
+				mdLink = fmt.Sprintf("[%s: %s](%s)", repo, res.Repos[0].Description, url)
+			} else {
+				mdLink += " (rpc error: no data returned)"
+			}
+		case <-time.After(5 * time.Second):
+			mdLink += " (rpc timed out)"
+		}
+	}
+
 	return mdLink
 }
