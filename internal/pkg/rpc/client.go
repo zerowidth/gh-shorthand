@@ -12,29 +12,34 @@ import (
 	"github.com/zerowidth/gh-shorthand/internal/pkg/config"
 )
 
-// Client represents an RPC client
-type Client struct {
+// Client represents an RPC client interface
+type Client interface {
+	Query(endpoint, query string) Result
+}
+
+// SocketClient is a client that talks to a local socket
+type SocketClient struct {
 	socketPath string
 }
 
 // NewClient creates a new Client from a config
-func NewClient(cfg config.Config) Client {
-	return Client{
+func NewClient(cfg config.Config) SocketClient {
+	return SocketClient{
 		socketPath: cfg.SocketPath,
 	}
 }
 
-// how long to wait before giving up on the backend
+// How long to wait before giving up on the backend
 const socketTimeout = 100 * time.Millisecond
 
 // Query executes a query against the RPC server.
 //
 // Returns a Result if the RPC call completed successfully, regardless of
 // whether the ultimate value is ready or not.
-func (c Client) Query(endpoint, query string) Result {
+func (sc SocketClient) Query(endpoint, query string) Result {
 	var res Result
 
-	if len(c.socketPath) == 0 {
+	if len(sc.socketPath) == 0 {
 		return Result{Complete: true} // RPC isn't enabled, don't worry about it
 	}
 
@@ -42,7 +47,7 @@ func (c Client) Query(endpoint, query string) Result {
 		Transport: &http.Transport{
 			DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
 				d := net.Dialer{}
-				return d.DialContext(ctx, "unix", c.socketPath)
+				return d.DialContext(ctx, "unix", sc.socketPath)
 			},
 		},
 		Timeout: socketTimeout,
