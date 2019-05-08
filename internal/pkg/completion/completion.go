@@ -733,6 +733,17 @@ func (c *completion) retrieveRepo(item *alfred.Item) {
 	}
 
 	item.Subtitle = res.Repos[0].Description
+
+	if item.Mods != nil {
+		item.Mods.Ctrl = &alfred.ModItem{
+			Valid: true,
+			Arg: fmt.Sprintf("paste [%s: %s](https://github.com/%s)",
+				c.parsed.Repo(), res.Repos[0].Description, c.parsed.Repo()),
+			Subtitle: fmt.Sprintf("Insert Markdown link with description to %s",
+				c.parsed.Repo()),
+			Icon: markdownIcon,
+		}
+	}
 }
 
 // retrieveIssue adds the title and state to an "open issue" item
