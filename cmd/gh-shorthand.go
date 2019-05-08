@@ -12,6 +12,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/zerowidth/gh-shorthand/internal/pkg/completion"
 	"github.com/zerowidth/gh-shorthand/internal/pkg/config"
+	"github.com/zerowidth/gh-shorthand/internal/pkg/rpc"
 	"github.com/zerowidth/gh-shorthand/internal/pkg/server"
 	"github.com/zerowidth/gh-shorthand/internal/pkg/snippets"
 )
@@ -73,7 +74,8 @@ description from the issue or PR's title.
 		if err != nil {
 			fmt.Fprintf(os.Stdout, "%s (error: %s)", input, err.Error())
 		}
-		link := snippets.MarkdownLink(cfg, input, markdownDescription)
+		rpcClient := rpc.NewClient(cfg)
+		link := snippets.MarkdownLink(rpcClient, input, markdownDescription)
 		fmt.Fprintf(os.Stdout, link)
 	},
 }
