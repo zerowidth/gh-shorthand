@@ -53,12 +53,20 @@ func TestMarkdownLink(t *testing.T) {
 			input:  "https://github.com/zw/df",
 			output: "[zw/df](https://github.com/zw/df)",
 		},
+		"repeated repo url": {
+			input:  "[zw/df](https://github.com/zw/df)",
+			output: "[zw/df](https://github.com/zw/df)",
+		},
 		"not a repo-only url": {
 			input:  "https://github.com/zw/df/foo",
 			output: "https://github.com/zw/df/foo",
 		},
 		"issue url": {
 			input:  "https://github.com/zw/df/issues/1",
+			output: "[zw/df#1](https://github.com/zw/df/issues/1)",
+		},
+		"repeated issue url": {
+			input:  "[zw/df#1](https://github.com/zw/df/issues/1)",
 			output: "[zw/df#1](https://github.com/zw/df/issues/1)",
 		},
 		"not an issue url": {
@@ -71,6 +79,10 @@ func TestMarkdownLink(t *testing.T) {
 		},
 		"pull request url": {
 			input:  "https://github.com/zw/df/pull/1",
+			output: "[zw/df#1](https://github.com/zw/df/pull/1)",
+		},
+		"repeated pull request url": {
+			input:  "[zw/df#1](https://github.com/zw/df/pull/1)",
 			output: "[zw/df#1](https://github.com/zw/df/pull/1)",
 		},
 		"extra text is ignored": {

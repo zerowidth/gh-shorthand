@@ -8,7 +8,7 @@ import (
 	"github.com/zerowidth/gh-shorthand/internal/pkg/rpc"
 )
 
-var repoRegex = regexp.MustCompile(`(https://github\.com/([^/]+)/([^/]+))/?$`)
+var repoRegex = regexp.MustCompile(`(https://github\.com/([^/]+)/([^/]+)\b)(.?)`)
 var issueRegex = regexp.MustCompile(`(https://github\.com/([^/]+)/([^/]+)/(issues|pull)/(\d+))#?`)
 var discussionRegex = regexp.MustCompile(`(https://github\.com/orgs/([^/]+)/teams/([^/]+)/discussions/(\d+))#?`)
 
@@ -35,7 +35,9 @@ func MarkdownLink(rpcClient rpc.Client, input string, includeDesc bool) string {
 		return formatIssue(rpcClient, url, repo, issue, includeDesc)
 	}
 
-	if repoMatches != nil {
+	// Don't want to match a repo url with anything after it, but can't do a
+	// negative lookahead to ignore a trailing /. Capture and check here instead.
+	if repoMatches != nil && repoMatches[4] != "/" {
 		url := repoMatches[1]
 		repo := fmt.Sprintf("%s/%s", repoMatches[2], repoMatches[3])
 		return formatRepo(rpcClient, url, repo, includeDesc)
