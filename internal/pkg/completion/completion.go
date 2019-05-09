@@ -101,12 +101,7 @@ func (c *completion) appendParsedItems() {
 	switch c.mode {
 	case "": // no input, show default items
 		c.result.AppendItems(
-			repoDefaultItem,
-			issueListDefaultItem,
-			projectListDefaultItem,
-			newIssueDefaultItem,
-			issueSearchDefaultItem,
-			openProjectDefaultItem,
+			defaultItems...,
 		)
 
 	case " ": // open repo, issue, and/or path
