@@ -59,7 +59,7 @@ func Complete(cfg config.Config, env Environment) alfred.FilterResult {
 		mode:      mode,
 		input:     input,
 		parsed:    parsed,
-		rpcClient: rpc.NewClient(cfg),
+		rpcClient: rpc.NewClient(cfg.SocketPath),
 	}
 	c.appendParsedItems()
 	c.finalizeResult()

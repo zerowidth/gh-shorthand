@@ -8,8 +8,6 @@ import (
 	"net/http"
 	"net/url"
 	"time"
-
-	"github.com/zerowidth/gh-shorthand/internal/pkg/config"
 )
 
 // Client represents an RPC client interface
@@ -23,9 +21,9 @@ type SocketClient struct {
 }
 
 // NewClient creates a new Client from a config
-func NewClient(cfg config.Config) SocketClient {
+func NewClient(socketPath string) SocketClient {
 	return SocketClient{
-		socketPath: cfg.SocketPath,
+		socketPath: socketPath,
 	}
 }
 

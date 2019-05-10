@@ -74,7 +74,7 @@ description from the issue or PR's title.
 		if err != nil {
 			fmt.Fprintf(os.Stdout, "%s (error: %s)", input, err.Error())
 		}
-		rpcClient := rpc.NewClient(cfg)
+		rpcClient := rpc.NewClient(cfg.SocketPath)
 		link := snippets.MarkdownLink(rpcClient, input, markdownDescription)
 		fmt.Fprintf(os.Stdout, link)
 	},

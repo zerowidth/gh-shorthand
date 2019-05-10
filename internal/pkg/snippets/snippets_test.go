@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/zerowidth/gh-shorthand/internal/pkg/config"
 	"github.com/zerowidth/gh-shorthand/internal/pkg/rpc"
 )
 
@@ -98,7 +97,7 @@ func TestMarkdownLink(t *testing.T) {
 
 	for desc, tc := range tests {
 		t.Run(desc, func(t *testing.T) {
-			rpcClient := rpc.NewClient(config.Config{})
+			rpcClient := rpc.NewClient("")
 			assert.Equal(t, tc.output, MarkdownLink(rpcClient, tc.input, false))
 		})
 	}
