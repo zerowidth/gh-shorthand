@@ -10,10 +10,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/zerowidth/gh-shorthand/internal/pkg/config"
-	"github.com/zerowidth/gh-shorthand/internal/pkg/parser"
-	"github.com/zerowidth/gh-shorthand/internal/pkg/rpc"
 	"github.com/zerowidth/gh-shorthand/pkg/alfred"
+	"github.com/zerowidth/gh-shorthand/pkg/config"
+	"github.com/zerowidth/gh-shorthand/pkg/parser"
+	"github.com/zerowidth/gh-shorthand/pkg/rpc"
 )
 
 const (

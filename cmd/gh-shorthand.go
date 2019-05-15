@@ -10,11 +10,11 @@ import (
 
 	"github.com/kardianos/service"
 	"github.com/spf13/cobra"
-	"github.com/zerowidth/gh-shorthand/internal/pkg/completion"
-	"github.com/zerowidth/gh-shorthand/internal/pkg/config"
-	"github.com/zerowidth/gh-shorthand/internal/pkg/rpc"
-	"github.com/zerowidth/gh-shorthand/internal/pkg/server"
-	"github.com/zerowidth/gh-shorthand/internal/pkg/snippets"
+	"github.com/zerowidth/gh-shorthand/pkg/completion"
+	"github.com/zerowidth/gh-shorthand/pkg/config"
+	"github.com/zerowidth/gh-shorthand/pkg/rpc"
+	"github.com/zerowidth/gh-shorthand/pkg/server"
+	"github.com/zerowidth/gh-shorthand/pkg/snippets"
 )
 
 var rootCmd = &cobra.Command{

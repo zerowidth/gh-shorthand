@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/zerowidth/gh-shorthand/internal/pkg/config"
 	"github.com/zerowidth/gh-shorthand/pkg/alfred"
+	"github.com/zerowidth/gh-shorthand/pkg/config"
 )
 
 var defaultCfg = &config.Config{

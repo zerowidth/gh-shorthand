@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/shurcooL/githubv4"
-	"github.com/zerowidth/gh-shorthand/internal/pkg/config"
+	"github.com/zerowidth/gh-shorthand/pkg/config"
 	"golang.org/x/oauth2"
 )
 

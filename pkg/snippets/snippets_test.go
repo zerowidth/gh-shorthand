@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/zerowidth/gh-shorthand/internal/pkg/rpc"
+	"github.com/zerowidth/gh-shorthand/pkg/rpc"
 )
 
 type urlTestCase struct {
