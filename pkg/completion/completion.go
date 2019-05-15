@@ -31,13 +31,18 @@ const (
 
 // Used internally to collect the input and output for completion
 type completion struct {
-	cfg       config.Config
-	env       Environment
-	result    alfred.FilterResult
-	input     string
-	parsed    parser.Result
-	retry     bool // for RPC calls on idle query input
+	// input
+	cfg       config.Config // the gh-shorthand config
+	env       Environment   // the runtime environment from alfred
+	input     string        // the input string from the user (minus mode)
 	rpcClient rpc.Client
+
+	// intermediate processing:
+	parsed parser.Result
+
+	// output
+	result alfred.FilterResult // the final assembled result
+	retry  bool                // should this script be re-invoked? (for RPC)
 }
 
 // Complete runs the main completion code
