@@ -34,7 +34,6 @@ type completion struct {
 	cfg       config.Config
 	env       Environment
 	result    alfred.FilterResult
-	mode      string
 	input     string
 	parsed    parser.Result
 	retry     bool // for RPC calls on idle query input
@@ -45,6 +44,7 @@ type completion struct {
 func Complete(cfg config.Config, env Environment) alfred.FilterResult {
 	mode, input, ok := extractMode(env.Query)
 	if !ok {
+		// this didn't have a valid mode, just skip it.
 		return alfred.NewFilterResult()
 	}
 
@@ -56,12 +56,11 @@ func Complete(cfg config.Config, env Environment) alfred.FilterResult {
 		cfg:       cfg,
 		env:       env,
 		result:    alfred.NewFilterResult(),
-		mode:      mode,
 		input:     input,
 		parsed:    parsed,
 		rpcClient: rpc.NewClient(cfg.SocketPath),
 	}
-	c.appendParsedItems()
+	c.appendParsedItems(mode)
 	c.finalizeResult()
 
 	return c.result
@@ -88,17 +87,19 @@ func extractMode(input string) (string, string, bool) {
 			input = input[2:]
 		}
 	}
+
+	// default is "no mode", with empty input
 	return mode, input, true
 }
 
-func (c *completion) appendParsedItems() {
+func (c *completion) appendParsedItems(mode string) {
 	fullInput := c.env.Query
 
 	if !c.parsed.HasRepo() && len(c.cfg.DefaultRepo) > 0 && !c.parsed.HasOwner() && !c.parsed.HasPath() {
 		c.parsed.SetRepo(c.cfg.DefaultRepo)
 	}
 
-	switch c.mode {
+	switch mode {
 	case "": // no input, show default items
 		c.result.AppendItems(
 			defaultItems...,
