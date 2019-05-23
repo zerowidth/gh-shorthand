@@ -9,7 +9,7 @@ import (
 	"github.com/go-chi/chi"
 	"github.com/kardianos/service"
 	cache "github.com/patrickmn/go-cache"
-	"github.com/zerowidth/gh-shorthand/internal/pkg/config"
+	"github.com/zerowidth/gh-shorthand/pkg/config"
 )
 
 const (

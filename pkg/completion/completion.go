@@ -7,15 +7,13 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"time"
 
-	"github.com/sahilm/fuzzy"
-	"github.com/zerowidth/gh-shorthand/internal/pkg/config"
-	"github.com/zerowidth/gh-shorthand/internal/pkg/parser"
-	"github.com/zerowidth/gh-shorthand/internal/pkg/rpc"
 	"github.com/zerowidth/gh-shorthand/pkg/alfred"
+	"github.com/zerowidth/gh-shorthand/pkg/config"
+	"github.com/zerowidth/gh-shorthand/pkg/parser"
+	"github.com/zerowidth/gh-shorthand/pkg/rpc"
 )
 
 const (
@@ -31,29 +29,27 @@ const (
 	issueListDelay = 1.0
 )
 
-type projectMode int
-
-const (
-	modeEdit projectMode = iota
-	modeTerm
-)
-
 // Used internally to collect the input and output for completion
 type completion struct {
-	cfg       config.Config
-	env       Environment
-	result    alfred.FilterResult
-	mode      string
-	input     string
-	parsed    parser.Result
-	retry     bool // for RPC calls on idle query input
+	// input
+	cfg       config.Config // the gh-shorthand config
+	env       Environment   // the runtime environment from alfred
+	input     string        // the input string from the user (minus mode)
 	rpcClient rpc.Client
+
+	// intermediate processing:
+	parsed parser.Result
+
+	// output
+	result alfred.FilterResult // the final assembled result
+	retry  bool                // should this script be re-invoked? (for RPC)
 }
 
 // Complete runs the main completion code
 func Complete(cfg config.Config, env Environment) alfred.FilterResult {
 	mode, input, ok := extractMode(env.Query)
 	if !ok {
+		// this didn't have a valid mode, just skip it.
 		return alfred.NewFilterResult()
 	}
 
@@ -65,53 +61,14 @@ func Complete(cfg config.Config, env Environment) alfred.FilterResult {
 		cfg:       cfg,
 		env:       env,
 		result:    alfred.NewFilterResult(),
-		mode:      mode,
 		input:     input,
 		parsed:    parsed,
-		rpcClient: rpc.NewClient(cfg),
+		rpcClient: rpc.NewClient(cfg.SocketPath),
 	}
-	c.appendParsedItems()
+	c.appendParsedItems(mode)
 	c.finalizeResult()
 
 	return c.result
-}
-
-// Environment represents the runtime environment from Alfred's invocation of
-// this binary.
-type Environment struct {
-	Query string
-	Start time.Time
-}
-
-// LoadAlfredEnvironment extracts the runtime environment from the OS environment
-//
-// The result of a script filter can set environment variables along with a
-// "rerun this" timer for another invocation, and this retrieves and stores that
-// information.
-func LoadAlfredEnvironment(input string) Environment {
-	e := Environment{
-		Query: input,
-		Start: time.Now(),
-	}
-
-	if query, ok := os.LookupEnv("query"); ok && query == input {
-		if sStr, ok := os.LookupEnv("s"); ok {
-			if nsStr, ok := os.LookupEnv("ns"); ok {
-				if s, err := strconv.ParseInt(sStr, 10, 64); err == nil {
-					if ns, err := strconv.ParseInt(nsStr, 10, 64); err == nil {
-						e.Start = time.Unix(s, ns)
-					}
-				}
-			}
-		}
-	}
-
-	return e
-}
-
-// Duration since alfred saw the first query
-func (e Environment) Duration() time.Duration {
-	return time.Since(e.Start)
 }
 
 // given an input query, extract the mode and input string. returns false if
@@ -135,25 +92,22 @@ func extractMode(input string) (string, string, bool) {
 			input = input[2:]
 		}
 	}
+
+	// default is "no mode", with empty input
 	return mode, input, true
 }
 
-func (c *completion) appendParsedItems() {
+func (c *completion) appendParsedItems(mode string) {
 	fullInput := c.env.Query
 
 	if !c.parsed.HasRepo() && len(c.cfg.DefaultRepo) > 0 && !c.parsed.HasOwner() && !c.parsed.HasPath() {
 		c.parsed.SetRepo(c.cfg.DefaultRepo)
 	}
 
-	switch c.mode {
+	switch mode {
 	case "": // no input, show default items
 		c.result.AppendItems(
-			repoDefaultItem,
-			issueListDefaultItem,
-			projectListDefaultItem,
-			newIssueDefaultItem,
-			issueSearchDefaultItem,
-			openProjectDefaultItem,
+			defaultItems...,
 		)
 
 	case " ": // open repo, issue, and/or path
@@ -245,11 +199,11 @@ func (c *completion) appendParsedItems() {
 
 	case "e":
 		c.result.AppendItems(
-			projectItems(c.cfg.ProjectDirMap(), c.input, modeEdit)...)
+			projectDirItems(c.cfg.ProjectDirMap(), c.input, modeEdit)...)
 
 	case "t":
 		c.result.AppendItems(
-			projectItems(c.cfg.ProjectDirMap(), c.input, modeTerm)...)
+			projectDirItems(c.cfg.ProjectDirMap(), c.input, modeTerm)...)
 
 	case "s":
 		searchItem := globalIssueSearchItem(c.input)
@@ -257,82 +211,6 @@ func (c *completion) appendParsedItems() {
 		c.result.AppendItems(searchItem)
 		c.result.AppendItems(matches...)
 	}
-}
-
-func projectItems(dirs map[string]string, search string, mode projectMode) (items alfred.Items) {
-	projects := map[string]string{}
-	projectNames := []string{}
-
-	for base, expanded := range dirs {
-		if dirs, err := findProjectDirs(expanded); err == nil {
-			for _, dirname := range dirs {
-				short := filepath.Join(base, dirname)
-				full := filepath.Join(expanded, dirname)
-				projects[short] = full
-				projectNames = append(projectNames, short)
-			}
-		} else {
-			items = append(items, ErrorItem("Invalid project directory: "+base, err.Error()))
-		}
-	}
-
-	if len(search) > 0 {
-		sorted := fuzzy.Find(search, projectNames)
-		projectNames = []string{}
-		for _, result := range sorted {
-			projectNames = append(projectNames, result.Str)
-		}
-	}
-
-	for _, short := range projectNames {
-		var item = alfred.Item{
-			Title: short,
-			Valid: true,
-			Text:  &alfred.Text{Copy: projects[short], LargeType: projects[short]},
-			Mods: &alfred.Mods{
-				Cmd: &alfred.ModItem{
-					Valid:    true,
-					Arg:      "term " + projects[short],
-					Subtitle: "Open terminal in " + short,
-					Icon:     terminalIcon,
-				},
-				Alt: &alfred.ModItem{
-					Valid:    true,
-					Arg:      "finder " + projects[short],
-					Subtitle: "Open finder in " + short,
-					Icon:     finderIcon,
-				},
-			},
-		}
-
-		if mode == modeEdit {
-			item.UID = "ghe:" + short
-			item.Subtitle = "Edit " + short
-			item.Arg = "edit " + projects[short]
-			item.Icon = editorIcon
-			item.Mods.Cmd = &alfred.ModItem{
-				Valid:    true,
-				Arg:      "term " + projects[short],
-				Subtitle: "Open terminal in " + short,
-				Icon:     terminalIcon,
-			}
-		} else {
-			item.UID = "ght:" + short
-			item.Subtitle = "Open terminal in " + short
-			item.Arg = "term " + projects[short]
-			item.Icon = terminalIcon
-			item.Mods.Cmd = &alfred.ModItem{
-				Valid:    true,
-				Arg:      "edit " + projects[short],
-				Subtitle: "Edit " + short,
-				Icon:     editorIcon,
-			}
-		}
-
-		items = append(items, item)
-	}
-
-	return
 }
 
 func openRepoItem(parsed parser.Result) alfred.Item {

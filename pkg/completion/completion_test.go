@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/zerowidth/gh-shorthand/internal/pkg/config"
 	"github.com/zerowidth/gh-shorthand/pkg/alfred"
+	"github.com/zerowidth/gh-shorthand/pkg/config"
 )
 
 var defaultCfg = &config.Config{
@@ -21,7 +21,7 @@ var defaultCfg = &config.Config{
 	UserMap: map[string]string{
 		"zw": "zerowidth",
 	},
-	ProjectDirs: []string{"../../../test/fixtures/work", "../../../test/fixtures/projects"},
+	ProjectDirs: []string{"testdata/work", "testdata/projects"},
 }
 
 var defaultInMap = &config.Config{
@@ -41,7 +41,7 @@ var userRepoCollision = &config.Config{
 }
 
 var invalidDir = &config.Config{
-	ProjectDirs: []string{"../../../test/fixtures/nonexistent"},
+	ProjectDirs: []string{"testdata/nonexistent"},
 }
 
 var emptyConfig = &config.Config{}
@@ -132,7 +132,7 @@ func (tc *completeTestCase) testItem(t *testing.T) {
 }
 
 func TestCompleteItems(t *testing.T) {
-	fixturePath, _ := filepath.Abs("../../../test/fixtures")
+	fixturePath, _ := filepath.Abs("testdata")
 
 	// Based on input, the resulting items must include one that matches either
 	// the given UID or title. All items are also validated for correctness and
@@ -664,9 +664,9 @@ func TestCompleteItems(t *testing.T) {
 
 		"edit project includes fixtures/work/work-foo": {
 			input:  "e ",
-			uid:    "ghe:../../../test/fixtures/work/work-foo",
+			uid:    "ghe:testdata/work/work-foo",
 			valid:  true,
-			title:  "../../../test/fixtures/work/work-foo",
+			title:  "testdata/work/work-foo",
 			arg:    "edit " + fixturePath + "/work/work-foo",
 			copy:   fixturePath + "/work/work-foo",
 			cmdMod: "term " + fixturePath + "/work/work-foo",
@@ -674,16 +674,16 @@ func TestCompleteItems(t *testing.T) {
 		},
 		"edit project includes fixtures/projects/project-bar": {
 			input:  "e ",
-			uid:    "ghe:../../../test/fixtures/projects/project-bar",
+			uid:    "ghe:testdata/projects/project-bar",
 			valid:  true,
-			title:  "../../../test/fixtures/projects/project-bar",
+			title:  "testdata/projects/project-bar",
 			arg:    "edit " + fixturePath + "/projects/project-bar",
 			cmdMod: "term " + fixturePath + "/projects/project-bar",
 			altMod: "finder " + fixturePath + "/projects/project-bar",
 		},
 		"edit project includes symlinked dir in fixtures": {
 			input:  "e linked",
-			uid:    "ghe:../../../test/fixtures/projects/linked",
+			uid:    "ghe:testdata/projects/linked",
 			valid:  true,
 			arg:    "edit " + fixturePath + "/projects/linked",
 			cmdMod: "term " + fixturePath + "/projects/linked",
@@ -691,36 +691,36 @@ func TestCompleteItems(t *testing.T) {
 		},
 		"edit project does not include symlinked file in fixtures": {
 			input:   "e linked",
-			exclude: "ghe:../../../test/fixtures/projects/linked-file",
+			exclude: "ghe:testdata/projects/linked-file",
 		},
 		"edit project shows error for invalid directory": {
 			input: "e foo",
 			cfg:   invalidDir,
-			title: "Invalid project directory: ../../../test/fixtures/nonexistent",
+			title: "Invalid project directory: testdata/nonexistent",
 		},
 		"edit project excludes files (listing only directories)": {
 			input:   "e ",
-			exclude: "ghe:../../../test/fixtures/work/ignored-file",
+			exclude: "ghe:testdata/work/ignored-file",
 		},
 
 		// edit/open/auto filtering
 		"edit project with input matches directories": {
 			input: "e work-foo",
-			uid:   "ghe:../../../test/fixtures/work/work-foo",
+			uid:   "ghe:testdata/work/work-foo",
 			valid: true,
 		},
 		"edit project with input excludes non-matches": {
 			input:   "e work-foo",
-			exclude: "ghe:../../../test/fixtures/projects/project-bar",
+			exclude: "ghe:testdata/projects/project-bar",
 		},
 		"edit project with input fuzzy-matches directories": {
 			input: "e wf",
-			uid:   "ghe:../../../test/fixtures/work/work-foo",
+			uid:   "ghe:testdata/work/work-foo",
 			valid: true,
 		},
 		"edit project with input excludes non-fuzzy matches": {
 			input:   "e wf",
-			exclude: "ghe:../../../test/fixtures/projects/project-bar",
+			exclude: "ghe:testdata/projects/project-bar",
 		},
 	} {
 		t.Run(fmt.Sprintf("Complete(%#v): %s", tc.input, desc), tc.testItem)
@@ -781,7 +781,7 @@ func TestFinalizeResult(t *testing.T) {
 }
 
 func TestFindProjectDirs(t *testing.T) {
-	fixturePath, _ := filepath.Abs("../../../test/fixtures/projects")
+	fixturePath, _ := filepath.Abs("testdata/projects")
 	dirList, err := findProjectDirs(fixturePath)
 	dirs := make(map[string]struct{}, len(dirList))
 	if err != nil {

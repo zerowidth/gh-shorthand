@@ -5,7 +5,7 @@ import (
 	"regexp"
 	"time"
 
-	"github.com/zerowidth/gh-shorthand/internal/pkg/rpc"
+	"github.com/zerowidth/gh-shorthand/pkg/rpc"
 )
 
 var repoRegex = regexp.MustCompile(`(https://github\.com/([^/]+)/([^/]+)\b)(.?)`)

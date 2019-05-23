@@ -14,8 +14,8 @@ import (
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"github.com/kardianos/service"
-	"github.com/zerowidth/gh-shorthand/internal/pkg/config"
-	"github.com/zerowidth/gh-shorthand/internal/pkg/rpc"
+	"github.com/zerowidth/gh-shorthand/pkg/config"
+	"github.com/zerowidth/gh-shorthand/pkg/rpc"
 )
 
 type server struct {
