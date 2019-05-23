@@ -82,6 +82,13 @@ func (p *Parser) Parse(input string) *NewResult {
 		}
 	}
 
+	if p.parsePath {
+		if matches := pathRegexp.FindStringSubmatch(input); matches != nil {
+			res.Path = matches[1]
+			input = input[len(matches[0]):]
+		}
+	}
+
 	if !p.parseQuery && len(input) > 0 {
 		res = &NewResult{} // invalid match, there's leftover characters!
 	}
@@ -132,5 +139,5 @@ var (
 	userRepoRegexp = regexp.MustCompile(`^([A-Za-z0-9][-A-Za-z0-9]*)/([\w\.\-]*)(\A|\z|\w)`) // user/repo
 	userRegexp     = regexp.MustCompile(`^([A-Za-z0-9][-A-Za-z0-9]*)\b`)                     // user
 	issueRegexp    = regexp.MustCompile(`^ ?#?([1-9]\d*)$`)
-	pathRegexp     = regexp.MustCompile(`^(/\S*)$`)
+	pathRegexp     = regexp.MustCompile(`^ ?(/\S*)$`)
 )

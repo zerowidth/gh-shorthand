@@ -283,6 +283,7 @@ var repoTests = []struct {
 	userShorthand string
 	repoShorthand string
 	issue         string
+	path          string
 }{
 
 	// basic shorthand tests
@@ -369,6 +370,56 @@ var repoTests = []struct {
 		name:        "bar",
 		issue:       "123",
 	},
+	{
+		test:          "matches an issue with expanded repo shorthand",
+		input:         "df 123",
+		user:          "zerowidth",
+		name:          "dotfiles",
+		issue:         "123",
+		repoShorthand: "df",
+	},
+	{
+		test:          "matches an issue with expanded user shorthand",
+		input:         "zw/dotfiles 123",
+		user:          "zerowidth",
+		name:          "dotfiles",
+		issue:         "123",
+		userShorthand: "zw",
+	},
+
+	// path parsing
+	{
+		test:  "matches a path",
+		input: "foo/bar /pulls",
+		user:  "foo",
+		name:  "bar",
+		path:  "/pulls",
+	},
+	{
+		test:  "matches a path with no space after repo",
+		input: "foo/bar/pulls",
+		user:  "foo",
+		name:  "bar",
+		path:  "/pulls",
+	},
+	{
+		test:  "does not match a path with spaces",
+		input: "foo/bar /pull another word",
+	},
+	{
+		test:        "matches a path with a default repo",
+		input:       "/pulls",
+		defaultRepo: "foo/bar",
+		user:        "foo",
+		name:        "bar",
+		path:        "/pulls",
+	},
+
+	// issue and path together
+	{
+		test:  "does not match an issue followed by a path",
+		input: "foo/bar 123/foo",
+	},
 }
 
 // TestRepoParser for testing the default "repo" mode parsing
@@ -384,6 +435,7 @@ func TestRepoParser(t *testing.T) {
 			assert.Equal(t, tc.repoShorthand, result.RepoShorthand, "result.RepoShorthand")
 			assert.Equal(t, tc.userShorthand, result.UserShorthand, "result.UserShorthand")
 			assert.Equal(t, tc.issue, result.Issue, "result.Issue")
+			assert.Equal(t, tc.path, result.Path, "result.Path")
 		})
 	}
 }
