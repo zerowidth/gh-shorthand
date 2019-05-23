@@ -69,8 +69,16 @@ func (p *Parser) Parse(input string) *NewResult {
 				res.RepoShorthand = user
 				input = input[len(user):]
 			}
-		} else if len(p.defaultRepo) > 0 {
+		}
+		if !res.HasRepo() && len(p.defaultRepo) > 0 {
 			res.SetRepo(p.defaultRepo)
+		}
+	}
+
+	if p.parseIssue {
+		if matches := issueRegexp.FindStringSubmatch(input); matches != nil {
+			res.Issue = matches[1]
+			input = input[len(matches[0]):]
 		}
 	}
 
@@ -123,6 +131,6 @@ var (
 	// using (\A|\z|\W) since \b requires a \w on the left
 	userRepoRegexp = regexp.MustCompile(`^([A-Za-z0-9][-A-Za-z0-9]*)/([\w\.\-]*)(\A|\z|\w)`) // user/repo
 	userRegexp     = regexp.MustCompile(`^([A-Za-z0-9][-A-Za-z0-9]*)\b`)                     // user
-	issueRegexp    = regexp.MustCompile(`^#?([1-9]\d*)$`)
+	issueRegexp    = regexp.MustCompile(`^ ?#?([1-9]\d*)$`)
 	pathRegexp     = regexp.MustCompile(`^(/\S*)$`)
 )

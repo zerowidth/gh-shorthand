@@ -282,7 +282,10 @@ var repoTests = []struct {
 	name          string
 	userShorthand string
 	repoShorthand string
+	issue         string
 }{
+
+	// basic shorthand tests
 	{
 		test:  "empty input matches nothing",
 		input: "",
@@ -327,6 +330,45 @@ var repoTests = []struct {
 		input:       "..invalid",
 		defaultRepo: "default/repo",
 	},
+
+	// issue parsing
+	{
+		test:  "matches a numeric-only issue",
+		input: "foo/bar 123",
+		user:  "foo",
+		name:  "bar",
+		issue: "123",
+	},
+	{
+		test:  "matches a hash-delimited issue with no space",
+		input: "foo/bar#123",
+		user:  "foo",
+		name:  "bar",
+		issue: "123",
+	},
+	{
+		test:  "matches a hash-delimited issue with space",
+		input: "foo/bar #123",
+		user:  "foo",
+		name:  "bar",
+		issue: "123",
+	},
+	{
+		test:        "matches an issue with a default repo",
+		input:       "123",
+		defaultRepo: "foo/bar",
+		user:        "foo",
+		name:        "bar",
+		issue:       "123",
+	},
+	{
+		test:        "matches a hash-delimited issue with a default repo",
+		input:       "#123",
+		defaultRepo: "foo/bar",
+		user:        "foo",
+		name:        "bar",
+		issue:       "123",
+	},
 }
 
 // TestRepoParser for testing the default "repo" mode parsing
@@ -341,6 +383,7 @@ func TestRepoParser(t *testing.T) {
 			assert.Equal(t, tc.name, result.Name, "result.Name")
 			assert.Equal(t, tc.repoShorthand, result.RepoShorthand, "result.RepoShorthand")
 			assert.Equal(t, tc.userShorthand, result.UserShorthand, "result.UserShorthand")
+			assert.Equal(t, tc.issue, result.Issue, "result.Issue")
 		})
 	}
 }

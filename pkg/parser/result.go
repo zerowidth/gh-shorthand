@@ -20,6 +20,12 @@ func (r *NewResult) SetRepo(repo string) {
 	r.Name = parts[1]
 }
 
+// HasRepo checks if the result has a fully qualified repo, either from a
+// matched repo shorthand, or from an explicit owner/name.
+func (r *NewResult) HasRepo() bool {
+	return len(r.User) > 0 && len(r.Name) > 0
+}
+
 // Result is a Parse result, returning the matched repo, issue, etc. as applicable
 type Result struct {
 	User      string // the repository owner, if present
