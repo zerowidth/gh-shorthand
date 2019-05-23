@@ -2,6 +2,24 @@ package parser
 
 import "strings"
 
+// NewResult is a result from the new parser
+type NewResult struct {
+	User          string
+	Name          string
+	UserShorthand string
+	RepoShorthand string
+	Issue         string
+	Path          string
+	Query         string
+}
+
+// SetRepo overrides owner and name on the result from an `owner/name` string.
+func (r *NewResult) SetRepo(repo string) {
+	parts := strings.SplitN(repo, "/", 2)
+	r.User = parts[0]
+	r.Name = parts[1]
+}
+
 // Result is a Parse result, returning the matched repo, issue, etc. as applicable
 type Result struct {
 	User      string // the repository owner, if present

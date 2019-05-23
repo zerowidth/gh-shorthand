@@ -270,3 +270,77 @@ func TestSetRepo(t *testing.T) {
 	result.SetRepo("foo/bar")
 	assert.Equal(t, "foo/bar", result.Repo())
 }
+
+var repoTests = []struct {
+	// input:
+	test        string // test name
+	input       string // input
+	defaultRepo string // default repo, if set
+
+	// assertions:
+	user          string
+	name          string
+	userShorthand string
+	repoShorthand string
+}{
+	{
+		test:  "empty input matches nothing",
+		input: "",
+	},
+	{
+		test:  "matches a fully qualified repo",
+		input: "zerowidth/dotfiles",
+		user:  "zerowidth",
+		name:  "dotfiles",
+	},
+	{
+		test:  "does not match leading space",
+		input: " foo/bar",
+	},
+	{
+		test:          "expands repo shorthand",
+		input:         "df",
+		user:          "zerowidth",
+		name:          "dotfiles",
+		repoShorthand: "df",
+	},
+	{
+		test:          "expands user shorthand when part of a repo",
+		input:         "zw/foo",
+		user:          "zerowidth",
+		name:          "foo",
+		userShorthand: "zw",
+	},
+	{
+		test:        "sets default repo if no repo match",
+		input:       "",
+		defaultRepo: "default/repo",
+		user:        "default",
+		name:        "repo",
+	},
+	{
+		test:  "does not match trailing text with valid repo",
+		input: "valid/repo x",
+	},
+	{
+		test:        "does not match invalid query with default repo",
+		input:       "..invalid",
+		defaultRepo: "default/repo",
+	},
+}
+
+// TestRepoParser for testing the default "repo" mode parsing
+func TestRepoParser(t *testing.T) {
+	for _, tc := range repoTests {
+		t.Run(tc.test, func(t *testing.T) {
+			parser := NewParser(repoMap, userMap, tc.defaultRepo,
+				WithRepo, WithIssue, WithPath)
+			result := parser.Parse(tc.input)
+
+			assert.Equal(t, tc.user, result.User, "result.User")
+			assert.Equal(t, tc.name, result.Name, "result.Name")
+			assert.Equal(t, tc.repoShorthand, result.RepoShorthand, "result.RepoShorthand")
+			assert.Equal(t, tc.userShorthand, result.UserShorthand, "result.UserShorthand")
+		})
+	}
+}

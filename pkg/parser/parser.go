@@ -5,6 +5,82 @@ import (
 	"strings"
 )
 
+// Parser is a shorthand parser
+type Parser struct {
+	repoMap     map[string]string
+	userMap     map[string]string
+	defaultRepo string
+	parseRepo   bool // look for repositories
+	parseUser   bool // look for users
+	parseIssue  bool // look for issues (#123, 123)
+	parsePath   bool // look for /path
+	parseQuery  bool // any extra text
+}
+
+// Option is a functional option to configure a Parser
+type Option func(*Parser)
+
+// NewParser returns a configured Parser
+func NewParser(repoMap, userMap map[string]string, defaultRepo string, options ...Option) *Parser {
+	parser := &Parser{
+		repoMap:     repoMap,
+		userMap:     userMap,
+		defaultRepo: defaultRepo,
+	}
+	for _, option := range options {
+		option(parser)
+	}
+	return parser
+}
+
+// WithRepo instructs the parser to look for a repository
+func WithRepo(p *Parser) { p.parseRepo = true }
+
+// WithUser instructs the parser to look for a user
+//
+// When this is set alongside WithRepo, a repo will take precedence
+func WithUser(p *Parser) { p.parseUser = true }
+
+// WithIssue instructs the parser to look for issue (or project) numbers
+func WithIssue(p *Parser) { p.parseIssue = true }
+
+// WithPath instructs the parser to look for a path
+func WithPath(p *Parser) { p.parsePath = true }
+
+// WithQuery instructs the parser to match any remaining text as a query
+func WithQuery(p *Parser) { p.parseQuery = true }
+
+// Parse parses the given input and returns a result
+func (p *Parser) Parse(input string) *NewResult {
+	res := &NewResult{}
+
+	if p.parseRepo {
+		if repo := userRepoRegexp.FindString(input); len(repo) > 0 {
+			res.SetRepo(repo)
+			if shortUser, ok := p.userMap[res.User]; ok {
+				res.UserShorthand = res.User
+				res.User = shortUser
+			}
+			input = input[len(repo):]
+		} else if user := userRegexp.FindString(input); len(user) > 0 {
+			// if it looks like a user but is really repo shorthand, expand it
+			if shortRepo, ok := p.repoMap[user]; ok {
+				res.SetRepo(shortRepo)
+				res.RepoShorthand = user
+				input = input[len(user):]
+			}
+		} else if len(p.defaultRepo) > 0 {
+			res.SetRepo(p.defaultRepo)
+		}
+	}
+
+	if !p.parseQuery && len(input) > 0 {
+		res = &NewResult{} // invalid match, there's leftover characters!
+	}
+
+	return res
+}
+
 // Parse takes a user and repo mapping along with an input string and attempts
 // to extract a repo, issue, path, or query, using the user and repo mappings
 // for shorthand expansion.
