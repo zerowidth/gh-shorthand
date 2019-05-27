@@ -10,7 +10,7 @@ type Parser struct {
 	repoMap     map[string]string
 	userMap     map[string]string
 	defaultRepo string
-	parseRepo   bool // look for repositories
+	requireRepo bool // require a repository match
 	parseUser   bool // look for users
 	parseIssue  bool // look for issues (#123, 123)
 	parsePath   bool // look for /path
@@ -33,8 +33,8 @@ func NewParser(repoMap, userMap map[string]string, defaultRepo string, options .
 	return parser
 }
 
-// WithRepo instructs the parser to look for a repository
-func WithRepo(p *Parser) { p.parseRepo = true }
+// RequireRepo instructs the parser to require a repository
+func RequireRepo(p *Parser) { p.requireRepo = true }
 
 // WithUser instructs the parser to look for a user
 //
@@ -54,7 +54,7 @@ func WithQuery(p *Parser) { p.parseQuery = true }
 func (p *Parser) Parse(input string) *NewResult {
 	res := &NewResult{}
 
-	if p.parseRepo {
+	if p.requireRepo {
 		if repo := userRepoRegexp.FindString(input); len(repo) > 0 {
 			res.SetRepo(repo)
 			if shortUser, ok := p.userMap[res.User]; ok {
@@ -75,6 +75,10 @@ func (p *Parser) Parse(input string) *NewResult {
 		}
 	}
 
+	if p.requireRepo && !res.HasRepo() {
+		return &NewResult{}
+	}
+
 	if p.parseIssue {
 		if matches := issueRegexp.FindStringSubmatch(input); matches != nil {
 			res.Issue = matches[1]
@@ -89,7 +93,10 @@ func (p *Parser) Parse(input string) *NewResult {
 		}
 	}
 
-	if !p.parseQuery && len(input) > 0 {
+	if p.parseQuery {
+		// only remove the first leading space, and all trailing spaces
+		res.Query = strings.TrimPrefix(strings.TrimRight(input, " "), " ")
+	} else if len(input) > 0 {
 		res = &NewResult{} // invalid match, there's leftover characters!
 	}
 

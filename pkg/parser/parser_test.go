@@ -323,6 +323,13 @@ var repoTests = []struct {
 		name:        "repo",
 	},
 	{
+		test:        "does not use default repo when repo matches",
+		input:       "foo/bar",
+		defaultRepo: "baz/mumble",
+		user:        "foo",
+		name:        "bar",
+	},
+	{
 		test:  "does not match trailing text with valid repo",
 		input: "valid/repo x",
 	},
@@ -427,7 +434,7 @@ func TestRepoParser(t *testing.T) {
 	for _, tc := range repoTests {
 		t.Run(tc.test, func(t *testing.T) {
 			parser := NewParser(repoMap, userMap, tc.defaultRepo,
-				WithRepo, WithIssue, WithPath)
+				RequireRepo, WithIssue, WithPath)
 			result := parser.Parse(tc.input)
 
 			assert.Equal(t, tc.user, result.User, "result.User")
@@ -436,6 +443,76 @@ func TestRepoParser(t *testing.T) {
 			assert.Equal(t, tc.userShorthand, result.UserShorthand, "result.UserShorthand")
 			assert.Equal(t, tc.issue, result.Issue, "result.Issue")
 			assert.Equal(t, tc.path, result.Path, "result.Path")
+		})
+	}
+}
+
+var issueTests = []struct {
+	// input:
+	test        string // test name
+	input       string // input
+	defaultRepo string // default repo, if set
+
+	// assertions:
+	user          string
+	name          string
+	userShorthand string
+	repoShorthand string
+	query         string
+}{
+	// basic shorthand tests
+	{
+		test:  "empty input matches nothing",
+		input: "",
+	},
+	{
+		test:          "expands repo shorthand",
+		input:         "df",
+		user:          "zerowidth",
+		name:          "dotfiles",
+		repoShorthand: "df",
+	},
+	{
+		test:  "matches a repo and a query",
+		input: "foo/bar a query",
+		user:  "foo",
+		name:  "bar",
+		query: "a query",
+	},
+	{
+		test:  "does not match a query if no repo given",
+		input: "a query",
+	},
+	{
+		test:  "removes trailing space",
+		input: "foo/bar q     ",
+		user:  "foo",
+		name:  "bar",
+		query: "q",
+	},
+	{
+		test:        "uses the default repo when no repo matches",
+		input:       "q",
+		defaultRepo: "foo/bar",
+		user:        "foo",
+		name:        "bar",
+		query:       "q",
+	},
+}
+
+// TestIssueParser for testing the "issue search" mode parsing
+func TestIssueParser(t *testing.T) {
+	for _, tc := range issueTests {
+		t.Run(tc.test, func(t *testing.T) {
+			parser := NewParser(repoMap, userMap, tc.defaultRepo,
+				RequireRepo, WithQuery)
+			result := parser.Parse(tc.input)
+
+			assert.Equal(t, tc.user, result.User, "result.User")
+			assert.Equal(t, tc.name, result.Name, "result.Name")
+			assert.Equal(t, tc.repoShorthand, result.RepoShorthand, "result.RepoShorthand")
+			assert.Equal(t, tc.userShorthand, result.UserShorthand, "result.UserShorthand")
+			assert.Equal(t, tc.query, result.Query, "result.Query")
 		})
 	}
 }
