@@ -26,6 +26,11 @@ func (r *NewResult) HasRepo() bool {
 	return len(r.User) > 0 && len(r.Name) > 0
 }
 
+// HasUser checks if the result has a matched user
+func (r *NewResult) HasUser() bool {
+	return len(r.User) > 0
+}
+
 // Result is a Parse result, returning the matched repo, issue, etc. as applicable
 type Result struct {
 	User      string // the repository owner, if present

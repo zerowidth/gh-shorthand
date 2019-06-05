@@ -338,6 +338,15 @@ var repoTests = []struct {
 		input:       "..invalid",
 		defaultRepo: "default/repo",
 	},
+	{
+		test:  "does not match a bare user",
+		input: "foo",
+	},
+	{
+		test:        "does not match a bare user with a default repo",
+		input:       "baz",
+		defaultRepo: "foo/bar",
+	},
 
 	// issue parsing
 	{
@@ -512,6 +521,115 @@ func TestIssueParser(t *testing.T) {
 			assert.Equal(t, tc.name, result.Name, "result.Name")
 			assert.Equal(t, tc.repoShorthand, result.RepoShorthand, "result.RepoShorthand")
 			assert.Equal(t, tc.userShorthand, result.UserShorthand, "result.UserShorthand")
+			assert.Equal(t, tc.query, result.Query, "result.Query")
+		})
+	}
+}
+
+var projectTests = []struct {
+	// input:
+	test        string // test name
+	input       string // input
+	defaultRepo string // default repo, if set
+
+	// assertions:
+	user          string
+	name          string
+	userShorthand string
+	repoShorthand string
+	issue         string
+	query         string
+}{
+	{
+		test:  "parses a repo and project",
+		input: "foo/bar 123",
+		user:  "foo",
+		name:  "bar",
+		issue: "123",
+	},
+	{
+		test:          "expands a repo for a project",
+		input:         "df 123",
+		user:          "zerowidth",
+		name:          "dotfiles",
+		repoShorthand: "df",
+		issue:         "123",
+	},
+	{
+		test:  "parses a user and a project",
+		input: "foo 123",
+		user:  "foo",
+		issue: "123",
+	},
+	{
+		test:          "expands a user from shorthand",
+		input:         "zw 123",
+		user:          "zerowidth",
+		userShorthand: "zw",
+		issue:         "123",
+	},
+	{
+		test:          "expands a user in a repo from shorthand",
+		input:         "zw/dotfiles",
+		user:          "zerowidth",
+		name:          "dotfiles",
+		userShorthand: "zw",
+	},
+	{
+		test:        "uses the default repo if set",
+		input:       "123",
+		defaultRepo: "foo/bar",
+		user:        "foo",
+		name:        "bar",
+		issue:       "123",
+	},
+	{
+		test:        "ignores default repo when parsing just a user",
+		input:       "baz 123",
+		defaultRepo: "foo/bar",
+		user:        "baz",
+		issue:       "123",
+	},
+	{
+		test:  "allows a numeric user when no default repo set",
+		input: "123",
+		user:  "123",
+	},
+	{
+		test:        "parses a bare numeric as an issue when default repo is set",
+		input:       "123",
+		defaultRepo: "foo/bar",
+		user:        "foo",
+		name:        "bar",
+		issue:       "123",
+	},
+
+	{
+		test:  "parses a numeric user followed by a project id",
+		input: "123 456",
+		user:  "123",
+		issue: "456",
+	},
+	{
+		test:        "does not parse a numeric user and project id when default repo set",
+		input:       "123 456",
+		defaultRepo: "foo/bar",
+	},
+}
+
+// TestProjectParser for testing the "project" mode parsing
+func TestProjectParser(t *testing.T) {
+	for _, tc := range projectTests {
+		t.Run(tc.test, func(t *testing.T) {
+			parser := NewParser(repoMap, userMap, tc.defaultRepo,
+				WithRepo, WithUser, WithIssue, WithQuery)
+			result := parser.Parse(tc.input)
+
+			assert.Equal(t, tc.user, result.User, "result.User")
+			assert.Equal(t, tc.name, result.Name, "result.Name")
+			assert.Equal(t, tc.repoShorthand, result.RepoShorthand, "result.RepoShorthand")
+			assert.Equal(t, tc.userShorthand, result.UserShorthand, "result.UserShorthand")
+			assert.Equal(t, tc.issue, result.Issue, "result.Issue")
 			assert.Equal(t, tc.query, result.Query, "result.Query")
 		})
 	}

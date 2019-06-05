@@ -11,6 +11,7 @@ type Parser struct {
 	userMap     map[string]string
 	defaultRepo string
 	requireRepo bool // require a repository match
+	parseRepo   bool // look for a repository match
 	parseUser   bool // look for users
 	parseIssue  bool // look for issues (#123, 123)
 	parsePath   bool // look for /path
@@ -34,7 +35,13 @@ func NewParser(repoMap, userMap map[string]string, defaultRepo string, options .
 }
 
 // RequireRepo instructs the parser to require a repository
-func RequireRepo(p *Parser) { p.requireRepo = true }
+func RequireRepo(p *Parser) {
+	p.parseRepo = true
+	p.requireRepo = true
+}
+
+// WithRepo instructs the parser to look for a repo match
+func WithRepo(p *Parser) { p.parseRepo = true }
 
 // WithUser instructs the parser to look for a user
 //
@@ -54,8 +61,9 @@ func WithQuery(p *Parser) { p.parseQuery = true }
 func (p *Parser) Parse(input string) *NewResult {
 	res := &NewResult{}
 
-	if p.requireRepo {
+	if p.parseRepo {
 		if repo := userRepoRegexp.FindString(input); len(repo) > 0 {
+			// found a repository directly, check for expansion:
 			res.SetRepo(repo)
 			if shortUser, ok := p.userMap[res.User]; ok {
 				res.UserShorthand = res.User
@@ -63,18 +71,46 @@ func (p *Parser) Parse(input string) *NewResult {
 			}
 			input = input[len(repo):]
 		} else if user := userRegexp.FindString(input); len(user) > 0 {
-			// if it looks like a user but is really repo shorthand, expand it
+			// found a user, see if it's repo shorthand:
 			if shortRepo, ok := p.repoMap[user]; ok {
 				res.SetRepo(shortRepo)
 				res.RepoShorthand = user
 				input = input[len(user):]
+			} else if p.parseUser {
+				// not repo shorthand, but we're allowed to match a user:
+				res.User = user
+				if shortUser, ok := p.userMap[user]; ok {
+					res.UserShorthand = user
+					res.User = shortUser
+				}
+				input = input[len(user):]
 			}
 		}
-		if !res.HasRepo() && len(p.defaultRepo) > 0 {
-			res.SetRepo(p.defaultRepo)
+
+		// assign default repository if needed:
+		if p.parseRepo && !res.HasRepo() && len(p.defaultRepo) > 0 {
+			if p.parseUser && res.HasUser() {
+				// if the matched user looks like an issue and there's no further input,
+				// use the default repo and use the numeric user as an issue:
+				if issue := issueRegexp.FindString(res.User); len(issue) > 0 {
+
+					// if there's still input even after a numeric-looking user, this is
+					// invalid. NB this _could_ be valid if parsing a query, but that use
+					// case isn't needed/supported
+					if len(input) > 0 {
+						return &NewResult{}
+					}
+
+					res.Issue = res.User
+					res.SetRepo(p.defaultRepo)
+				}
+			} else {
+				res.SetRepo(p.defaultRepo)
+			}
 		}
 	}
 
+	// if we don't have a repo assigned by now, there's no match
 	if p.requireRepo && !res.HasRepo() {
 		return &NewResult{}
 	}
@@ -97,7 +133,7 @@ func (p *Parser) Parse(input string) *NewResult {
 		// only remove the first leading space, and all trailing spaces
 		res.Query = strings.TrimPrefix(strings.TrimRight(input, " "), " ")
 	} else if len(input) > 0 {
-		res = &NewResult{} // invalid match, there's leftover characters!
+		res = &NewResult{} // invalid match, there's leftover characters
 	}
 
 	return res

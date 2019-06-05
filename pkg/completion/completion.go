@@ -105,7 +105,7 @@ func (c *completion) appendParsedItems(mode string) {
 	}
 
 	switch mode {
-	case "": // no input, show default items
+	case "": // no mode, no input, show default items
 		c.result.AppendItems(
 			defaultItems...,
 		)
