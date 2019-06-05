@@ -265,13 +265,9 @@ func TestCompleteItems(t *testing.T) {
 			arg:   "open https://github.com/zerowidth/dotfiles/foo",
 			copy:  "https://github.com/zerowidth/dotfiles/foo",
 		},
-		"open direct path when not prefixed with repo": {
-			input: " /foo",
-			uid:   "gh:/foo",
-			valid: true,
-			title: "Open /foo",
-			arg:   "open https://github.com/foo",
-			copy:  "https://github.com/foo",
+		"don't open direct path when not prefixed with repo": {
+			input:   " /foo",
+			exclude: "gh:/foo",
 		},
 		"don't open direct path when matching user prefix": {
 			input:   " zw/",
@@ -402,10 +398,6 @@ func TestCompleteItems(t *testing.T) {
 		"includes no default if remaining input isn't otherwise valid": {
 			input:   " foo",
 			exclude: "gh:zerowidth/default",
-		},
-		"does not use default repo with path alone": {
-			input:   " /foo",
-			exclude: "gh:zerowidth/default/foo",
 		},
 		"show issues for a default repo": {
 			input: "i ",

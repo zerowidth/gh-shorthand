@@ -144,10 +144,11 @@ func (p *Parser) Parse(input string) *NewResult {
 		}
 	}
 
+	remainder := strings.TrimPrefix(strings.TrimRight(input, " "), " ")
 	if p.parseQuery {
 		// only remove the first leading space, and all trailing spaces
-		res.Query = strings.TrimPrefix(strings.TrimRight(input, " "), " ")
-	} else if len(input) > 0 {
+		res.Query = remainder
+	} else if len(remainder) > 0 {
 		res = &NewResult{} // invalid match, there's leftover characters
 	}
 

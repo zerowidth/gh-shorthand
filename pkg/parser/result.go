@@ -31,6 +31,40 @@ func (r *NewResult) HasUser() bool {
 	return len(r.User) > 0
 }
 
+// HasIssue checks if the result has a matched issue
+func (r *NewResult) HasIssue() bool {
+	return len(r.Issue) > 0
+}
+
+// HasPath checks if the result has a matched path
+func (r *NewResult) HasPath() bool {
+	return len(r.Path) > 0
+}
+
+// Repo returns the repo defined in the result, if present
+func (r *NewResult) Repo() string {
+	if r.HasRepo() {
+		return r.User + "/" + r.Name
+	}
+	return ""
+}
+
+// Annotation is a helper for displaying details about a match. Returns a string
+// with a leading space, noting the matched shorthand and issue if applicable.
+func (r *NewResult) Annotation() string {
+	var annotation string
+	if len(r.RepoShorthand) > 0 {
+		annotation += " (" + r.RepoShorthand
+		if r.HasIssue() {
+			annotation += "#" + r.Issue
+		}
+		annotation += ")"
+	} else if len(r.UserShorthand) > 0 {
+		annotation += " (" + r.UserShorthand + ")"
+	}
+	return annotation
+}
+
 // Result is a Parse result, returning the matched repo, issue, etc. as applicable
 type Result struct {
 	User      string // the repository owner, if present

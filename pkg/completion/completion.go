@@ -111,10 +111,11 @@ func (c *completion) appendParsedItems(mode string) {
 		)
 
 	case " ": // open repo, issue, and/or path
-		// repo required, no query allowed
-		if c.parsed.HasRepo() &&
-			(c.parsed.HasIssue() || c.parsed.HasPath() || c.parsed.EmptyQuery()) {
-			item := openRepoItem(c.parsed)
+		parser := parser.NewRepoParser(c.cfg.RepoMap, c.cfg.UserMap, c.cfg.DefaultRepo)
+		result := parser.Parse(c.input)
+
+		if result.HasRepo() {
+			item := openRepoItem(result)
 			if c.parsed.HasIssue() {
 				c.retrieveIssue(&item)
 			} else {
@@ -123,8 +124,8 @@ func (c *completion) appendParsedItems(mode string) {
 			c.result.AppendItems(item)
 		}
 
-		if !c.parsed.HasRepo() && !c.parsed.HasOwner() && c.parsed.HasPath() {
-			c.result.AppendItems(openPathItem(c.parsed.Path()))
+		if !result.HasRepo() && result.HasPath() {
+			c.result.AppendItems(openPathItem(result.Path))
 		}
 
 		c.result.AppendItems(
@@ -213,7 +214,7 @@ func (c *completion) appendParsedItems(mode string) {
 	}
 }
 
-func openRepoItem(parsed parser.Result) alfred.Item {
+func openRepoItem(parsed *parser.NewResult) alfred.Item {
 	uid := "gh:" + parsed.Repo()
 	title := "Open " + parsed.Repo()
 	arg := "open https://github.com/" + parsed.Repo()
@@ -221,17 +222,17 @@ func openRepoItem(parsed parser.Result) alfred.Item {
 	var mods *alfred.Mods
 
 	if parsed.HasIssue() {
-		uid += "#" + parsed.Issue()
-		title += "#" + parsed.Issue()
-		arg += "/issues/" + parsed.Issue()
+		uid += "#" + parsed.Issue
+		title += "#" + parsed.Issue
+		arg += "/issues/" + parsed.Issue
 		icon = issueIcon
-		mods = issueMods(parsed.Repo(), parsed.Issue(), "")
+		mods = issueMods(parsed.Repo(), parsed.Issue, "")
 	}
 
 	if parsed.HasPath() {
-		uid += parsed.Path()
-		title += parsed.Path()
-		arg += parsed.Path()
+		uid += parsed.Path
+		title += parsed.Path
+		arg += parsed.Path
 		icon = pathIcon
 	}
 

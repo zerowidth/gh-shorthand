@@ -292,10 +292,20 @@ var repoTests = []struct {
 		input: "",
 	},
 	{
+		test:  "blank input matches nothing",
+		input: "     ",
+	},
+	{
 		test:  "matches a fully qualified repo",
 		input: "zerowidth/dotfiles",
 		user:  "zerowidth",
 		name:  "dotfiles",
+	},
+	{
+		test:  "ignores trailing whitespace",
+		input: "foo/bar",
+		user:  "foo",
+		name:  "bar",
 	},
 	{
 		test:  "does not match leading space",
@@ -421,6 +431,10 @@ var repoTests = []struct {
 	{
 		test:  "does not match a path with spaces",
 		input: "foo/bar /pull another word",
+	},
+	{
+		test:  "does not match a bare path",
+		input: "/pulls",
 	},
 	{
 		test:        "matches a path with a default repo",
