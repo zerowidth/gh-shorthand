@@ -34,6 +34,21 @@ func NewParser(repoMap, userMap map[string]string, defaultRepo string, options .
 	return parser
 }
 
+// NewRepoParser returns a parser for repo/issue/path queries
+func NewRepoParser(repoMap, userMap map[string]string, defaultRepo string) *Parser {
+	return NewParser(repoMap, userMap, defaultRepo, RequireRepo, WithIssue, WithPath)
+}
+
+// NewIssueParser returns a parser for issue searches
+func NewIssueParser(repoMap, userMap map[string]string, defaultRepo string) *Parser {
+	return NewParser(repoMap, userMap, defaultRepo, RequireRepo, WithQuery)
+}
+
+// NewProjectParser returns a parser for projects
+func NewProjectParser(repoMap, userMap map[string]string, defaultRepo string) *Parser {
+	return NewParser(repoMap, userMap, defaultRepo, WithRepo, WithUser, WithIssue, WithQuery)
+}
+
 // RequireRepo instructs the parser to require a repository
 func RequireRepo(p *Parser) {
 	p.parseRepo = true

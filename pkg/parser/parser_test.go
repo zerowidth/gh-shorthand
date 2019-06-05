@@ -442,8 +442,7 @@ var repoTests = []struct {
 func TestRepoParser(t *testing.T) {
 	for _, tc := range repoTests {
 		t.Run(tc.test, func(t *testing.T) {
-			parser := NewParser(repoMap, userMap, tc.defaultRepo,
-				RequireRepo, WithIssue, WithPath)
+			parser := NewRepoParser(repoMap, userMap, tc.defaultRepo)
 			result := parser.Parse(tc.input)
 
 			assert.Equal(t, tc.user, result.User, "result.User")
@@ -513,8 +512,7 @@ var issueTests = []struct {
 func TestIssueParser(t *testing.T) {
 	for _, tc := range issueTests {
 		t.Run(tc.test, func(t *testing.T) {
-			parser := NewParser(repoMap, userMap, tc.defaultRepo,
-				RequireRepo, WithQuery)
+			parser := NewIssueParser(repoMap, userMap, tc.defaultRepo)
 			result := parser.Parse(tc.input)
 
 			assert.Equal(t, tc.user, result.User, "result.User")
@@ -621,8 +619,7 @@ var projectTests = []struct {
 func TestProjectParser(t *testing.T) {
 	for _, tc := range projectTests {
 		t.Run(tc.test, func(t *testing.T) {
-			parser := NewParser(repoMap, userMap, tc.defaultRepo,
-				WithRepo, WithUser, WithIssue, WithQuery)
+			parser := NewProjectParser(repoMap, userMap, tc.defaultRepo)
 			result := parser.Parse(tc.input)
 
 			assert.Equal(t, tc.user, result.User, "result.User")
