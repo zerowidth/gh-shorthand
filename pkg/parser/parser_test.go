@@ -430,6 +430,10 @@ var repoTests = []struct {
 		issue:         "123",
 		userShorthand: "zw",
 	},
+	{
+		test:  "does not match invalid issue",
+		input: "foo/bar 0123",
+	},
 
 	// path parsing
 	{
