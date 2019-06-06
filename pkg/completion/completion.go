@@ -116,10 +116,10 @@ func (c *completion) appendParsedItems(mode string) {
 
 		if result.HasRepo() {
 			item := openRepoItem(result)
-			if c.parsed.HasIssue() {
-				c.retrieveIssue(&item)
+			if result.HasIssue() {
+				c.retrieveIssue(result.Repo(), result.Issue, &item)
 			} else {
-				c.retrieveRepo(&item)
+				c.retrieveRepo(result.Repo(), &item)
 			}
 			c.result.AppendItems(item)
 		}
@@ -146,7 +146,7 @@ func (c *completion) appendParsedItems(mode string) {
 				c.result.AppendItems(matches...)
 			} else {
 				issuesItem := openIssuesItem(result)
-				matches := c.retrieveRecentIssues(&issuesItem)
+				matches := c.retrieveRecentIssues(result.Repo(), &issuesItem)
 				c.result.AppendItems(issuesItem)
 				c.result.AppendItems(searchIssuesItem(result, fullInput))
 				c.result.AppendItems(matches...)
@@ -163,21 +163,21 @@ func (c *completion) appendParsedItems(mode string) {
 
 		if result.HasRepo() {
 			item := repoProjectsItem(result)
-			if c.parsed.HasIssue() {
-				c.retrieveRepoProject(&item)
+			if result.HasIssue() {
+				c.retrieveRepoProject(result.Repo(), result.Issue, &item)
 				c.result.AppendItems(item)
 			} else {
-				projects := c.retrieveRepoProjects(&item)
+				projects := c.retrieveRepoProjects(result.Repo(), &item)
 				c.result.AppendItems(item)
 				c.result.AppendItems(projects...)
 			}
 		} else if result.HasUser() {
 			item := orgProjectsItem(result)
-			if c.parsed.HasIssue() {
-				c.retrieveOrgProject(&item)
+			if result.HasIssue() {
+				c.retrieveOrgProject(result.User, result.Issue, &item)
 				c.result.AppendItems(item)
 			} else {
-				projects := c.retrieveOrgProjects(&item)
+				projects := c.retrieveOrgProjects(result.User, &item)
 				c.result.AppendItems(item)
 				c.result.AppendItems(projects...)
 			}
@@ -602,10 +602,10 @@ func ellipsis(prefix string, duration time.Duration) string {
 	return prefix + strings.Repeat(".", int((duration.Nanoseconds()/250000000)%4))
 }
 
-// retrieveRepo adds the repo description to the "open repo" item
+// retrieveRepo adds a repo's description to an "open repo" item
 // using an RPC call.
-func (c *completion) retrieveRepo(item *alfred.Item) {
-	res := c.rpcRequest("/repo", c.parsed.Repo(), delay)
+func (c *completion) retrieveRepo(repo string, item *alfred.Item) {
+	res := c.rpcRequest("/repo", repo, delay)
 	if len(res.Error) > 0 {
 		item.Subtitle = res.Error
 		return
@@ -625,17 +625,17 @@ func (c *completion) retrieveRepo(item *alfred.Item) {
 		item.Mods.Ctrl = &alfred.ModItem{
 			Valid: true,
 			Arg: fmt.Sprintf("paste [%s: %s](https://github.com/%s)",
-				c.parsed.Repo(), res.Repos[0].Description, c.parsed.Repo()),
+				repo, res.Repos[0].Description, repo),
 			Subtitle: fmt.Sprintf("Insert Markdown link with description to %s",
-				c.parsed.Repo()),
+				repo),
 			Icon: markdownIcon,
 		}
 	}
 }
 
 // retrieveIssue adds the title and state to an "open issue" item
-func (c *completion) retrieveIssue(item *alfred.Item) {
-	res := c.rpcRequest("/issue", c.parsed.Repo()+"#"+c.parsed.Issue(), delay)
+func (c *completion) retrieveIssue(repo, issuenum string, item *alfred.Item) {
+	res := c.rpcRequest("/issue", repo+"#"+issuenum, delay)
 	if len(res.Error) > 0 {
 		item.Subtitle = res.Error
 		return
@@ -655,20 +655,20 @@ func (c *completion) retrieveIssue(item *alfred.Item) {
 		item.Mods.Ctrl = &alfred.ModItem{
 			Valid: true,
 			Arg: fmt.Sprintf("paste [%s#%s: %s](https://github.com/%s/issues/%s)",
-				c.parsed.Repo(), c.parsed.Issue(), issue.Title, c.parsed.Repo(), c.parsed.Issue()),
+				repo, issuenum, issue.Title, repo, issuenum),
 			Subtitle: fmt.Sprintf("Insert Markdown link with description to %s#%s",
-				c.parsed.Repo(), c.parsed.Issue()),
+				repo, issuenum),
 			Icon: markdownIcon,
 		}
 	}
 }
 
-func (c *completion) retrieveRepoProject(item *alfred.Item) {
-	c.retrieveProject(item, c.parsed.Repo()+"/"+c.parsed.Issue())
+func (c *completion) retrieveRepoProject(repo, issuenum string, item *alfred.Item) {
+	c.retrieveProject(item, repo+"/"+issuenum)
 }
 
-func (c *completion) retrieveOrgProject(item *alfred.Item) {
-	c.retrieveProject(item, c.parsed.User+"/"+c.parsed.Issue())
+func (c *completion) retrieveOrgProject(user, issuenum string, item *alfred.Item) {
+	c.retrieveProject(item, user+"/"+issuenum)
 }
 
 func (c *completion) retrieveProject(item *alfred.Item, query string) {
@@ -690,12 +690,12 @@ func (c *completion) retrieveProject(item *alfred.Item, query string) {
 	item.Icon = projectStateIcon(project.State)
 }
 
-func (c *completion) retrieveOrgProjects(item *alfred.Item) alfred.Items {
-	return c.retrieveProjects(item, c.parsed.User)
+func (c *completion) retrieveOrgProjects(user string, item *alfred.Item) alfred.Items {
+	return c.retrieveProjects(item, user)
 }
 
-func (c *completion) retrieveRepoProjects(item *alfred.Item) alfred.Items {
-	return c.retrieveProjects(item, c.parsed.Repo())
+func (c *completion) retrieveRepoProjects(repo string, item *alfred.Item) alfred.Items {
+	return c.retrieveProjects(item, repo)
 }
 
 func (c *completion) retrieveProjects(item *alfred.Item, query string) (projects alfred.Items) {
@@ -710,7 +710,7 @@ func (c *completion) retrieveProjects(item *alfred.Item, query string) (projects
 		item.Subtitle = "No projects found"
 		return
 	}
-	projects = append(projects, projectItemsFromProjects(res.Projects, "in "+c.parsed.Repo())...)
+	projects = append(projects, projectItemsFromProjects(res.Projects, "in "+query)...)
 	return
 }
 
@@ -736,8 +736,8 @@ func (c *completion) retrieveIssueSearchItems(item *alfred.Item, repo, query str
 	return c.searchIssues(item, query, includeRepo, searchDelay)
 }
 
-func (c *completion) retrieveRecentIssues(item *alfred.Item) alfred.Items {
-	return c.searchIssues(item, "repo:"+c.parsed.Repo()+" sort:updated-desc", false, issueListDelay)
+func (c *completion) retrieveRecentIssues(repo string, item *alfred.Item) alfred.Items {
+	return c.searchIssues(item, "repo:"+repo+" sort:updated-desc", false, issueListDelay)
 }
 
 func (c *completion) searchIssues(item *alfred.Item, query string, includeRepo bool, delay float64) alfred.Items {
