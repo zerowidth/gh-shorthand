@@ -49,6 +49,12 @@ func NewProjectParser(repoMap, userMap map[string]string, defaultRepo string) *P
 	return NewParser(repoMap, userMap, defaultRepo, WithRepo, WithUser, WithIssue, WithQuery)
 }
 
+// NewUserCompletionParser returns a parser for matching user/repo completion
+// for autocomplete. Does not require a default repo.
+func NewUserCompletionParser(repoMap, userMap map[string]string) *Parser {
+	return NewParser(repoMap, userMap, "", WithRepo, WithUser)
+}
+
 // RequireRepo instructs the parser to require a repository
 func RequireRepo(p *Parser) {
 	p.parseRepo = true

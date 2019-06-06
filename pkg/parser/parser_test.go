@@ -357,6 +357,10 @@ var repoTests = []struct {
 		input:       "baz",
 		defaultRepo: "foo/bar",
 	},
+	{
+		test:  "does not match trailing slash on user",
+		input: "foo/",
+	},
 
 	// issue parsing
 	{
@@ -642,6 +646,80 @@ func TestProjectParser(t *testing.T) {
 			assert.Equal(t, tc.userShorthand, result.UserShorthand, "result.UserShorthand")
 			assert.Equal(t, tc.issue, result.Issue, "result.Issue")
 			assert.Equal(t, tc.query, result.Query, "result.Query")
+		})
+	}
+}
+
+var userCompletionTests = []struct {
+	// input:
+	test  string // test name
+	input string // input
+
+	// assertions:
+	user          string
+	name          string
+	userShorthand string
+	repoShorthand string
+}{
+	{
+		test:  "parses a repo",
+		input: "foo/bar",
+		user:  "foo",
+		name:  "bar",
+	},
+	{
+		test:          "expands repo shorthand",
+		input:         "df",
+		user:          "zerowidth",
+		name:          "dotfiles",
+		repoShorthand: "df",
+	},
+	{
+		test:          "expands user shorthand with a repo",
+		input:         "zw/foo",
+		user:          "zerowidth",
+		name:          "foo",
+		userShorthand: "zw",
+	},
+	{
+		test:  "matches just a user",
+		input: "foo",
+		user:  "foo",
+	},
+	{
+		test:          "expands user shorthand",
+		input:         "zw",
+		user:          "zerowidth",
+		userShorthand: "zw",
+	},
+	{
+		test:  "matches a user with a trailing slash",
+		input: "foo/",
+		user:  "foo",
+	},
+	{
+		test:          "expands user shorthand with a trailing slash",
+		input:         "zw/",
+		user:          "zerowidth",
+		userShorthand: "zw",
+	},
+	{
+		test:  "does not match invalid input",
+		input: "foo bar",
+	},
+}
+
+// TestUserCompletionParserfor testing the user completion parser
+func TestUserCompletionParser(t *testing.T) {
+	for _, tc := range userCompletionTests {
+		t.Run(tc.test, func(t *testing.T) {
+			parser := NewUserCompletionParser(repoMap, userMap)
+			result := parser.Parse(tc.input)
+
+			assert.Equal(t, tc.user, result.User, "result.User")
+			assert.Equal(t, tc.name, result.Name, "result.Name")
+			assert.Equal(t, tc.repoShorthand, result.RepoShorthand, "result.RepoShorthand")
+			assert.Equal(t, tc.userShorthand, result.UserShorthand, "result.UserShorthand")
 		})
 	}
 }

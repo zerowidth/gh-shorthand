@@ -17,7 +17,9 @@ type NewResult struct {
 func (r *NewResult) SetRepo(repo string) {
 	parts := strings.SplitN(repo, "/", 2)
 	r.User = parts[0]
-	r.Name = parts[1]
+	if len(parts) > 1 {
+		r.Name = parts[1]
+	}
 }
 
 // HasRepo checks if the result has a fully qualified repo, either from a

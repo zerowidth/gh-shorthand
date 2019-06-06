@@ -491,31 +491,34 @@ func openEndedNewIssueItem(input string) alfred.Item {
 }
 
 func autocompleteItems(cfg config.Config, input string, parsed *parser.NewResult,
-	autocompleteRepoItem func(string, string) alfred.Item,
-	autocompleteUserItem func(string, string) alfred.Item,
+	repoItem func(string, string) alfred.Item,
+	userItem func(string, string) alfred.Item,
 	openEndedItem func(string) alfred.Item) (items alfred.Items) {
+
+	parser := parser.NewUserCompletionParser(cfg.RepoMap, cfg.UserMap)
+	result := parser.Parse(input)
 
 	if strings.Contains(input, " ") {
 		return
 	}
 
 	items = append(items,
-		autocompleteRepoItems(cfg, input, autocompleteRepoItem)...)
+		autocompleteRepoItems(cfg, input, repoItem)...)
 	items = append(items,
-		autocompleteUserItems(cfg, input, parsed, true, autocompleteUserItem)...)
+		autocompleteUserItems(cfg, input, result, true, userItem)...)
 
-	if len(input) == 0 || parsed.Repo() != input {
+	if len(input) == 0 || result.Repo() != input {
 		items = append(items, openEndedItem(input))
 	}
 	return
 }
 
 func autocompleteRepoItems(cfg config.Config, input string,
-	autocompleteRepoItem func(string, string) alfred.Item) (items alfred.Items) {
+	repoItem func(string, string) alfred.Item) (items alfred.Items) {
 	if len(input) > 0 {
 		for key, repo := range cfg.RepoMap {
 			if strings.HasPrefix(key, input) && len(key) > len(input) {
-				items = append(items, autocompleteRepoItem(key, repo))
+				items = append(items, repoItem(key, repo))
 			}
 		}
 	}
@@ -524,13 +527,13 @@ func autocompleteRepoItems(cfg config.Config, input string,
 
 func autocompleteUserItems(cfg config.Config, input string,
 	parsed *parser.NewResult, includeMatchedUser bool,
-	autocompleteUserItem func(string, string) alfred.Item) (items alfred.Items) {
+	userItem func(string, string) alfred.Item) (items alfred.Items) {
 	if len(input) > 0 {
 		for key, user := range cfg.UserMap {
 			prefixed := strings.HasPrefix(key, input) && len(key) > len(input)
 			matched := includeMatchedUser && key == parsed.UserShorthand && !parsed.HasRepo()
 			if prefixed || matched {
-				items = append(items, autocompleteUserItem(key, user))
+				items = append(items, userItem(key, user))
 			}
 		}
 	}
