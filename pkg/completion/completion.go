@@ -210,7 +210,7 @@ func (c *completion) appendParsedItems(mode string) {
 	}
 }
 
-func openRepoItem(parsed *parser.NewResult) alfred.Item {
+func openRepoItem(parsed *parser.Result) alfred.Item {
 	uid := "gh:" + parsed.Repo()
 	title := "Open " + parsed.Repo()
 	arg := "open https://github.com/" + parsed.Repo()
@@ -258,7 +258,7 @@ func openPathItem(path string) alfred.Item {
 	}
 }
 
-func openIssuesItem(parsed *parser.NewResult) (item alfred.Item) {
+func openIssuesItem(parsed *parser.Result) (item alfred.Item) {
 	return alfred.Item{
 		UID:   "ghi:" + parsed.Repo(),
 		Title: "List issues for " + parsed.Repo() + parsed.Annotation(),
@@ -268,7 +268,7 @@ func openIssuesItem(parsed *parser.NewResult) (item alfred.Item) {
 	}
 }
 
-func searchIssuesItem(parsed *parser.NewResult, fullInput string) alfred.Item {
+func searchIssuesItem(parsed *parser.Result, fullInput string) alfred.Item {
 	extra := parsed.Annotation()
 
 	if len(parsed.Query) > 0 {
@@ -291,7 +291,7 @@ func searchIssuesItem(parsed *parser.NewResult, fullInput string) alfred.Item {
 	}
 }
 
-func repoProjectsItem(parsed *parser.NewResult) alfred.Item {
+func repoProjectsItem(parsed *parser.Result) alfred.Item {
 	if parsed.HasIssue() {
 		return alfred.Item{
 			UID:   "ghp:" + parsed.Repo() + "/" + parsed.Issue,
@@ -310,7 +310,7 @@ func repoProjectsItem(parsed *parser.NewResult) alfred.Item {
 	}
 }
 
-func orgProjectsItem(parsed *parser.NewResult) alfred.Item {
+func orgProjectsItem(parsed *parser.Result) alfred.Item {
 	if parsed.HasIssue() {
 		return alfred.Item{
 			UID:   "ghp:" + parsed.User + "/" + parsed.Issue,
@@ -329,7 +329,7 @@ func orgProjectsItem(parsed *parser.NewResult) alfred.Item {
 	}
 }
 
-func newIssueItem(parsed *parser.NewResult) alfred.Item {
+func newIssueItem(parsed *parser.Result) alfred.Item {
 	title := "New issue in " + parsed.Repo()
 	title += parsed.Annotation()
 
@@ -490,7 +490,7 @@ func openEndedNewIssueItem(input string) alfred.Item {
 	}
 }
 
-func autocompleteItems(cfg config.Config, input string, parsed *parser.NewResult,
+func autocompleteItems(cfg config.Config, input string, parsed *parser.Result,
 	repoItem func(string, string) alfred.Item,
 	userItem func(string, string) alfred.Item,
 	openEndedItem func(string) alfred.Item) (items alfred.Items) {
@@ -526,7 +526,7 @@ func autocompleteRepoItems(cfg config.Config, input string,
 }
 
 func autocompleteUserItems(cfg config.Config, input string,
-	parsed *parser.NewResult, includeMatchedUser bool,
+	parsed *parser.Result, includeMatchedUser bool,
 	userItem func(string, string) alfred.Item) (items alfred.Items) {
 	if len(input) > 0 {
 		for key, user := range cfg.UserMap {

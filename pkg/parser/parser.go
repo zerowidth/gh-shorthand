@@ -79,8 +79,8 @@ func WithPath(p *Parser) { p.parsePath = true }
 func WithQuery(p *Parser) { p.parseQuery = true }
 
 // Parse parses the given input and returns a result
-func (p *Parser) Parse(input string) *NewResult {
-	res := &NewResult{}
+func (p *Parser) Parse(input string) *Result {
+	res := &Result{}
 
 	if p.parseRepo {
 		if repo := userRepoRegexp.FindString(input); len(repo) > 0 {
@@ -119,7 +119,7 @@ func (p *Parser) Parse(input string) *NewResult {
 					// invalid. NB this _could_ be valid if parsing a query, but that use
 					// case isn't needed/supported
 					if len(input) > 0 {
-						return &NewResult{}
+						return &Result{}
 					}
 
 					res.Issue = res.User
@@ -133,7 +133,7 @@ func (p *Parser) Parse(input string) *NewResult {
 
 	// if we don't have a repo assigned by now, there's no match
 	if p.requireRepo && !res.HasRepo() {
-		return &NewResult{}
+		return &Result{}
 	}
 
 	if p.parseIssue {
@@ -155,7 +155,7 @@ func (p *Parser) Parse(input string) *NewResult {
 		// only remove the first leading space, and all trailing spaces
 		res.Query = remainder
 	} else if len(remainder) > 0 {
-		res = &NewResult{} // invalid match, there's leftover characters
+		res = &Result{} // invalid match, there's leftover characters
 	}
 
 	return res
