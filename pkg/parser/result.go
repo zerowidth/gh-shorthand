@@ -41,6 +41,11 @@ func (r *NewResult) HasPath() bool {
 	return len(r.Path) > 0
 }
 
+// HasQuery checks if the result has a matched path
+func (r *NewResult) HasQuery() bool {
+	return len(r.Query) > 0
+}
+
 // Repo returns the repo defined in the result, if present
 func (r *NewResult) Repo() string {
 	if r.HasRepo() {

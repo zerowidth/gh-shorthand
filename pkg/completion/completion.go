@@ -133,18 +133,22 @@ func (c *completion) appendParsedItems(mode string) {
 				autocompleteOpenItem, autocompleteUserOpenItem, openEndedOpenItem)...)
 
 	case "i":
+		parser := parser.NewIssueParser(c.cfg.RepoMap, c.cfg.UserMap, c.cfg.DefaultRepo)
+		result := parser.Parse(c.input)
+
 		// repo required
-		if c.parsed.HasRepo() {
-			if c.parsed.EmptyQuery() {
-				issuesItem := openIssuesItem(c.parsed)
-				matches := c.retrieveRecentIssues(&issuesItem)
-				c.result.AppendItems(issuesItem)
-				c.result.AppendItems(searchIssuesItem(c.parsed, fullInput))
+		if result.HasRepo() {
+
+			if result.HasQuery() {
+				searchItem := searchIssuesItem(result, fullInput)
+				matches := c.retrieveIssueSearchItems(&searchItem, result.Repo(), result.Query, false)
+				c.result.AppendItems(searchItem)
 				c.result.AppendItems(matches...)
 			} else {
-				searchItem := searchIssuesItem(c.parsed, fullInput)
-				matches := c.retrieveIssueSearchItems(&searchItem, c.parsed.Repo(), c.parsed.Query, false)
-				c.result.AppendItems(searchItem)
+				issuesItem := openIssuesItem(result)
+				matches := c.retrieveRecentIssues(&issuesItem)
+				c.result.AppendItems(issuesItem)
+				c.result.AppendItems(searchIssuesItem(result, fullInput))
 				c.result.AppendItems(matches...)
 			}
 		}
@@ -154,27 +158,28 @@ func (c *completion) appendParsedItems(mode string) {
 				autocompleteIssueItem, autocompleteUserIssueItem, openEndedIssueItem)...)
 
 	case "p":
-		if c.parsed.HasOwner() && (c.parsed.HasIssue() || c.parsed.EmptyQuery()) {
-			if c.parsed.HasRepo() {
-				item := repoProjectsItem(c.parsed)
-				if c.parsed.HasIssue() {
-					c.retrieveRepoProject(&item)
-					c.result.AppendItems(item)
-				} else {
-					projects := c.retrieveRepoProjects(&item)
-					c.result.AppendItems(item)
-					c.result.AppendItems(projects...)
-				}
+		parser := parser.NewProjectParser(c.cfg.RepoMap, c.cfg.UserMap, c.cfg.DefaultRepo)
+		result := parser.Parse(c.input)
+
+		if result.HasRepo() {
+			item := repoProjectsItem(result)
+			if c.parsed.HasIssue() {
+				c.retrieveRepoProject(&item)
+				c.result.AppendItems(item)
 			} else {
-				item := orgProjectsItem(c.parsed)
-				if c.parsed.HasIssue() {
-					c.retrieveOrgProject(&item)
-					c.result.AppendItems(item)
-				} else {
-					projects := c.retrieveOrgProjects(&item)
-					c.result.AppendItems(item)
-					c.result.AppendItems(projects...)
-				}
+				projects := c.retrieveRepoProjects(&item)
+				c.result.AppendItems(item)
+				c.result.AppendItems(projects...)
+			}
+		} else if result.HasUser() {
+			item := orgProjectsItem(result)
+			if c.parsed.HasIssue() {
+				c.retrieveOrgProject(&item)
+				c.result.AppendItems(item)
+			} else {
+				projects := c.retrieveOrgProjects(&item)
+				c.result.AppendItems(item)
+				c.result.AppendItems(projects...)
 			}
 		}
 
@@ -189,9 +194,12 @@ func (c *completion) appendParsedItems(mode string) {
 		}
 
 	case "n":
+		parser := parser.NewParser(c.cfg.RepoMap, c.cfg.UserMap, c.cfg.DefaultRepo, parser.RequireRepo, parser.WithQuery)
+		result := parser.Parse(c.input)
+
 		// repo required
-		if c.parsed.HasRepo() {
-			c.result.AppendItems(newIssueItem(c.parsed))
+		if result.HasRepo() {
+			c.result.AppendItems(newIssueItem(result))
 		}
 
 		c.result.AppendItems(
@@ -262,7 +270,7 @@ func openPathItem(path string) alfred.Item {
 	}
 }
 
-func openIssuesItem(parsed parser.Result) (item alfred.Item) {
+func openIssuesItem(parsed *parser.NewResult) (item alfred.Item) {
 	return alfred.Item{
 		UID:   "ghi:" + parsed.Repo(),
 		Title: "List issues for " + parsed.Repo() + parsed.Annotation(),
@@ -272,7 +280,7 @@ func openIssuesItem(parsed parser.Result) (item alfred.Item) {
 	}
 }
 
-func searchIssuesItem(parsed parser.Result, fullInput string) alfred.Item {
+func searchIssuesItem(parsed *parser.NewResult, fullInput string) alfred.Item {
 	extra := parsed.Annotation()
 
 	if len(parsed.Query) > 0 {
@@ -295,13 +303,13 @@ func searchIssuesItem(parsed parser.Result, fullInput string) alfred.Item {
 	}
 }
 
-func repoProjectsItem(parsed parser.Result) alfred.Item {
+func repoProjectsItem(parsed *parser.NewResult) alfred.Item {
 	if parsed.HasIssue() {
 		return alfred.Item{
-			UID:   "ghp:" + parsed.Repo() + "/" + parsed.Issue(),
-			Title: "Open project #" + parsed.Issue() + " in " + parsed.Repo() + parsed.Annotation(),
+			UID:   "ghp:" + parsed.Repo() + "/" + parsed.Issue,
+			Title: "Open project #" + parsed.Issue + " in " + parsed.Repo() + parsed.Annotation(),
 			Valid: true,
-			Arg:   "open https://github.com/" + parsed.Repo() + "/projects/" + parsed.Issue(),
+			Arg:   "open https://github.com/" + parsed.Repo() + "/projects/" + parsed.Issue,
 			Icon:  projectIcon,
 		}
 	}
@@ -314,13 +322,13 @@ func repoProjectsItem(parsed parser.Result) alfred.Item {
 	}
 }
 
-func orgProjectsItem(parsed parser.Result) alfred.Item {
+func orgProjectsItem(parsed *parser.NewResult) alfred.Item {
 	if parsed.HasIssue() {
 		return alfred.Item{
-			UID:   "ghp:" + parsed.User + "/" + parsed.Issue(),
-			Title: "Open project #" + parsed.Issue() + " for " + parsed.User + parsed.Annotation(),
+			UID:   "ghp:" + parsed.User + "/" + parsed.Issue,
+			Title: "Open project #" + parsed.Issue + " for " + parsed.User + parsed.Annotation(),
 			Valid: true,
-			Arg:   "open https://github.com/orgs/" + parsed.User + "/projects/" + parsed.Issue(),
+			Arg:   "open https://github.com/orgs/" + parsed.User + "/projects/" + parsed.Issue,
 			Icon:  projectIcon,
 		}
 	}
@@ -333,11 +341,11 @@ func orgProjectsItem(parsed parser.Result) alfred.Item {
 	}
 }
 
-func newIssueItem(parsed parser.Result) alfred.Item {
+func newIssueItem(parsed *parser.NewResult) alfred.Item {
 	title := "New issue in " + parsed.Repo()
 	title += parsed.Annotation()
 
-	if parsed.EmptyQuery() {
+	if !parsed.HasQuery() {
 		return alfred.Item{
 			UID:   "ghn:" + parsed.Repo(),
 			Title: title,
