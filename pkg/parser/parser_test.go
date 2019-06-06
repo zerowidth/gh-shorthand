@@ -326,6 +326,20 @@ var repoTests = []struct {
 		userShorthand: "zw",
 	},
 	{
+		test:          "expands duplicate as repo",
+		input:         "dupe",
+		user:          "dupe-repo",
+		name:          "stuff",
+		repoShorthand: "dupe",
+	},
+	{
+		test:          "expands duplicate user with repo as user",
+		input:         "dupe/foo",
+		user:          "dupe-user",
+		name:          "foo",
+		userShorthand: "dupe",
+	},
+	{
 		test:        "sets default repo if no repo match",
 		input:       "",
 		defaultRepo: "default/repo",
@@ -702,6 +716,12 @@ var userCompletionTests = []struct {
 		input:         "zw/",
 		user:          "zerowidth",
 		userShorthand: "zw",
+	},
+	{
+		test:          "expands duplicate user with trailing slash as user",
+		input:         "dupe/",
+		user:          "dupe-user",
+		userShorthand: "dupe",
 	},
 	{
 		test:  "does not match invalid input",
