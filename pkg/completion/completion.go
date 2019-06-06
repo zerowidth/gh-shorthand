@@ -37,9 +37,6 @@ type completion struct {
 	input     string        // the input string from the user (minus mode)
 	rpcClient rpc.Client
 
-	// intermediate processing:
-	parsed parser.Result
-
 	// output
 	result alfred.FilterResult // the final assembled result
 	retry  bool                // should this script be re-invoked? (for RPC)
@@ -53,16 +50,11 @@ func Complete(cfg config.Config, env Environment) alfred.FilterResult {
 		return alfred.NewFilterResult()
 	}
 
-	bareUser := mode == "p"
-	ignoreNumeric := len(cfg.DefaultRepo) > 0
-	parsed := parser.Parse(cfg.RepoMap, cfg.UserMap, input, bareUser, ignoreNumeric)
-
 	c := completion{
 		cfg:       cfg,
 		env:       env,
 		result:    alfred.NewFilterResult(),
 		input:     input,
-		parsed:    parsed,
 		rpcClient: rpc.NewClient(cfg.SocketPath),
 	}
 	c.appendParsedItems(mode)
@@ -100,10 +92,6 @@ func extractMode(input string) (string, string, bool) {
 func (c *completion) appendParsedItems(mode string) {
 	fullInput := c.env.Query
 
-	if !c.parsed.HasRepo() && len(c.cfg.DefaultRepo) > 0 && !c.parsed.HasOwner() && !c.parsed.HasPath() {
-		c.parsed.SetRepo(c.cfg.DefaultRepo)
-	}
-
 	switch mode {
 	case "": // no mode, no input, show default items
 		c.result.AppendItems(
@@ -129,7 +117,7 @@ func (c *completion) appendParsedItems(mode string) {
 		}
 
 		c.result.AppendItems(
-			autocompleteItems(c.cfg, c.input, c.parsed,
+			autocompleteItems(c.cfg, c.input, result,
 				autocompleteOpenItem, autocompleteUserOpenItem, openEndedOpenItem)...)
 
 	case "i":
@@ -154,7 +142,7 @@ func (c *completion) appendParsedItems(mode string) {
 		}
 
 		c.result.AppendItems(
-			autocompleteItems(c.cfg, c.input, c.parsed,
+			autocompleteItems(c.cfg, c.input, result,
 				autocompleteIssueItem, autocompleteUserIssueItem, openEndedIssueItem)...)
 
 	case "p":
@@ -187,8 +175,8 @@ func (c *completion) appendParsedItems(mode string) {
 			c.result.AppendItems(
 				autocompleteRepoItems(c.cfg, c.input, autocompleteProjectItem)...)
 			c.result.AppendItems(
-				autocompleteUserItems(c.cfg, c.input, c.parsed, false, autocompleteOrgProjectItem)...)
-			if len(c.input) == 0 || c.parsed.Repo() != c.input {
+				autocompleteUserItems(c.cfg, c.input, result, false, autocompleteOrgProjectItem)...)
+			if len(c.input) == 0 || result.Repo() != c.input {
 				c.result.AppendItems(openEndedProjectItem(c.input))
 			}
 		}
@@ -203,7 +191,7 @@ func (c *completion) appendParsedItems(mode string) {
 		}
 
 		c.result.AppendItems(
-			autocompleteItems(c.cfg, c.input, c.parsed,
+			autocompleteItems(c.cfg, c.input, result,
 				autocompleteNewIssueItem, autocompleteUserNewIssueItem, openEndedNewIssueItem)...)
 
 	case "e":
@@ -502,7 +490,7 @@ func openEndedNewIssueItem(input string) alfred.Item {
 	}
 }
 
-func autocompleteItems(cfg config.Config, input string, parsed parser.Result,
+func autocompleteItems(cfg config.Config, input string, parsed *parser.NewResult,
 	autocompleteRepoItem func(string, string) alfred.Item,
 	autocompleteUserItem func(string, string) alfred.Item,
 	openEndedItem func(string) alfred.Item) (items alfred.Items) {
@@ -535,12 +523,12 @@ func autocompleteRepoItems(cfg config.Config, input string,
 }
 
 func autocompleteUserItems(cfg config.Config, input string,
-	parsed parser.Result, includeMatchedUser bool,
+	parsed *parser.NewResult, includeMatchedUser bool,
 	autocompleteUserItem func(string, string) alfred.Item) (items alfred.Items) {
 	if len(input) > 0 {
 		for key, user := range cfg.UserMap {
 			prefixed := strings.HasPrefix(key, input) && len(key) > len(input)
-			matched := includeMatchedUser && key == parsed.UserMatch && !parsed.HasRepo()
+			matched := includeMatchedUser && key == parsed.UserShorthand && !parsed.HasRepo()
 			if prefixed || matched {
 				items = append(items, autocompleteUserItem(key, user))
 			}

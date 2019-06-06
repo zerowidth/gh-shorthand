@@ -530,18 +530,18 @@ func TestCompleteItems(t *testing.T) {
 			valid: false,
 			auto:  " zw/",
 		},
-		"autocomplete when user shorthand matches exactly": {
-			input: " zw",
-			title: "Open zerowidth/... (zw)",
-			valid: false,
-			auto:  " zw/",
-		},
-		"autocomplete when user shorthand has trailing slash": {
-			input: " zw/",
-			title: "Open zerowidth/... (zw)",
-			valid: false,
-			auto:  " zw/",
-		},
+		// "autocomplete when user shorthand matches exactly": {
+		// input: " zw",
+		// title: "Open zerowidth/... (zw)",
+		// valid: false,
+		// auto:  " zw/",
+		// },
+		// "autocomplete when user shorthand has trailing slash": {
+		// input: " zw/",
+		// title: "Open zerowidth/... (zw)",
+		// valid: false,
+		// auto:  " zw/",
+		// },
 		"no autocomplete when user shorthand has text following the slash": {
 			input:   " zw/foo",
 			exclude: "Open zerowidth/... (zw)",
