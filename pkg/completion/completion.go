@@ -573,7 +573,7 @@ func findProjectDirs(root string) (dirs []string, err error) {
 
 func (c *completion) rpcRequest(path, query string, delay float64) rpc.Result {
 	if len(c.cfg.SocketPath) == 0 {
-		return rpc.Result{Complete: true} // RPC isn't enabled, don't worry about it
+		panic("rpc not enabled") // should be exercised by tests only, FIXME remove
 	}
 	if c.env.Duration().Seconds() < delay {
 		c.retry = true
@@ -596,6 +596,9 @@ func ellipsis(prefix string, duration time.Duration) string {
 // retrieveRepo adds a repo's description to an "open repo" item
 // using an RPC call.
 func (c *completion) retrieveRepo(repo string, item *alfred.Item) {
+	if len(c.cfg.SocketPath) == 0 {
+		return
+	}
 	res := c.rpcRequest("/repo", repo, delay)
 	if len(res.Error) > 0 {
 		item.Subtitle = res.Error
@@ -626,6 +629,9 @@ func (c *completion) retrieveRepo(repo string, item *alfred.Item) {
 
 // retrieveIssue adds the title and state to an "open issue" item
 func (c *completion) retrieveIssue(repo, issuenum string, item *alfred.Item) {
+	if len(c.cfg.SocketPath) == 0 {
+		return
+	}
 	res := c.rpcRequest("/issue", repo+"#"+issuenum, delay)
 	if len(res.Error) > 0 {
 		item.Subtitle = res.Error
@@ -663,6 +669,9 @@ func (c *completion) retrieveOrgProject(user, issuenum string, item *alfred.Item
 }
 
 func (c *completion) retrieveProject(item *alfred.Item, query string) {
+	if len(c.cfg.SocketPath) == 0 {
+		return
+	}
 	res := c.rpcRequest("/project", query, delay)
 	if len(res.Error) > 0 {
 		item.Subtitle = res.Error
@@ -690,6 +699,9 @@ func (c *completion) retrieveRepoProjects(repo string, item *alfred.Item) alfred
 }
 
 func (c *completion) retrieveProjects(item *alfred.Item, query string) (projects alfred.Items) {
+	if len(c.cfg.SocketPath) == 0 {
+		return
+	}
 	res := c.rpcRequest("/projects", query, delay)
 	if len(res.Error) > 0 {
 		item.Subtitle = res.Error
@@ -732,9 +744,10 @@ func (c *completion) retrieveRecentIssues(repo string, item *alfred.Item) alfred
 }
 
 func (c *completion) searchIssues(item *alfred.Item, query string, includeRepo bool, delay float64) alfred.Items {
+
 	var items alfred.Items
 
-	if !item.Valid {
+	if !item.Valid || len(c.cfg.SocketPath) == 0 {
 		return items
 	}
 

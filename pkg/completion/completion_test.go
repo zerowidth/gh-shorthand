@@ -129,6 +129,8 @@ func (tc *completeTestCase) testItem(t *testing.T) {
 		}
 	}
 
+	assert.NotContains(t, item.Subtitle, "rpc error")
+
 }
 
 func TestCompleteItems(t *testing.T) {
