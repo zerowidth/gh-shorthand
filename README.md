@@ -81,7 +81,6 @@ Listed as the first character of input, which defines the mode, followed by a de
 * `(space)` : `[repo [issue|/path] | issue | /path]` : Open a repository or issue
     * Opens a repository if given, or the default repository.
     * Opens an issue for a repository if given, or the default repository.
-    * Opens `github.com/path` if just a path is given.
     * Opens a relative path under a repository if a repository is given.
     * If RPC is enabled, updates the repo or issue to show its title and open/closed state.
 * `i` : `<repo> [query]` : List or search issues for a repository.

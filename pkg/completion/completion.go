@@ -37,9 +37,6 @@ type completion struct {
 	input     string        // the input string from the user (minus mode)
 	rpcClient rpc.Client
 
-	// intermediate processing:
-	parsed parser.Result
-
 	// output
 	result alfred.FilterResult // the final assembled result
 	retry  bool                // should this script be re-invoked? (for RPC)
@@ -53,16 +50,11 @@ func Complete(cfg config.Config, env Environment) alfred.FilterResult {
 		return alfred.NewFilterResult()
 	}
 
-	bareUser := mode == "p"
-	ignoreNumeric := len(cfg.DefaultRepo) > 0
-	parsed := parser.Parse(cfg.RepoMap, cfg.UserMap, input, bareUser, ignoreNumeric)
-
 	c := completion{
 		cfg:       cfg,
 		env:       env,
 		result:    alfred.NewFilterResult(),
 		input:     input,
-		parsed:    parsed,
 		rpcClient: rpc.NewClient(cfg.SocketPath),
 	}
 	c.appendParsedItems(mode)
@@ -100,80 +92,82 @@ func extractMode(input string) (string, string, bool) {
 func (c *completion) appendParsedItems(mode string) {
 	fullInput := c.env.Query
 
-	if !c.parsed.HasRepo() && len(c.cfg.DefaultRepo) > 0 && !c.parsed.HasOwner() && !c.parsed.HasPath() {
-		c.parsed.SetRepo(c.cfg.DefaultRepo)
-	}
-
 	switch mode {
-	case "": // no input, show default items
+	case "": // no mode, no input, show default items
 		c.result.AppendItems(
 			defaultItems...,
 		)
 
 	case " ": // open repo, issue, and/or path
-		// repo required, no query allowed
-		if c.parsed.HasRepo() &&
-			(c.parsed.HasIssue() || c.parsed.HasPath() || c.parsed.EmptyQuery()) {
-			item := openRepoItem(c.parsed)
-			if c.parsed.HasIssue() {
-				c.retrieveIssue(&item)
+		parser := parser.NewRepoParser(c.cfg.RepoMap, c.cfg.UserMap, c.cfg.DefaultRepo)
+		result := parser.Parse(c.input)
+
+		if result.HasRepo() {
+			item := openRepoItem(result)
+			if result.HasIssue() {
+				c.retrieveIssue(result.Repo(), result.Issue, &item)
 			} else {
-				c.retrieveRepo(&item)
+				c.retrieveRepo(result.Repo(), &item)
 			}
 			c.result.AppendItems(item)
 		}
 
-		if !c.parsed.HasRepo() && !c.parsed.HasOwner() && c.parsed.HasPath() {
-			c.result.AppendItems(openPathItem(c.parsed.Path()))
+		if !result.HasRepo() && result.HasPath() {
+			c.result.AppendItems(openPathItem(result.Path))
 		}
 
 		c.result.AppendItems(
-			autocompleteItems(c.cfg, c.input, c.parsed,
+			autocompleteItems(c.cfg, c.input, result,
 				autocompleteOpenItem, autocompleteUserOpenItem, openEndedOpenItem)...)
 
 	case "i":
+		parser := parser.NewIssueParser(c.cfg.RepoMap, c.cfg.UserMap, c.cfg.DefaultRepo)
+		result := parser.Parse(c.input)
+
 		// repo required
-		if c.parsed.HasRepo() {
-			if c.parsed.EmptyQuery() {
-				issuesItem := openIssuesItem(c.parsed)
-				matches := c.retrieveRecentIssues(&issuesItem)
-				c.result.AppendItems(issuesItem)
-				c.result.AppendItems(searchIssuesItem(c.parsed, fullInput))
+		if result.HasRepo() {
+
+			if result.HasQuery() {
+				searchItem := searchIssuesItem(result, fullInput)
+				matches := c.retrieveIssueSearchItems(&searchItem, result.Repo(), result.Query, false)
+				c.result.AppendItems(searchItem)
 				c.result.AppendItems(matches...)
 			} else {
-				searchItem := searchIssuesItem(c.parsed, fullInput)
-				matches := c.retrieveIssueSearchItems(&searchItem, c.parsed.Repo(), c.parsed.Query, false)
-				c.result.AppendItems(searchItem)
+				issuesItem := openIssuesItem(result)
+				matches := c.retrieveRecentIssues(result.Repo(), &issuesItem)
+				c.result.AppendItems(issuesItem)
+				c.result.AppendItems(searchIssuesItem(result, fullInput))
 				c.result.AppendItems(matches...)
 			}
 		}
 
 		c.result.AppendItems(
-			autocompleteItems(c.cfg, c.input, c.parsed,
+			autocompleteItems(c.cfg, c.input, result,
 				autocompleteIssueItem, autocompleteUserIssueItem, openEndedIssueItem)...)
 
 	case "p":
-		if c.parsed.HasOwner() && (c.parsed.HasIssue() || c.parsed.EmptyQuery()) {
-			if c.parsed.HasRepo() {
-				item := repoProjectsItem(c.parsed)
-				if c.parsed.HasIssue() {
-					c.retrieveRepoProject(&item)
-					c.result.AppendItems(item)
-				} else {
-					projects := c.retrieveRepoProjects(&item)
-					c.result.AppendItems(item)
-					c.result.AppendItems(projects...)
-				}
+		parser := parser.NewProjectParser(c.cfg.RepoMap, c.cfg.UserMap, c.cfg.DefaultRepo)
+		result := parser.Parse(c.input)
+
+		if result.HasRepo() {
+			item := repoProjectsItem(result)
+			if result.HasIssue() {
+				c.retrieveRepoProject(result.Repo(), result.Issue, &item)
+				c.result.AppendItems(item)
 			} else {
-				item := orgProjectsItem(c.parsed)
-				if c.parsed.HasIssue() {
-					c.retrieveOrgProject(&item)
-					c.result.AppendItems(item)
-				} else {
-					projects := c.retrieveOrgProjects(&item)
-					c.result.AppendItems(item)
-					c.result.AppendItems(projects...)
-				}
+				projects := c.retrieveRepoProjects(result.Repo(), &item)
+				c.result.AppendItems(item)
+				c.result.AppendItems(projects...)
+			}
+		} else if result.HasUser() {
+			item := orgProjectsItem(result)
+			if result.HasIssue() {
+				c.retrieveOrgProject(result.User, result.Issue, &item)
+				c.result.AppendItems(item)
+			} else {
+				projects := c.retrieveOrgProjects(result.User, &item)
+				c.result.AppendItems(item)
+				c.result.AppendItems(projects...)
 			}
 		}
 
@@ -181,20 +175,23 @@ func (c *completion) appendParsedItems(mode string) {
 			c.result.AppendItems(
 				autocompleteRepoItems(c.cfg, c.input, autocompleteProjectItem)...)
 			c.result.AppendItems(
-				autocompleteUserItems(c.cfg, c.input, c.parsed, false, autocompleteOrgProjectItem)...)
-			if len(c.input) == 0 || c.parsed.Repo() != c.input {
+				autocompleteUserItems(c.cfg, c.input, result, false, autocompleteOrgProjectItem)...)
+			if len(c.input) == 0 || result.Repo() != c.input {
 				c.result.AppendItems(openEndedProjectItem(c.input))
 			}
 		}
 
 	case "n":
+		parser := parser.NewParser(c.cfg.RepoMap, c.cfg.UserMap, c.cfg.DefaultRepo, parser.RequireRepo, parser.WithQuery)
+		result := parser.Parse(c.input)
+
 		// repo required
-		if c.parsed.HasRepo() {
-			c.result.AppendItems(newIssueItem(c.parsed))
+		if result.HasRepo() {
+			c.result.AppendItems(newIssueItem(result))
 		}
 
 		c.result.AppendItems(
-			autocompleteItems(c.cfg, c.input, c.parsed,
+			autocompleteItems(c.cfg, c.input, result,
 				autocompleteNewIssueItem, autocompleteUserNewIssueItem, openEndedNewIssueItem)...)
 
 	case "e":
@@ -213,7 +210,7 @@ func (c *completion) appendParsedItems(mode string) {
 	}
 }
 
-func openRepoItem(parsed parser.Result) alfred.Item {
+func openRepoItem(parsed *parser.Result) alfred.Item {
 	uid := "gh:" + parsed.Repo()
 	title := "Open " + parsed.Repo()
 	arg := "open https://github.com/" + parsed.Repo()
@@ -221,17 +218,17 @@ func openRepoItem(parsed parser.Result) alfred.Item {
 	var mods *alfred.Mods
 
 	if parsed.HasIssue() {
-		uid += "#" + parsed.Issue()
-		title += "#" + parsed.Issue()
-		arg += "/issues/" + parsed.Issue()
+		uid += "#" + parsed.Issue
+		title += "#" + parsed.Issue
+		arg += "/issues/" + parsed.Issue
 		icon = issueIcon
-		mods = issueMods(parsed.Repo(), parsed.Issue(), "")
+		mods = issueMods(parsed.Repo(), parsed.Issue, "")
 	}
 
 	if parsed.HasPath() {
-		uid += parsed.Path()
-		title += parsed.Path()
-		arg += parsed.Path()
+		uid += parsed.Path
+		title += parsed.Path
+		arg += parsed.Path
 		icon = pathIcon
 	}
 
@@ -261,7 +258,7 @@ func openPathItem(path string) alfred.Item {
 	}
 }
 
-func openIssuesItem(parsed parser.Result) (item alfred.Item) {
+func openIssuesItem(parsed *parser.Result) (item alfred.Item) {
 	return alfred.Item{
 		UID:   "ghi:" + parsed.Repo(),
 		Title: "List issues for " + parsed.Repo() + parsed.Annotation(),
@@ -271,7 +268,7 @@ func openIssuesItem(parsed parser.Result) (item alfred.Item) {
 	}
 }
 
-func searchIssuesItem(parsed parser.Result, fullInput string) alfred.Item {
+func searchIssuesItem(parsed *parser.Result, fullInput string) alfred.Item {
 	extra := parsed.Annotation()
 
 	if len(parsed.Query) > 0 {
@@ -294,13 +291,13 @@ func searchIssuesItem(parsed parser.Result, fullInput string) alfred.Item {
 	}
 }
 
-func repoProjectsItem(parsed parser.Result) alfred.Item {
+func repoProjectsItem(parsed *parser.Result) alfred.Item {
 	if parsed.HasIssue() {
 		return alfred.Item{
-			UID:   "ghp:" + parsed.Repo() + "/" + parsed.Issue(),
-			Title: "Open project #" + parsed.Issue() + " in " + parsed.Repo() + parsed.Annotation(),
+			UID:   "ghp:" + parsed.Repo() + "/" + parsed.Issue,
+			Title: "Open project #" + parsed.Issue + " in " + parsed.Repo() + parsed.Annotation(),
 			Valid: true,
-			Arg:   "open https://github.com/" + parsed.Repo() + "/projects/" + parsed.Issue(),
+			Arg:   "open https://github.com/" + parsed.Repo() + "/projects/" + parsed.Issue,
 			Icon:  projectIcon,
 		}
 	}
@@ -313,13 +310,13 @@ func repoProjectsItem(parsed parser.Result) alfred.Item {
 	}
 }
 
-func orgProjectsItem(parsed parser.Result) alfred.Item {
+func orgProjectsItem(parsed *parser.Result) alfred.Item {
 	if parsed.HasIssue() {
 		return alfred.Item{
-			UID:   "ghp:" + parsed.User + "/" + parsed.Issue(),
-			Title: "Open project #" + parsed.Issue() + " for " + parsed.User + parsed.Annotation(),
+			UID:   "ghp:" + parsed.User + "/" + parsed.Issue,
+			Title: "Open project #" + parsed.Issue + " for " + parsed.User + parsed.Annotation(),
 			Valid: true,
-			Arg:   "open https://github.com/orgs/" + parsed.User + "/projects/" + parsed.Issue(),
+			Arg:   "open https://github.com/orgs/" + parsed.User + "/projects/" + parsed.Issue,
 			Icon:  projectIcon,
 		}
 	}
@@ -332,11 +329,11 @@ func orgProjectsItem(parsed parser.Result) alfred.Item {
 	}
 }
 
-func newIssueItem(parsed parser.Result) alfred.Item {
+func newIssueItem(parsed *parser.Result) alfred.Item {
 	title := "New issue in " + parsed.Repo()
 	title += parsed.Annotation()
 
-	if parsed.EmptyQuery() {
+	if !parsed.HasQuery() {
 		return alfred.Item{
 			UID:   "ghn:" + parsed.Repo(),
 			Title: title,
@@ -493,32 +490,35 @@ func openEndedNewIssueItem(input string) alfred.Item {
 	}
 }
 
-func autocompleteItems(cfg config.Config, input string, parsed parser.Result,
-	autocompleteRepoItem func(string, string) alfred.Item,
-	autocompleteUserItem func(string, string) alfred.Item,
+func autocompleteItems(cfg config.Config, input string, parsed *parser.Result,
+	repoItem func(string, string) alfred.Item,
+	userItem func(string, string) alfred.Item,
 	openEndedItem func(string) alfred.Item) (items alfred.Items) {
+
+	parser := parser.NewUserCompletionParser(cfg.RepoMap, cfg.UserMap)
+	result := parser.Parse(input)
 
 	if strings.Contains(input, " ") {
 		return
 	}
 
 	items = append(items,
-		autocompleteRepoItems(cfg, input, autocompleteRepoItem)...)
+		autocompleteRepoItems(cfg, input, repoItem)...)
 	items = append(items,
-		autocompleteUserItems(cfg, input, parsed, true, autocompleteUserItem)...)
+		autocompleteUserItems(cfg, input, result, true, userItem)...)
 
-	if len(input) == 0 || parsed.Repo() != input {
+	if len(input) == 0 || result.Repo() != input {
 		items = append(items, openEndedItem(input))
 	}
 	return
 }
 
 func autocompleteRepoItems(cfg config.Config, input string,
-	autocompleteRepoItem func(string, string) alfred.Item) (items alfred.Items) {
+	repoItem func(string, string) alfred.Item) (items alfred.Items) {
 	if len(input) > 0 {
 		for key, repo := range cfg.RepoMap {
 			if strings.HasPrefix(key, input) && len(key) > len(input) {
-				items = append(items, autocompleteRepoItem(key, repo))
+				items = append(items, repoItem(key, repo))
 			}
 		}
 	}
@@ -526,14 +526,14 @@ func autocompleteRepoItems(cfg config.Config, input string,
 }
 
 func autocompleteUserItems(cfg config.Config, input string,
-	parsed parser.Result, includeMatchedUser bool,
-	autocompleteUserItem func(string, string) alfred.Item) (items alfred.Items) {
+	parsed *parser.Result, includeMatchedUser bool,
+	userItem func(string, string) alfred.Item) (items alfred.Items) {
 	if len(input) > 0 {
 		for key, user := range cfg.UserMap {
 			prefixed := strings.HasPrefix(key, input) && len(key) > len(input)
-			matched := includeMatchedUser && key == parsed.UserMatch && !parsed.HasRepo()
+			matched := includeMatchedUser && key == parsed.UserShorthand && !parsed.HasRepo()
 			if prefixed || matched {
-				items = append(items, autocompleteUserItem(key, user))
+				items = append(items, userItem(key, user))
 			}
 		}
 	}
@@ -593,10 +593,10 @@ func ellipsis(prefix string, duration time.Duration) string {
 	return prefix + strings.Repeat(".", int((duration.Nanoseconds()/250000000)%4))
 }
 
-// retrieveRepo adds the repo description to the "open repo" item
+// retrieveRepo adds a repo's description to an "open repo" item
 // using an RPC call.
-func (c *completion) retrieveRepo(item *alfred.Item) {
-	res := c.rpcRequest("/repo", c.parsed.Repo(), delay)
+func (c *completion) retrieveRepo(repo string, item *alfred.Item) {
+	res := c.rpcRequest("/repo", repo, delay)
 	if len(res.Error) > 0 {
 		item.Subtitle = res.Error
 		return
@@ -616,17 +616,17 @@ func (c *completion) retrieveRepo(item *alfred.Item) {
 		item.Mods.Ctrl = &alfred.ModItem{
 			Valid: true,
 			Arg: fmt.Sprintf("paste [%s: %s](https://github.com/%s)",
-				c.parsed.Repo(), res.Repos[0].Description, c.parsed.Repo()),
+				repo, res.Repos[0].Description, repo),
 			Subtitle: fmt.Sprintf("Insert Markdown link with description to %s",
-				c.parsed.Repo()),
+				repo),
 			Icon: markdownIcon,
 		}
 	}
 }
 
 // retrieveIssue adds the title and state to an "open issue" item
-func (c *completion) retrieveIssue(item *alfred.Item) {
-	res := c.rpcRequest("/issue", c.parsed.Repo()+"#"+c.parsed.Issue(), delay)
+func (c *completion) retrieveIssue(repo, issuenum string, item *alfred.Item) {
+	res := c.rpcRequest("/issue", repo+"#"+issuenum, delay)
 	if len(res.Error) > 0 {
 		item.Subtitle = res.Error
 		return
@@ -646,20 +646,20 @@ func (c *completion) retrieveIssue(item *alfred.Item) {
 		item.Mods.Ctrl = &alfred.ModItem{
 			Valid: true,
 			Arg: fmt.Sprintf("paste [%s#%s: %s](https://github.com/%s/issues/%s)",
-				c.parsed.Repo(), c.parsed.Issue(), issue.Title, c.parsed.Repo(), c.parsed.Issue()),
+				repo, issuenum, issue.Title, repo, issuenum),
 			Subtitle: fmt.Sprintf("Insert Markdown link with description to %s#%s",
-				c.parsed.Repo(), c.parsed.Issue()),
+				repo, issuenum),
 			Icon: markdownIcon,
 		}
 	}
 }
 
-func (c *completion) retrieveRepoProject(item *alfred.Item) {
-	c.retrieveProject(item, c.parsed.Repo()+"/"+c.parsed.Issue())
+func (c *completion) retrieveRepoProject(repo, issuenum string, item *alfred.Item) {
+	c.retrieveProject(item, repo+"/"+issuenum)
 }
 
-func (c *completion) retrieveOrgProject(item *alfred.Item) {
-	c.retrieveProject(item, c.parsed.User+"/"+c.parsed.Issue())
+func (c *completion) retrieveOrgProject(user, issuenum string, item *alfred.Item) {
+	c.retrieveProject(item, user+"/"+issuenum)
 }
 
 func (c *completion) retrieveProject(item *alfred.Item, query string) {
@@ -681,12 +681,12 @@ func (c *completion) retrieveProject(item *alfred.Item, query string) {
 	item.Icon = projectStateIcon(project.State)
 }
 
-func (c *completion) retrieveOrgProjects(item *alfred.Item) alfred.Items {
-	return c.retrieveProjects(item, c.parsed.User)
+func (c *completion) retrieveOrgProjects(user string, item *alfred.Item) alfred.Items {
+	return c.retrieveProjects(item, user)
 }
 
-func (c *completion) retrieveRepoProjects(item *alfred.Item) alfred.Items {
-	return c.retrieveProjects(item, c.parsed.Repo())
+func (c *completion) retrieveRepoProjects(repo string, item *alfred.Item) alfred.Items {
+	return c.retrieveProjects(item, repo)
 }
 
 func (c *completion) retrieveProjects(item *alfred.Item, query string) (projects alfred.Items) {
@@ -701,7 +701,7 @@ func (c *completion) retrieveProjects(item *alfred.Item, query string) (projects
 		item.Subtitle = "No projects found"
 		return
 	}
-	projects = append(projects, projectItemsFromProjects(res.Projects, "in "+c.parsed.Repo())...)
+	projects = append(projects, projectItemsFromProjects(res.Projects, "in "+query)...)
 	return
 }
 
@@ -727,8 +727,8 @@ func (c *completion) retrieveIssueSearchItems(item *alfred.Item, repo, query str
 	return c.searchIssues(item, query, includeRepo, searchDelay)
 }
 
-func (c *completion) retrieveRecentIssues(item *alfred.Item) alfred.Items {
-	return c.searchIssues(item, "repo:"+c.parsed.Repo()+" sort:updated-desc", false, issueListDelay)
+func (c *completion) retrieveRecentIssues(repo string, item *alfred.Item) alfred.Items {
+	return c.searchIssues(item, "repo:"+repo+" sort:updated-desc", false, issueListDelay)
 }
 
 func (c *completion) searchIssues(item *alfred.Item, query string, includeRepo bool, delay float64) alfred.Items {
