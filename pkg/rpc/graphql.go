@@ -131,6 +131,9 @@ func (g *GitHubClient) getRepoProject(res *Result, owner, name string, number in
 		"number": githubv4.Int(number),
 	}
 	err := g.query(&q, vars)
+	if q.Repository.Project.Number == 0 {
+		return fmt.Errorf("Could not resolve to a project with the number %d", number)
+	}
 	res.Projects = append(res.Projects, q.Repository.Project.toProject())
 	return err
 }
