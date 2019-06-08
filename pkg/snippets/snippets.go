@@ -5,6 +5,7 @@ import (
 	"regexp"
 	"time"
 
+	"github.com/zerowidth/gh-shorthand/pkg/parser"
 	"github.com/zerowidth/gh-shorthand/pkg/rpc"
 )
 
@@ -17,15 +18,15 @@ var discussionRegex = regexp.MustCompile(`(https://github\.com/orgs/([^/]+)/team
 // "https://github.com/zerowidth/camper_van/issues/1" becomes a markdown link
 // with link text "zerowidth/camper_van#1".
 func MarkdownLink(rpcClient rpc.Client, input string, includeDesc bool) string {
+	parser := parser.NewIssueReferenceParser()
+	issueReference := parser.Parse(input)
 	issueMatches := issueRegex.FindStringSubmatch(input)
 	discussionMatches := discussionRegex.FindStringSubmatchIndex(input)
 	repoMatches := repoRegex.FindStringSubmatch(input)
 
-	if discussionMatches != nil {
-		template := "[@$2/$3#$4]($1)"
-		result := []byte{}
-		result = discussionRegex.ExpandString(result, template, input, discussionMatches)
-		return string(result)
+	if issueReference.HasIssue() {
+		url := fmt.Sprintf("https://github.com/%s/issues/%s", issueReference.Repo(), issueReference.Issue)
+		return formatIssue(rpcClient, url, issueReference.Repo(), issueReference.Issue, includeDesc)
 	}
 
 	if issueMatches != nil {
@@ -33,6 +34,13 @@ func MarkdownLink(rpcClient rpc.Client, input string, includeDesc bool) string {
 		repo := fmt.Sprintf("%s/%s", issueMatches[2], issueMatches[3])
 		issue := issueMatches[5]
 		return formatIssue(rpcClient, url, repo, issue, includeDesc)
+	}
+
+	if discussionMatches != nil {
+		template := "[@$2/$3#$4]($1)"
+		result := []byte{}
+		result = discussionRegex.ExpandString(result, template, input, discussionMatches)
+		return string(result)
 	}
 
 	// Don't want to match a repo url with anything after it, but can't do a
