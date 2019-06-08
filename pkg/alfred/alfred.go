@@ -34,16 +34,17 @@ type Variables map[string]string
 
 // Item is an Alfred result item
 type Item struct {
-	UID          string `json:"uid,omitempty"`          // optional unique identifier for alfred to learn from
-	Title        string `json:"title"`                  // title displayed in the result row
-	Subtitle     string `json:"subtitle,omitempty"`     // optional subtitle displayed in the result row
-	Arg          string `json:"arg,omitempty"`          // recommended string argument to pass through to output action
-	Icon         *Icon  `json:"icon,omitempty"`         // optional icon argument
-	Valid        bool   `json:"valid"`                  // valid means "actionable", false means "populate autocomplete text"
-	Autocomplete string `json:"autocomplete,omitempty"` // recommended string to autocomplete with tab key
+	UID          string    `json:"uid,omitempty"`          // optional unique identifier for alfred to learn from
+	Title        string    `json:"title"`                  // title displayed in the result row
+	Subtitle     string    `json:"subtitle,omitempty"`     // optional subtitle displayed in the result row
+	Arg          string    `json:"arg,omitempty"`          // recommended string argument to pass through to output action
+	Icon         *Icon     `json:"icon,omitempty"`         // optional icon argument
+	Valid        bool      `json:"valid"`                  // valid means "actionable", false means "populate autocomplete text"
+	Autocomplete string    `json:"autocomplete,omitempty"` // recommended string to autocomplete with tab key
+	Variables    Variables `json:"variables,omitempty"`    // item-level variables
+	Mods         *Mods     `json:"mods,omitempty"`         // optional modifier keys arguments
+	Text         *Text     `json:"text,omitempty"`         // optional text if copied to clipboard or displayed as large text
 	// Type string // "default", "file", "file:skipcheck" to treat the result as a file
-	Mods *Mods `json:"mods,omitempty"` // optional modifier keys arguments
-	Text *Text `json:"text,omitempty"` // optional text if copied to clipboard or displayed as large text
 	// Quicklook string // optional url for quicklook
 }
 
@@ -75,10 +76,11 @@ type Text struct {
 
 // ModItem defines an alternate action for an item
 type ModItem struct {
-	Valid    bool   `json:"valid"`
-	Arg      string `json:"arg,omitempty"`
-	Subtitle string `json:"subtitle,omitempty"`
-	Icon     *Icon  `json:"icon,omitempty"`
+	Valid     bool      `json:"valid"`
+	Arg       string    `json:"arg,omitempty"`
+	Subtitle  string    `json:"subtitle,omitempty"`
+	Icon      *Icon     `json:"icon,omitempty"`
+	Variables Variables `json:"variables,omitempty"`
 }
 
 // Mods define alternate actions for an item, with alt or cmd held down
