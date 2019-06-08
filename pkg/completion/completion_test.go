@@ -47,18 +47,21 @@ var invalidDir = &config.Config{
 var emptyConfig = &config.Config{}
 
 type completeTestCase struct {
-	test    string         // test name
-	input   string         // input string
-	uid     string         // the results must contain an entry with this uid
-	valid   bool           // and with the valid flag set to this
-	title   string         // the expected title
-	arg     string         // expected argument
-	auto    string         // expected autocomplete arg
-	cfg     *config.Config // config to use instead of the default cfg
-	exclude string         // exclude any item with this UID or title
-	copy    string         // the clipboard copy string, if applicable
-	cmdMod  string         // cmd modifier action, if applicable
-	altMod  string         // alt modifier action, if applicable
+	test         string         // test name
+	input        string         // input string
+	uid          string         // the results must contain an entry with this uid
+	valid        bool           // and with the valid flag set to this
+	title        string         // the expected title
+	arg          string         // expected argument
+	action       string         // expected action
+	auto         string         // expected autocomplete arg
+	cfg          *config.Config // config to use instead of the default cfg
+	exclude      string         // exclude any item with this UID or title
+	copy         string         // the clipboard copy string, if applicable
+	cmdModArg    string         // cmd modifier argument, if applicable
+	cmdModAction string         // cmd modifier action, if applicable
+	altModArg    string         // alt modifier argument, if applicable
+	altModAction string         // alt modifier action, if applicable
 }
 
 func (tc *completeTestCase) testItem(t *testing.T) {
@@ -106,6 +109,11 @@ func (tc *completeTestCase) testItem(t *testing.T) {
 
 	if len(tc.arg) > 0 {
 		assert.Equal(t, tc.arg, item.Arg, "item.Arg in\n%+v", item)
+		// if assert.NotNil(t, item.Variables, "item.Variables") &&
+		if item.Variables != nil &&
+			assert.Contains(t, item.Variables, "action", "item.Variables['action']") {
+			assert.Equal(t, tc.action, item.Variables["action"], "item.Variables['action']")
+		}
 	}
 
 	if len(tc.auto) > 0 {
@@ -118,20 +126,29 @@ func (tc *completeTestCase) testItem(t *testing.T) {
 		}
 	}
 
-	if len(tc.cmdMod) > 0 || len(tc.altMod) > 0 {
+	if len(tc.cmdModArg) > 0 || len(tc.altModArg) > 0 {
 		if assert.NotNil(t, item.Mods, "item.Mods in\n#%v", item) {
-			if len(tc.cmdMod) > 0 && assert.NotNil(t, item.Mods.Cmd, "item.Mods.Cmd") {
-				assert.Equal(t, tc.cmdMod, item.Mods.Cmd.Arg, "item.Mods.Cmd.Arg")
+			if len(tc.cmdModArg) > 0 && assert.NotNil(t, item.Mods.Cmd, "item.Mods.Cmd") {
+				assert.Equal(t, tc.cmdModArg, item.Mods.Cmd.Arg, "item.Mods.Cmd.Arg")
+				// if assert.NotNil(t, item.Mods.Cmd.Variables, "item.Mods.Cmd.Variables") &&
+				if item.Mods.Cmd.Variables != nil &&
+					assert.Contains(t, item.Mods.Cmd.Variables, "action", "item.Mods.Cmd.Variables['action']") {
+					assert.Equal(t, tc.cmdModAction, item.Mods.Cmd.Variables["action"], "item.Mods.Cmd.Variables['action']")
+				}
 			}
 
-			if len(tc.altMod) > 0 && assert.NotNil(t, item.Mods.Alt, "item.Mods.Alt") {
-				assert.Equal(t, tc.altMod, item.Mods.Alt.Arg, "items.Mods.Alt.Arg")
+			if len(tc.altModArg) > 0 && assert.NotNil(t, item.Mods.Alt, "item.Mods.Alt") {
+				assert.Equal(t, tc.altModArg, item.Mods.Alt.Arg, "items.Mods.Alt.Arg")
+				// if assert.NotNil(t, item.Mods.Alt.Variables, "item.Mods.Alt.Variables") &&
+				if item.Mods.Alt.Variables != nil &&
+					assert.Contains(t, item.Mods.Alt.Variables, "action", "item.Mods.Alt.Variables['action']") {
+					assert.Equal(t, tc.altModAction, item.Mods.Alt.Variables["action"], "item.Mods.Alt.Variables['action']")
+				}
 			}
 		}
 	}
 
 	assert.NotContains(t, item.Subtitle, "rpc error")
-
 }
 
 func TestCompleteItems(t *testing.T) {
@@ -199,25 +216,25 @@ func TestCompleteItems(t *testing.T) {
 
 		// basic parsing tests
 		{
-			test:   "open a shorthand repo",
-			input:  " df",
-			uid:    "gh:zerowidth/dotfiles",
-			valid:  true,
-			title:  "Open zerowidth/dotfiles (df)",
-			arg:    "open https://github.com/zerowidth/dotfiles",
-			copy:   "https://github.com/zerowidth/dotfiles",
-			cmdMod: "paste [zerowidth/dotfiles](https://github.com/zerowidth/dotfiles)",
+			test:      "open a shorthand repo",
+			input:     " df",
+			uid:       "gh:zerowidth/dotfiles",
+			valid:     true,
+			title:     "Open zerowidth/dotfiles (df)",
+			arg:       "open https://github.com/zerowidth/dotfiles",
+			copy:      "https://github.com/zerowidth/dotfiles",
+			cmdModArg: "paste [zerowidth/dotfiles](https://github.com/zerowidth/dotfiles)",
 		},
 		{
-			test:   "open a shorthand repo and issue",
-			input:  " df 123",
-			uid:    "gh:zerowidth/dotfiles#123",
-			valid:  true,
-			title:  "Open zerowidth/dotfiles#123 (df#123)",
-			arg:    "open https://github.com/zerowidth/dotfiles/issues/123",
-			copy:   "https://github.com/zerowidth/dotfiles/issues/123",
-			altMod: "paste zerowidth/dotfiles#123",
-			cmdMod: "paste [zerowidth/dotfiles#123](https://github.com/zerowidth/dotfiles/issues/123)",
+			test:      "open a shorthand repo and issue",
+			input:     " df 123",
+			uid:       "gh:zerowidth/dotfiles#123",
+			valid:     true,
+			title:     "Open zerowidth/dotfiles#123 (df#123)",
+			arg:       "open https://github.com/zerowidth/dotfiles/issues/123",
+			copy:      "https://github.com/zerowidth/dotfiles/issues/123",
+			altModArg: "paste zerowidth/dotfiles#123",
+			cmdModArg: "paste [zerowidth/dotfiles#123](https://github.com/zerowidth/dotfiles/issues/123)",
 		},
 		{
 			test:  "open a fully qualified repo",
@@ -229,15 +246,15 @@ func TestCompleteItems(t *testing.T) {
 			copy:  "https://github.com/foo/bar",
 		},
 		{
-			test:   "open a fully qualified repo and issue",
-			input:  " foo/bar 123",
-			uid:    "gh:foo/bar#123",
-			valid:  true,
-			title:  "Open foo/bar#123",
-			arg:    "open https://github.com/foo/bar/issues/123",
-			copy:   "https://github.com/foo/bar/issues/123",
-			altMod: "paste foo/bar#123",
-			cmdMod: "paste [foo/bar#123](https://github.com/foo/bar/issues/123)",
+			test:      "open a fully qualified repo and issue",
+			input:     " foo/bar 123",
+			uid:       "gh:foo/bar#123",
+			valid:     true,
+			title:     "Open foo/bar#123",
+			arg:       "open https://github.com/foo/bar/issues/123",
+			copy:      "https://github.com/foo/bar/issues/123",
+			altModArg: "paste foo/bar#123",
+			cmdModArg: "paste [foo/bar#123](https://github.com/foo/bar/issues/123)",
 		},
 		{
 			test:  "open a shorthand user with repo",
@@ -735,34 +752,34 @@ func TestCompleteItems(t *testing.T) {
 		},
 
 		{
-			test:   "edit project includes fixtures/work/work-foo",
-			input:  "e ",
-			uid:    "ghe:testdata/work/work-foo",
-			valid:  true,
-			title:  "testdata/work/work-foo",
-			arg:    "edit " + fixturePath + "/work/work-foo",
-			copy:   fixturePath + "/work/work-foo",
-			cmdMod: "term " + fixturePath + "/work/work-foo",
-			altMod: "finder " + fixturePath + "/work/work-foo",
+			test:      "edit project includes fixtures/work/work-foo",
+			input:     "e ",
+			uid:       "ghe:testdata/work/work-foo",
+			valid:     true,
+			title:     "testdata/work/work-foo",
+			arg:       "edit " + fixturePath + "/work/work-foo",
+			copy:      fixturePath + "/work/work-foo",
+			cmdModArg: "term " + fixturePath + "/work/work-foo",
+			altModArg: "finder " + fixturePath + "/work/work-foo",
 		},
 		{
-			test:   "edit project includes fixtures/projects/project-bar",
-			input:  "e ",
-			uid:    "ghe:testdata/projects/project-bar",
-			valid:  true,
-			title:  "testdata/projects/project-bar",
-			arg:    "edit " + fixturePath + "/projects/project-bar",
-			cmdMod: "term " + fixturePath + "/projects/project-bar",
-			altMod: "finder " + fixturePath + "/projects/project-bar",
+			test:      "edit project includes fixtures/projects/project-bar",
+			input:     "e ",
+			uid:       "ghe:testdata/projects/project-bar",
+			valid:     true,
+			title:     "testdata/projects/project-bar",
+			arg:       "edit " + fixturePath + "/projects/project-bar",
+			cmdModArg: "term " + fixturePath + "/projects/project-bar",
+			altModArg: "finder " + fixturePath + "/projects/project-bar",
 		},
 		{
-			test:   "edit project includes symlinked dir in fixtures",
-			input:  "e linked",
-			uid:    "ghe:testdata/projects/linked",
-			valid:  true,
-			arg:    "edit " + fixturePath + "/projects/linked",
-			cmdMod: "term " + fixturePath + "/projects/linked",
-			altMod: "finder " + fixturePath + "/projects/linked",
+			test:      "edit project includes symlinked dir in fixtures",
+			input:     "e linked",
+			uid:       "ghe:testdata/projects/linked",
+			valid:     true,
+			arg:       "edit " + fixturePath + "/projects/linked",
+			cmdModArg: "term " + fixturePath + "/projects/linked",
+			altModArg: "finder " + fixturePath + "/projects/linked",
 		},
 		{
 			test:    "edit project does not include symlinked file in fixtures",
