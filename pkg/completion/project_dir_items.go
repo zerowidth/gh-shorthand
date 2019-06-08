@@ -45,17 +45,12 @@ func projectDirItems(dirs map[string]string, search string, mode projectDirMode)
 			Valid: true,
 			Text:  &alfred.Text{Copy: projects[short], LargeType: projects[short]},
 			Mods: &alfred.Mods{
-				Cmd: &alfred.ModItem{
-					Valid:    true,
-					Arg:      "term " + projects[short],
-					Subtitle: "Open terminal in " + short,
-					Icon:     terminalIcon,
-				},
 				Alt: &alfred.ModItem{
-					Valid:    true,
-					Arg:      "finder " + projects[short],
-					Subtitle: "Open finder in " + short,
-					Icon:     finderIcon,
+					Valid:     true,
+					Arg:       projects[short],
+					Subtitle:  "Open finder in " + short,
+					Icon:      finderIcon,
+					Variables: alfred.Variables{"action": "finder"},
 				},
 			},
 		}
@@ -63,24 +58,28 @@ func projectDirItems(dirs map[string]string, search string, mode projectDirMode)
 		if mode == modeEdit {
 			item.UID = "ghe:" + short
 			item.Subtitle = "Edit " + short
-			item.Arg = "edit " + projects[short]
+			item.Arg = projects[short]
+			item.Variables = alfred.Variables{"action": "edit"}
 			item.Icon = editorIcon
 			item.Mods.Cmd = &alfred.ModItem{
-				Valid:    true,
-				Arg:      "term " + projects[short],
-				Subtitle: "Open terminal in " + short,
-				Icon:     terminalIcon,
+				Valid:     true,
+				Arg:       projects[short],
+				Subtitle:  "Open terminal in " + short,
+				Icon:      terminalIcon,
+				Variables: alfred.Variables{"action": "term"},
 			}
 		} else {
 			item.UID = "ght:" + short
 			item.Subtitle = "Open terminal in " + short
-			item.Arg = "term " + projects[short]
+			item.Arg = projects[short]
+			item.Variables = alfred.Variables{"action": "term"}
 			item.Icon = terminalIcon
 			item.Mods.Cmd = &alfred.ModItem{
-				Valid:    true,
-				Arg:      "edit " + projects[short],
-				Subtitle: "Edit " + short,
-				Icon:     editorIcon,
+				Valid:     true,
+				Arg:       projects[short],
+				Subtitle:  "Edit " + short,
+				Icon:      editorIcon,
+				Variables: alfred.Variables{"action": "edit"},
 			}
 		}
 

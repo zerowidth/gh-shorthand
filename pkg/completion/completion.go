@@ -213,7 +213,7 @@ func (c *completion) appendParsedItems(mode string) {
 func openRepoItem(parsed *parser.Result) alfred.Item {
 	uid := "gh:" + parsed.Repo()
 	title := "Open " + parsed.Repo()
-	arg := "open https://github.com/" + parsed.Repo()
+	arg := "https://github.com/" + parsed.Repo()
 	icon := repoIcon
 	var mods *alfred.Mods
 
@@ -239,32 +239,35 @@ func openRepoItem(parsed *parser.Result) alfred.Item {
 	title += parsed.Annotation()
 
 	return alfred.Item{
-		UID:   uid,
-		Title: title,
-		Arg:   arg,
-		Valid: true,
-		Icon:  icon,
-		Mods:  mods,
+		UID:       uid,
+		Title:     title,
+		Arg:       arg,
+		Valid:     true,
+		Icon:      icon,
+		Variables: alfred.Variables{"action": "open"},
+		Mods:      mods,
 	}
 }
 
 func openPathItem(path string) alfred.Item {
 	return alfred.Item{
-		UID:   "gh:" + path,
-		Title: fmt.Sprintf("Open %s", path),
-		Arg:   "open https://github.com" + path,
-		Valid: true,
-		Icon:  pathIcon,
+		UID:       "gh:" + path,
+		Title:     fmt.Sprintf("Open %s", path),
+		Arg:       "https://github.com" + path,
+		Valid:     true,
+		Variables: alfred.Variables{"action": "open"},
+		Icon:      pathIcon,
 	}
 }
 
 func openIssuesItem(parsed *parser.Result) (item alfred.Item) {
 	return alfred.Item{
-		UID:   "ghi:" + parsed.Repo(),
-		Title: "List issues for " + parsed.Repo() + parsed.Annotation(),
-		Arg:   "open https://github.com/" + parsed.Repo() + "/issues",
-		Valid: true,
-		Icon:  issueListIcon,
+		UID:       "ghi:" + parsed.Repo(),
+		Title:     "List issues for " + parsed.Repo() + parsed.Annotation(),
+		Arg:       "https://github.com/" + parsed.Repo() + "/issues",
+		Valid:     true,
+		Variables: alfred.Variables{"action": "open"},
+		Icon:      issueListIcon,
 	}
 }
 
@@ -273,13 +276,14 @@ func searchIssuesItem(parsed *parser.Result, fullInput string) alfred.Item {
 
 	if len(parsed.Query) > 0 {
 		escaped := url.PathEscape(parsed.Query)
-		arg := "open https://github.com/" + parsed.Repo() + "/search?utf8=✓&type=Issues&q=" + escaped
+		arg := "https://github.com/" + parsed.Repo() + "/search?utf8=✓&type=Issues&q=" + escaped
 		return alfred.Item{
-			UID:   "ghis:" + parsed.Repo(),
-			Title: "Search issues in " + parsed.Repo() + extra + " for " + parsed.Query,
-			Arg:   arg,
-			Valid: true,
-			Icon:  searchIcon,
+			UID:       "ghis:" + parsed.Repo(),
+			Title:     "Search issues in " + parsed.Repo() + extra + " for " + parsed.Query,
+			Arg:       arg,
+			Valid:     true,
+			Variables: alfred.Variables{"action": "open"},
+			Icon:      searchIcon,
 		}
 	}
 
@@ -294,38 +298,42 @@ func searchIssuesItem(parsed *parser.Result, fullInput string) alfred.Item {
 func repoProjectsItem(parsed *parser.Result) alfred.Item {
 	if parsed.HasIssue() {
 		return alfred.Item{
-			UID:   "ghp:" + parsed.Repo() + "/" + parsed.Issue,
-			Title: "Open project #" + parsed.Issue + " in " + parsed.Repo() + parsed.Annotation(),
-			Valid: true,
-			Arg:   "open https://github.com/" + parsed.Repo() + "/projects/" + parsed.Issue,
-			Icon:  projectIcon,
+			UID:       "ghp:" + parsed.Repo() + "/" + parsed.Issue,
+			Title:     "Open project #" + parsed.Issue + " in " + parsed.Repo() + parsed.Annotation(),
+			Valid:     true,
+			Arg:       "https://github.com/" + parsed.Repo() + "/projects/" + parsed.Issue,
+			Variables: alfred.Variables{"action": "open"},
+			Icon:      projectIcon,
 		}
 	}
 	return alfred.Item{
-		UID:   "ghp:" + parsed.Repo(),
-		Title: "List projects in " + parsed.Repo() + parsed.Annotation(),
-		Valid: true,
-		Arg:   "open https://github.com/" + parsed.Repo() + "/projects",
-		Icon:  projectIcon,
+		UID:       "ghp:" + parsed.Repo(),
+		Title:     "List projects in " + parsed.Repo() + parsed.Annotation(),
+		Valid:     true,
+		Arg:       "https://github.com/" + parsed.Repo() + "/projects",
+		Variables: alfred.Variables{"action": "open"},
+		Icon:      projectIcon,
 	}
 }
 
 func orgProjectsItem(parsed *parser.Result) alfred.Item {
 	if parsed.HasIssue() {
 		return alfred.Item{
-			UID:   "ghp:" + parsed.User + "/" + parsed.Issue,
-			Title: "Open project #" + parsed.Issue + " for " + parsed.User + parsed.Annotation(),
-			Valid: true,
-			Arg:   "open https://github.com/orgs/" + parsed.User + "/projects/" + parsed.Issue,
-			Icon:  projectIcon,
+			UID:       "ghp:" + parsed.User + "/" + parsed.Issue,
+			Title:     "Open project #" + parsed.Issue + " for " + parsed.User + parsed.Annotation(),
+			Valid:     true,
+			Arg:       "https://github.com/orgs/" + parsed.User + "/projects/" + parsed.Issue,
+			Variables: alfred.Variables{"action": "open"},
+			Icon:      projectIcon,
 		}
 	}
 	return alfred.Item{
-		UID:   "ghp:" + parsed.User,
-		Title: "List projects for " + parsed.User + parsed.Annotation(),
-		Valid: true,
-		Arg:   "open https://github.com/orgs/" + parsed.User + "/projects",
-		Icon:  projectIcon,
+		UID:       "ghp:" + parsed.User,
+		Title:     "List projects for " + parsed.User + parsed.Annotation(),
+		Valid:     true,
+		Arg:       "https://github.com/orgs/" + parsed.User + "/projects",
+		Variables: alfred.Variables{"action": "open"},
+		Icon:      projectIcon,
 	}
 }
 
@@ -335,35 +343,38 @@ func newIssueItem(parsed *parser.Result) alfred.Item {
 
 	if !parsed.HasQuery() {
 		return alfred.Item{
-			UID:   "ghn:" + parsed.Repo(),
-			Title: title,
-			Arg:   "open https://github.com/" + parsed.Repo() + "/issues/new",
-			Valid: true,
-			Icon:  newIssueIcon,
+			UID:       "ghn:" + parsed.Repo(),
+			Title:     title,
+			Arg:       "https://github.com/" + parsed.Repo() + "/issues/new",
+			Variables: alfred.Variables{"action": "open"},
+			Valid:     true,
+			Icon:      newIssueIcon,
 		}
 	}
 
 	escaped := url.PathEscape(parsed.Query)
-	arg := "open https://github.com/" + parsed.Repo() + "/issues/new?title=" + escaped
+	arg := "https://github.com/" + parsed.Repo() + "/issues/new?title=" + escaped
 	return alfred.Item{
-		UID:   "ghn:" + parsed.Repo(),
-		Title: title + ": " + parsed.Query,
-		Arg:   arg,
-		Valid: true,
-		Icon:  newIssueIcon,
+		UID:       "ghn:" + parsed.Repo(),
+		Title:     title + ": " + parsed.Query,
+		Arg:       arg,
+		Variables: alfred.Variables{"action": "open"},
+		Valid:     true,
+		Icon:      newIssueIcon,
 	}
 }
 
 func globalIssueSearchItem(input string) alfred.Item {
 	if len(input) > 0 {
 		escaped := url.PathEscape(input)
-		arg := "open https://github.com/search?utf8=✓&type=Issues&q=" + escaped
+		arg := "https://github.com/search?utf8=✓&type=Issues&q=" + escaped
 		return alfred.Item{
-			UID:   "ghs:",
-			Title: "Search issues for " + input,
-			Arg:   arg,
-			Valid: true,
-			Icon:  searchIcon,
+			UID:       "ghs:",
+			Title:     "Search issues for " + input,
+			Arg:       arg,
+			Valid:     true,
+			Variables: alfred.Variables{"action": "open"},
+			Icon:      searchIcon,
 		}
 	}
 
@@ -379,8 +390,9 @@ func autocompleteOpenItem(key, repo string) alfred.Item {
 	return alfred.Item{
 		UID:          "gh:" + repo,
 		Title:        fmt.Sprintf("Open %s (%s)", repo, key),
-		Arg:          "open https://github.com/" + repo,
+		Arg:          "https://github.com/" + repo,
 		Valid:        true,
+		Variables:    alfred.Variables{"action": "open"},
 		Autocomplete: " " + key,
 		Icon:         repoIcon,
 	}
@@ -398,8 +410,9 @@ func autocompleteIssueItem(key, repo string) alfred.Item {
 	return alfred.Item{
 		UID:          "ghi:" + repo,
 		Title:        fmt.Sprintf("List issues for %s (%s)", repo, key),
-		Arg:          "open https://github.com/" + repo + "/issues",
+		Arg:          "https://github.com/" + repo + "/issues",
 		Valid:        true,
+		Variables:    alfred.Variables{"action": "open"},
 		Autocomplete: "i " + key,
 		Icon:         issueListIcon,
 	}
@@ -417,8 +430,9 @@ func autocompleteProjectItem(key, repo string) alfred.Item {
 	return alfred.Item{
 		UID:          "ghp:" + repo,
 		Title:        fmt.Sprintf("List projects in %s (%s)", repo, key),
-		Arg:          "open https://github.com/" + repo + "/projects",
+		Arg:          "https://github.com/" + repo + "/projects",
 		Valid:        true,
+		Variables:    alfred.Variables{"action": "open"},
 		Autocomplete: "p " + key,
 		Icon:         projectIcon,
 	}
@@ -428,8 +442,9 @@ func autocompleteOrgProjectItem(key, user string) alfred.Item {
 	return alfred.Item{
 		UID:          "ghp:" + user,
 		Title:        fmt.Sprintf("List projects for %s (%s)", user, key),
-		Arg:          "open https://github.com/orgs/" + user + "/projects",
+		Arg:          "https://github.com/orgs/" + user + "/projects",
 		Valid:        true,
+		Variables:    alfred.Variables{"action": "open"},
 		Autocomplete: "p " + key,
 		Icon:         projectIcon,
 	}
@@ -439,8 +454,9 @@ func autocompleteNewIssueItem(key, repo string) alfred.Item {
 	return alfred.Item{
 		UID:          "ghn:" + repo,
 		Title:        fmt.Sprintf("New issue in %s (%s)", repo, key),
-		Arg:          "open https://github.com/" + repo + "/issues/new",
+		Arg:          "https://github.com/" + repo + "/issues/new",
 		Valid:        true,
+		Variables:    alfred.Variables{"action": "open"},
 		Autocomplete: "n " + key,
 		Icon:         newIssueIcon,
 	}
@@ -618,11 +634,12 @@ func (c *completion) retrieveRepo(repo string, item *alfred.Item) {
 	if item.Mods != nil {
 		item.Mods.Ctrl = &alfred.ModItem{
 			Valid: true,
-			Arg: fmt.Sprintf("paste [%s: %s](https://github.com/%s)",
+			Arg: fmt.Sprintf("[%s: %s](https://github.com/%s)",
 				repo, res.Repos[0].Description, repo),
 			Subtitle: fmt.Sprintf("Insert Markdown link with description to %s",
 				repo),
-			Icon: markdownIcon,
+			Variables: alfred.Variables{"action": "paste"},
+			Icon:      markdownIcon,
 		}
 	}
 }
@@ -651,11 +668,12 @@ func (c *completion) retrieveIssue(repo, issuenum string, item *alfred.Item) {
 	if item.Mods != nil {
 		item.Mods.Ctrl = &alfred.ModItem{
 			Valid: true,
-			Arg: fmt.Sprintf("paste [%s#%s: %s](https://github.com/%s/issues/%s)",
+			Arg: fmt.Sprintf("[%s#%s: %s](https://github.com/%s/issues/%s)",
 				repo, issuenum, issue.Title, repo, issuenum),
 			Subtitle: fmt.Sprintf("Insert Markdown link with description to %s#%s",
 				repo, issuenum),
-			Icon: markdownIcon,
+			Variables: alfred.Variables{"action": "paste"},
+			Icon:      markdownIcon,
 		}
 	}
 }
@@ -722,11 +740,12 @@ func projectItemsFromProjects(projects []rpc.Project, desc string) alfred.Items 
 	for _, project := range projects {
 		// no UID so alfred doesn't remember these
 		items = append(items, alfred.Item{
-			Title:    project.Name,
-			Subtitle: fmt.Sprintf("Open project #%d %s", project.Number, desc),
-			Valid:    true,
-			Arg:      "open " + project.URL,
-			Icon:     projectStateIcon(project.State),
+			Title:     project.Name,
+			Subtitle:  fmt.Sprintf("Open project #%d %s", project.Number, desc),
+			Valid:     true,
+			Arg:       project.URL,
+			Variables: alfred.Variables{"action": "open"},
+			Icon:      projectStateIcon(project.State),
 		})
 	}
 	return items
@@ -777,19 +796,20 @@ func issueItemsFromIssues(issues []rpc.Issue, includeRepo bool) alfred.Items {
 		}
 		arg := ""
 		if issue.Type == "Issue" {
-			arg = "open https://github.com/" + issue.Repo + "/issues/" + issue.Number
+			arg = "https://github.com/" + issue.Repo + "/issues/" + issue.Number
 		} else {
-			arg = "open https://github.com/" + issue.Repo + "/pull/" + issue.Number
+			arg = "https://github.com/" + issue.Repo + "/pull/" + issue.Number
 		}
 
 		// no UID so alfred doesn't remember these
 		items = append(items, alfred.Item{
-			Title:    itemTitle,
-			Subtitle: fmt.Sprintf("Open %s#%s", issue.Repo, issue.Number),
-			Valid:    true,
-			Arg:      arg,
-			Icon:     issueStateIcon(issue.Type, issue.State),
-			Mods:     issueMods(issue.Repo, issue.Number, issue.Title),
+			Title:     itemTitle,
+			Subtitle:  fmt.Sprintf("Open %s#%s", issue.Repo, issue.Number),
+			Valid:     true,
+			Arg:       arg,
+			Icon:      issueStateIcon(issue.Type, issue.State),
+			Variables: alfred.Variables{"action": "open"},
+			Mods:      issueMods(issue.Repo, issue.Number, issue.Title),
 		})
 	}
 
@@ -799,10 +819,11 @@ func issueItemsFromIssues(issues []rpc.Issue, includeRepo bool) alfred.Items {
 func repoMods(repo string) *alfred.Mods {
 	return &alfred.Mods{
 		Cmd: &alfred.ModItem{
-			Valid:    true,
-			Arg:      fmt.Sprintf("paste [%s](https://github.com/%s)", repo, repo),
-			Subtitle: fmt.Sprintf("Insert Markdown link to %s", repo),
-			Icon:     markdownIcon,
+			Valid:     true,
+			Arg:       fmt.Sprintf("[%s](https://github.com/%s)", repo, repo),
+			Subtitle:  fmt.Sprintf("Insert Markdown link to %s", repo),
+			Icon:      markdownIcon,
+			Variables: alfred.Variables{"action": "paste"},
 		},
 	}
 }
@@ -810,24 +831,27 @@ func repoMods(repo string) *alfred.Mods {
 func issueMods(repo, number, title string) *alfred.Mods {
 	mods := &alfred.Mods{
 		Cmd: &alfred.ModItem{
-			Valid:    true,
-			Arg:      fmt.Sprintf("paste [%s#%s](https://github.com/%s/issues/%s)", repo, number, repo, number),
-			Subtitle: fmt.Sprintf("Insert Markdown link to %s#%s", repo, number),
-			Icon:     markdownIcon,
+			Valid:     true,
+			Arg:       fmt.Sprintf("[%s#%s](https://github.com/%s/issues/%s)", repo, number, repo, number),
+			Subtitle:  fmt.Sprintf("Insert Markdown link to %s#%s", repo, number),
+			Variables: alfred.Variables{"action": "paste"},
+			Icon:      markdownIcon,
 		},
 		Alt: &alfred.ModItem{
-			Valid:    true,
-			Arg:      fmt.Sprintf("paste %s#%s", repo, number),
-			Subtitle: fmt.Sprintf("Insert issue reference to %s#%s", repo, number),
-			Icon:     issueIcon,
+			Valid:     true,
+			Arg:       fmt.Sprintf("%s#%s", repo, number),
+			Subtitle:  fmt.Sprintf("Insert issue reference to %s#%s", repo, number),
+			Variables: alfred.Variables{"action": "paste"},
+			Icon:      issueIcon,
 		},
 	}
 	if len(title) > 0 {
 		mods.Ctrl = &alfred.ModItem{
-			Valid:    true,
-			Arg:      fmt.Sprintf("paste [%s#%s: %s](https://github.com/%s/issues/%s)", repo, number, title, repo, number),
-			Subtitle: fmt.Sprintf("Insert Markdown link with description to %s#%s", repo, number),
-			Icon:     markdownIcon,
+			Valid:     true,
+			Arg:       fmt.Sprintf("[%s#%s: %s](https://github.com/%s/issues/%s)", repo, number, title, repo, number),
+			Subtitle:  fmt.Sprintf("Insert Markdown link with description to %s#%s", repo, number),
+			Variables: alfred.Variables{"action": "paste"},
+			Icon:      markdownIcon,
 		}
 	}
 	return mods
@@ -846,9 +870,11 @@ func ErrorItem(title, subtitle string) alfred.Item {
 func (c *completion) finalizeResult() {
 	// automatically set "open <url>" urls to copy/large text
 	for i, item := range c.result.Items {
-		if item.Text == nil && strings.HasPrefix(item.Arg, "open ") {
-			url := item.Arg[5:]
-			c.result.Items[i].Text = &alfred.Text{Copy: url, LargeType: url}
+		if item.Text == nil && item.Variables != nil {
+			if action, ok := item.Variables["action"]; ok && action == "open" {
+				url := item.Arg
+				c.result.Items[i].Text = &alfred.Text{Copy: url, LargeType: url}
+			}
 		}
 	}
 
