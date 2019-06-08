@@ -7,15 +7,16 @@ import (
 
 // Parser is a shorthand parser
 type Parser struct {
-	repoMap     map[string]string
-	userMap     map[string]string
-	defaultRepo string
-	requireRepo bool // require a repository match
-	parseRepo   bool // look for a repository match
-	parseUser   bool // look for users
-	parseIssue  bool // look for issues (#123, 123)
-	parsePath   bool // look for /path
-	parseQuery  bool // any extra text
+	repoMap      map[string]string
+	userMap      map[string]string
+	defaultRepo  string
+	requireRepo  bool // require a repository match
+	parseRepo    bool // look for a repository match
+	parseUser    bool // look for users
+	requireIssue bool // require an issue match
+	parseIssue   bool // look for issues (#123, 123)
+	parsePath    bool // look for /path
+	parseQuery   bool // any extra text
 }
 
 // Option is a functional option to configure a Parser
@@ -55,6 +56,12 @@ func NewUserCompletionParser(repoMap, userMap map[string]string) *Parser {
 	return NewParser(repoMap, userMap, "", WithRepo, WithUser)
 }
 
+// NewIssueReferenceParser returns a parser for matching issue references
+func NewIssueReferenceParser() *Parser {
+	empty := map[string]string{}
+	return NewParser(empty, empty, "", RequireRepo, RequireIssue)
+}
+
 // RequireRepo instructs the parser to require a repository
 func RequireRepo(p *Parser) {
 	p.parseRepo = true
@@ -71,6 +78,12 @@ func WithUser(p *Parser) { p.parseUser = true }
 
 // WithIssue instructs the parser to look for issue (or project) numbers
 func WithIssue(p *Parser) { p.parseIssue = true }
+
+// RequireIssue instructs the parser to require an issue number
+func RequireIssue(p *Parser) {
+	p.parseIssue = true
+	p.requireIssue = true
+}
 
 // WithPath instructs the parser to look for a path
 func WithPath(p *Parser) { p.parsePath = true }
@@ -141,6 +154,10 @@ func (p *Parser) Parse(input string) *Result {
 			res.Issue = matches[1]
 			input = input[len(matches[0]):]
 		}
+	}
+
+	if p.requireIssue && !res.HasIssue() {
+		return &Result{}
 	}
 
 	if p.parsePath {
