@@ -47,6 +47,7 @@ var invalidDir = &config.Config{
 var emptyConfig = &config.Config{}
 
 type completeTestCase struct {
+	test    string         // test name
 	input   string         // input string
 	uid     string         // the results must contain an entry with this uid
 	valid   bool           // and with the valid flag set to this
@@ -139,56 +140,66 @@ func TestCompleteItems(t *testing.T) {
 	// Based on input, the resulting items must include one that matches either
 	// the given UID or title. All items are also validated for correctness and
 	// uniqueness by UID.
-	for desc, tc := range map[string]completeTestCase{
+	for _, tc := range []completeTestCase{
 
 		// defaults
-		"empty input shows open repo/issue default": {
+		{
+			test:  "empty input shows open repo/issue default",
 			input: "",
 			title: "Open repositories and issues on GitHub",
 			auto:  " ",
 		},
-		"empty input shows issue list/search default": {
+		{
+			test:  "empty input shows issue list/search default",
 			input: "",
 			title: "List and search issues in a GitHub repository",
 			auto:  "i ",
 		},
-		"empty input shows project list/search default": {
+		{
+			test:  "empty input shows project list/search default",
 			input: "",
 			title: "List and open projects on GitHub repositories or organizations",
 			auto:  "p ",
 		},
-		"empty input shows new issue default": {
+		{
+			test:  "empty input shows new issue default",
 			input: "",
 			title: "New issue in a GitHub repository",
 			auto:  "n ",
 		},
-		"empty input shows edit project default": {
+		{
+			test:  "empty input shows edit project default",
 			input: "",
 			title: "Open a project",
 			auto:  "e ",
 		},
-		"empty input shows search issues default": {
+		{
+			test:  "empty input shows search issues default",
 			input: "",
 			title: "Search issues across GitHub",
 			auto:  "s ",
 		},
-		"a mode char by itself shows the default repo": {
+		{
+			test:  "a mode char by itself shows the default repo",
 			input: "i",
 			uid:   "ghi:zerowidth/default",
 			valid: true,
 		},
-		"a mode char followed by a space shows the default repo": {
+		{
+			test:  "a mode char followed by a space shows the default repo",
 			input: "i ",
 			uid:   "ghi:zerowidth/default",
 			valid: true,
 		},
-		"a mode char followed by a non-space shows nothing": {
+		{
+			test:    "a mode char followed by a non-space shows nothing",
 			input:   "ix",
 			exclude: "ghi:zerowidth/default",
 		},
 
 		// basic parsing tests
-		"open a shorthand repo": {
+		{
+			test:   "open a shorthand repo",
 			input:  " df",
 			uid:    "gh:zerowidth/dotfiles",
 			valid:  true,
@@ -197,7 +208,8 @@ func TestCompleteItems(t *testing.T) {
 			copy:   "https://github.com/zerowidth/dotfiles",
 			cmdMod: "paste [zerowidth/dotfiles](https://github.com/zerowidth/dotfiles)",
 		},
-		"open a shorthand repo and issue": {
+		{
+			test:   "open a shorthand repo and issue",
 			input:  " df 123",
 			uid:    "gh:zerowidth/dotfiles#123",
 			valid:  true,
@@ -207,7 +219,8 @@ func TestCompleteItems(t *testing.T) {
 			altMod: "paste zerowidth/dotfiles#123",
 			cmdMod: "paste [zerowidth/dotfiles#123](https://github.com/zerowidth/dotfiles/issues/123)",
 		},
-		"open a fully qualified repo": {
+		{
+			test:  "open a fully qualified repo",
 			input: " foo/bar",
 			uid:   "gh:foo/bar",
 			valid: true,
@@ -215,7 +228,8 @@ func TestCompleteItems(t *testing.T) {
 			arg:   "open https://github.com/foo/bar",
 			copy:  "https://github.com/foo/bar",
 		},
-		"open a fully qualified repo and issue": {
+		{
+			test:   "open a fully qualified repo and issue",
 			input:  " foo/bar 123",
 			uid:    "gh:foo/bar#123",
 			valid:  true,
@@ -225,7 +239,8 @@ func TestCompleteItems(t *testing.T) {
 			altMod: "paste foo/bar#123",
 			cmdMod: "paste [foo/bar#123](https://github.com/foo/bar/issues/123)",
 		},
-		"open a shorthand user with repo": {
+		{
+			test:  "open a shorthand user with repo",
 			input: " zw/foo",
 			uid:   "gh:zerowidth/foo",
 			valid: true,
@@ -233,7 +248,8 @@ func TestCompleteItems(t *testing.T) {
 			arg:   "open https://github.com/zerowidth/foo",
 			copy:  "https://github.com/zerowidth/foo",
 		},
-		"open a shorthand user with repo and issue": {
+		{
+			test:  "open a shorthand user with repo and issue",
 			input: " zw/foo 123",
 			uid:   "gh:zerowidth/foo#123",
 			valid: true,
@@ -241,25 +257,30 @@ func TestCompleteItems(t *testing.T) {
 			arg:   "open https://github.com/zerowidth/foo/issues/123",
 			copy:  "https://github.com/zerowidth/foo/issues/123",
 		},
-		"no match if any unparsed query remains after shorthand": {
+		{
+			test:    "no match if any unparsed query remains after shorthand",
 			input:   " df foo",
 			exclude: "gh:zerowidth/dotfiles",
 		},
-		"no match if any unparsed query remains after repo": {
+		{
+			test:    "no match if any unparsed query remains after repo",
 			input:   " foo/bar baz",
 			exclude: "gh:foo/bar",
 		},
-		"ignores trailing whitespace for shorthand": {
+		{
+			test:  "ignores trailing whitespace for shorthand",
 			input: " df ",
 			uid:   "gh:zerowidth/dotfiles",
 			valid: true,
 		},
-		"ignores trailing whitespace for repo": {
+		{
+			test:  "ignores trailing whitespace for repo",
 			input: " foo/bar ",
 			uid:   "gh:foo/bar",
 			valid: true,
 		},
-		"open path on matched shorthand repo": {
+		{
+			test:  "open path on matched shorthand repo",
 			input: " df /foo",
 			uid:   "gh:zerowidth/dotfiles/foo",
 			valid: true,
@@ -267,33 +288,39 @@ func TestCompleteItems(t *testing.T) {
 			arg:   "open https://github.com/zerowidth/dotfiles/foo",
 			copy:  "https://github.com/zerowidth/dotfiles/foo",
 		},
-		"don't open direct path when not prefixed with repo": {
+		{
+			test:    "don't open direct path when not prefixed with repo",
 			input:   " /foo",
 			exclude: "gh:/foo",
 		},
-		"don't open direct path when matching user prefix": {
+		{
+			test:    "don't open direct path when matching user prefix",
 			input:   " zw/",
 			exclude: "gh:/",
 		},
-		"prefer colliding repo expansion with shorthand alone": {
+		{
+			test:  "prefer colliding repo expansion with shorthand alone",
 			input: " zw",
 			cfg:   userRepoCollision,
 			uid:   "gh:zerowidth/dotfiles",
 			valid: true,
 		},
-		"prefer colliding user expansion with trailing repo name": {
+		{
+			test:  "prefer colliding user expansion with trailing repo name",
 			input: " zw/foo",
 			cfg:   userRepoCollision,
 			uid:   "gh:zeedub/foo",
 			valid: true,
 		},
-		"requires exact prefix for repo shorthand": {
+		{
+			test:  "requires exact prefix for repo shorthand",
 			input: " dfx/foo",
 			uid:   "gh:dfx/foo",
 			valid: true,
 			title: "Open dfx/foo",
 		},
-		"requires exact prefix for user shorthand": {
+		{
+			test:  "requires exact prefix for user shorthand",
 			input: " zwx/foo",
 			uid:   "gh:zwx/foo",
 			valid: true,
@@ -301,7 +328,8 @@ func TestCompleteItems(t *testing.T) {
 		},
 
 		// issue index/search
-		"open issues index on a shorthand repo": {
+		{
+			test:  "open issues index on a shorthand repo",
 			input: "i df",
 			uid:   "ghi:zerowidth/dotfiles",
 			valid: true,
@@ -309,7 +337,8 @@ func TestCompleteItems(t *testing.T) {
 			arg:   "open https://github.com/zerowidth/dotfiles/issues",
 			copy:  "https://github.com/zerowidth/dotfiles/issues",
 		},
-		"open issues index on a repo": {
+		{
+			test:  "open issues index on a repo",
 			input: "i foo/bar",
 			uid:   "ghi:foo/bar",
 			valid: true,
@@ -317,7 +346,8 @@ func TestCompleteItems(t *testing.T) {
 			arg:   "open https://github.com/foo/bar/issues",
 			copy:  "https://github.com/foo/bar/issues",
 		},
-		"search issues on a repo": {
+		{
+			test:  "search issues on a repo",
 			input: "i a/b foo bar",
 			uid:   "ghis:a/b",
 			valid: true,
@@ -325,7 +355,8 @@ func TestCompleteItems(t *testing.T) {
 			arg:   "open https://github.com/a/b/search?utf8=✓&type=Issues&q=foo%20bar",
 			copy:  "https://github.com/a/b/search?utf8=✓&type=Issues&q=foo%20bar",
 		},
-		"search issues on a shorhthand repo": {
+		{
+			test:  "search issues on a shorhthand repo",
 			input: "i df foo bar",
 			uid:   "ghis:zerowidth/dotfiles",
 			valid: true,
@@ -333,7 +364,8 @@ func TestCompleteItems(t *testing.T) {
 			arg:   "open https://github.com/zerowidth/dotfiles/search?utf8=✓&type=Issues&q=foo%20bar",
 			copy:  "https://github.com/zerowidth/dotfiles/search?utf8=✓&type=Issues&q=foo%20bar",
 		},
-		"search issues for a numeric string on a repo": {
+		{
+			test:  "search issues for a numeric string on a repo",
 			input: "i a/b 12345",
 			uid:   "ghis:a/b",
 			valid: true,
@@ -341,7 +373,8 @@ func TestCompleteItems(t *testing.T) {
 		},
 
 		// new issue
-		"open a new issue in a shorthand repo": {
+		{
+			test:  "open a new issue in a shorthand repo",
 			input: "n df",
 			uid:   "ghn:zerowidth/dotfiles",
 			valid: true,
@@ -349,7 +382,8 @@ func TestCompleteItems(t *testing.T) {
 			arg:   "open https://github.com/zerowidth/dotfiles/issues/new",
 			copy:  "https://github.com/zerowidth/dotfiles/issues/new",
 		},
-		"open a new issue in a repo": {
+		{
+			test:  "open a new issue in a repo",
 			input: "n a/b",
 			uid:   "ghn:a/b",
 			valid: true,
@@ -357,7 +391,8 @@ func TestCompleteItems(t *testing.T) {
 			arg:   "open https://github.com/a/b/issues/new",
 			copy:  "https://github.com/a/b/issues/new",
 		},
-		"open a new issue with a query": {
+		{
+			test:  "open a new issue with a query",
 			input: "n df foo bar",
 			uid:   "ghn:zerowidth/dotfiles",
 			valid: true,
@@ -365,13 +400,15 @@ func TestCompleteItems(t *testing.T) {
 			arg:   "open https://github.com/zerowidth/dotfiles/issues/new?title=foo%20bar",
 			copy:  "https://github.com/zerowidth/dotfiles/issues/new?title=foo%20bar",
 		},
-		"search issues globally with no query": {
+		{
+			test:  "search issues globally with no query",
 			input: "s ",
 			title: "Search issues for...",
 			valid: false,
 			auto:  "s ",
 		},
-		"search issues globally with a query": {
+		{
+			test:  "search issues globally with a query",
 			input: "s foo bar",
 			title: "Search issues for foo bar",
 			valid: true,
@@ -380,7 +417,8 @@ func TestCompleteItems(t *testing.T) {
 		},
 
 		// default repo
-		"open an issue with the default repo": {
+		{
+			test:  "open an issue with the default repo",
 			input: " 123",
 			uid:   "gh:zerowidth/default#123",
 			valid: true,
@@ -388,7 +426,8 @@ func TestCompleteItems(t *testing.T) {
 			arg:   "open https://github.com/zerowidth/default/issues/123",
 			copy:  "https://github.com/zerowidth/default/issues/123",
 		},
-		"open the default repo when default is also in map": {
+		{
+			test:  "open the default repo when default is also in map",
 			cfg:   defaultInMap,
 			input: " ",
 			uid:   "gh:zerowidth/dotfiles",
@@ -397,29 +436,34 @@ func TestCompleteItems(t *testing.T) {
 			arg:   "open https://github.com/zerowidth/dotfiles",
 			copy:  "https://github.com/zerowidth/dotfiles",
 		},
-		"includes no default if remaining input isn't otherwise valid": {
+		{
+			test:    "includes no default if remaining input isn't otherwise valid",
 			input:   " foo",
 			exclude: "gh:zerowidth/default",
 		},
-		"show issues for a default repo": {
+		{
+			test:  "show issues for a default repo",
 			input: "i ",
 			uid:   "ghi:zerowidth/default",
 			valid: true,
 			title: "List issues for zerowidth/default",
 		},
-		"search issues with a query in the default repo": {
+		{
+			test:  "search issues with a query in the default repo",
 			input: "i foo",
 			uid:   "ghis:zerowidth/default",
 			valid: true,
 			title: "Search issues in zerowidth/default for foo",
 		},
-		"new issue in the default repo": {
+		{
+			test:  "new issue in the default repo",
 			input: "n ",
 			uid:   "ghn:zerowidth/default",
 			valid: true,
 			title: "New issue in zerowidth/default",
 		},
-		"new issue with a title in the default repo": {
+		{
+			test:  "new issue with a title in the default repo",
 			input: "n foo",
 			uid:   "ghn:zerowidth/default",
 			valid: true,
@@ -427,7 +471,8 @@ func TestCompleteItems(t *testing.T) {
 		},
 
 		// projects
-		"project listing with explicit repo": {
+		{
+			test:  "project listing with explicit repo",
 			input: "p zerowidth/dotfiles",
 			uid:   "ghp:zerowidth/dotfiles",
 			title: "List projects in zerowidth/dotfiles",
@@ -435,7 +480,8 @@ func TestCompleteItems(t *testing.T) {
 			arg:   "open https://github.com/zerowidth/dotfiles/projects",
 			copy:  "https://github.com/zerowidth/dotfiles/projects",
 		},
-		"specific project with explicit repo": {
+		{
+			test:  "specific project with explicit repo",
 			input: "p zerowidth/dotfiles 10",
 			uid:   "ghp:zerowidth/dotfiles/10",
 			title: "Open project #10 in zerowidth/dotfiles",
@@ -443,7 +489,8 @@ func TestCompleteItems(t *testing.T) {
 			arg:   "open https://github.com/zerowidth/dotfiles/projects/10",
 			copy:  "https://github.com/zerowidth/dotfiles/projects/10",
 		},
-		"project listing with shorthand repo": {
+		{
+			test:  "project listing with shorthand repo",
 			input: "p df",
 			uid:   "ghp:zerowidth/dotfiles",
 			title: "List projects in zerowidth/dotfiles (df)",
@@ -451,7 +498,8 @@ func TestCompleteItems(t *testing.T) {
 			arg:   "open https://github.com/zerowidth/dotfiles/projects",
 			copy:  "https://github.com/zerowidth/dotfiles/projects",
 		},
-		"specific project with shorthand repo": {
+		{
+			test:  "specific project with shorthand repo",
 			input: "p df 10",
 			uid:   "ghp:zerowidth/dotfiles/10",
 			title: "Open project #10 in zerowidth/dotfiles (df#10)",
@@ -459,7 +507,8 @@ func TestCompleteItems(t *testing.T) {
 			arg:   "open https://github.com/zerowidth/dotfiles/projects/10",
 			copy:  "https://github.com/zerowidth/dotfiles/projects/10",
 		},
-		"project listing with org": {
+		{
+			test:  "project listing with org",
 			input: "p zerowidth",
 			uid:   "ghp:zerowidth",
 			title: "List projects for zerowidth",
@@ -467,7 +516,8 @@ func TestCompleteItems(t *testing.T) {
 			arg:   "open https://github.com/orgs/zerowidth/projects",
 			copy:  "https://github.com/orgs/zerowidth/projects",
 		},
-		"specific project with org": {
+		{
+			test:  "specific project with org",
 			input: "p zerowidth 10",
 			uid:   "ghp:zerowidth/10",
 			title: "Open project #10 for zerowidth",
@@ -475,7 +525,8 @@ func TestCompleteItems(t *testing.T) {
 			arg:   "open https://github.com/orgs/zerowidth/projects/10",
 			copy:  "https://github.com/orgs/zerowidth/projects/10",
 		},
-		"project listing with user shorthand": {
+		{
+			test:  "project listing with user shorthand",
 			input: "p zw",
 			uid:   "ghp:zerowidth",
 			title: "List projects for zerowidth (zw)",
@@ -483,7 +534,8 @@ func TestCompleteItems(t *testing.T) {
 			arg:   "open https://github.com/orgs/zerowidth/projects",
 			copy:  "https://github.com/orgs/zerowidth/projects",
 		},
-		"specific project with user shorthand": {
+		{
+			test:  "specific project with user shorthand",
 			input: "p zw 10",
 			uid:   "ghp:zerowidth/10",
 			title: "Open project #10 for zerowidth (zw)",
@@ -491,12 +543,14 @@ func TestCompleteItems(t *testing.T) {
 			arg:   "open https://github.com/orgs/zerowidth/projects/10",
 			copy:  "https://github.com/orgs/zerowidth/projects/10",
 		},
-		"specific project with numeric username treated as project": {
+		{
+			test:  "specific project with numeric username treated as project",
 			input: "p 123",
 			uid:   "ghp:zerowidth/default/123",
 			valid: true,
 		},
-		"specific project with numeric username but default repo treated as user": {
+		{
+			test:  "specific project with numeric username but default repo treated as user",
 			input: "p 123",
 			cfg:   emptyConfig,
 			uid:   "ghp:123",
@@ -504,11 +558,13 @@ func TestCompleteItems(t *testing.T) {
 		},
 
 		// repo autocomplete
-		"no autocomplete for empty input": {
+		{
+			test:    "no autocomplete for empty input",
 			input:   " ",
 			exclude: "gh:zerowidth/dotfiles",
 		},
-		"autocomplete 'd', first match": {
+		{
+			test:  "autocomplete 'd', first match",
 			input: " d",
 			uid:   "gh:zerowidth/dotfiles",
 			valid: true,
@@ -517,7 +573,8 @@ func TestCompleteItems(t *testing.T) {
 			copy:  "https://github.com/zerowidth/dotfiles",
 			auto:  " df",
 		},
-		"autocomplete 'd', second match": {
+		{
+			test:  "autocomplete 'd', second match",
 			input: " d",
 			uid:   "gh:zerowidth/df2",
 			valid: true,
@@ -526,55 +583,65 @@ func TestCompleteItems(t *testing.T) {
 			copy:  "https://github.com/zerowidth/df2",
 			auto:  " df2",
 		},
-		"autocomplete 'z', matching user shorthand": {
+		{
+			test:  "autocomplete 'z', matching user shorthand",
 			input: " z",
 			title: "Open zerowidth/... (zw)",
 			valid: false,
 			auto:  " zw/",
 		},
-		"autocomplete when user shorthand matches exactly": {
+		{
+			test:  "autocomplete when user shorthand matches exactly",
 			input: " zw",
 			title: "Open zerowidth/... (zw)",
 			valid: false,
 			auto:  " zw/",
 		},
-		"autocomplete when user shorthand has trailing slash": {
+		{
+			test:  "autocomplete when user shorthand has trailing slash",
 			input: " zw/",
 			title: "Open zerowidth/... (zw)",
 			valid: false,
 			auto:  " zw/",
 		},
-		"no autocomplete when user shorthand has text following the slash": {
+		{
+			test:    "no autocomplete when user shorthand has text following the slash",
 			input:   " zw/foo",
 			exclude: "Open zerowidth/... (zw)",
 		},
-		"autocomplete 'd', open-ended": {
+		{
+			test:  "autocomplete 'd', open-ended",
 			input: " d",
 			title: "Open d...",
 			valid: false,
 		},
-		"autocomplete open-ended when no default": {
+		{
+			test:  "autocomplete open-ended when no default",
 			cfg:   emptyConfig,
 			input: " ",
 			title: "Open ...",
 			valid: false,
 		},
-		"autocomplete unmatched user prefix": {
+		{
+			test:  "autocomplete unmatched user prefix",
 			input: " foo/",
 			title: "Open foo/...",
 			valid: false,
 		},
-		"does not autocomplete with fully-qualified repo": {
+		{
+			test:    "does not autocomplete with fully-qualified repo",
 			input:   " foo/bar",
 			exclude: "Open foo/bar...",
 		},
-		"no autocomplete when input has space": {
+		{
+			test:    "no autocomplete when input has space",
 			input:   " foo bar",
 			exclude: "Open foo bar...",
 		},
 
 		// issue index autocomplete
-		"autocompletes for issue index": {
+		{
+			test:  "autocompletes for issue index",
 			input: "i d",
 			uid:   "ghi:zerowidth/dotfiles",
 			valid: true,
@@ -583,45 +650,52 @@ func TestCompleteItems(t *testing.T) {
 			copy:  "https://github.com/zerowidth/dotfiles/issues",
 			auto:  "i df",
 		},
-		"autocompletes issue index with input so far": {
+		{
+			test:  "autocompletes issue index with input so far",
 			input: "i foo",
 			valid: false,
 			title: "List issues for foo...",
 			auto:  "i foo",
 		},
-		"autocomplete issues open-ended when no default": {
+		{
+			test:  "autocomplete issues open-ended when no default",
 			cfg:   emptyConfig,
 			input: "i ",
 			title: "List issues for ...",
 			valid: false,
 		},
-		"autocomplete user for issues": {
+		{
+			test:  "autocomplete user for issues",
 			input: "i z",
 			title: "List issues for zerowidth/... (zw)",
 			auto:  "i zw/",
 		},
 
 		// project autocomplete
-		"autocompletes for repo projects": {
+		{
+			test:  "autocompletes for repo projects",
 			input: "p d",
 			uid:   "ghp:zerowidth/dotfiles",
 			valid: true,
 			title: "List projects in zerowidth/dotfiles (df)",
 			auto:  "p df",
 		},
-		"autocompletes user projects": {
+		{
+			test:  "autocompletes user projects",
 			input: "p z",
 			uid:   "ghp:zerowidth",
 			valid: true,
 			title: "List projects for zerowidth (zw)",
 			auto:  "p zw",
 		},
-		"autocompletes projects with input so far": {
+		{
+			test:  "autocompletes projects with input so far",
 			input: "p foo",
 			title: "List projects for foo...",
 			valid: false,
 		},
-		"autocomplete open-ended projects when no default": {
+		{
+			test:  "autocomplete open-ended projects when no default",
 			input: "p ",
 			cfg:   emptyConfig,
 			title: "List projects for ...",
@@ -629,7 +703,8 @@ func TestCompleteItems(t *testing.T) {
 		},
 
 		// new issue autocomplete
-		"autocompletes for new issue": {
+		{
+			test:  "autocompletes for new issue",
 			input: "n d",
 			uid:   "ghn:zerowidth/dotfiles",
 			valid: true,
@@ -638,25 +713,29 @@ func TestCompleteItems(t *testing.T) {
 			copy:  "https://github.com/zerowidth/dotfiles/issues/new",
 			auto:  "n df",
 		},
-		"autocomplete user for new issue": {
+		{
+			test:  "autocomplete user for new issue",
 			input: "n z",
 			title: "New issue in zerowidth/... (zw)",
 			auto:  "n zw/",
 		},
-		"autocompletes new issue with input so far": {
+		{
+			test:  "autocompletes new issue with input so far",
 			input: "n foo",
 			valid: false,
 			title: "New issue in foo...",
 			auto:  "n foo",
 		},
-		"autocomplete new issue open-ended when no default": {
+		{
+			test:  "autocomplete new issue open-ended when no default",
 			cfg:   emptyConfig,
 			input: "n ",
 			title: "New issue in ...",
 			valid: false,
 		},
 
-		"edit project includes fixtures/work/work-foo": {
+		{
+			test:   "edit project includes fixtures/work/work-foo",
 			input:  "e ",
 			uid:    "ghe:testdata/work/work-foo",
 			valid:  true,
@@ -666,7 +745,8 @@ func TestCompleteItems(t *testing.T) {
 			cmdMod: "term " + fixturePath + "/work/work-foo",
 			altMod: "finder " + fixturePath + "/work/work-foo",
 		},
-		"edit project includes fixtures/projects/project-bar": {
+		{
+			test:   "edit project includes fixtures/projects/project-bar",
 			input:  "e ",
 			uid:    "ghe:testdata/projects/project-bar",
 			valid:  true,
@@ -675,7 +755,8 @@ func TestCompleteItems(t *testing.T) {
 			cmdMod: "term " + fixturePath + "/projects/project-bar",
 			altMod: "finder " + fixturePath + "/projects/project-bar",
 		},
-		"edit project includes symlinked dir in fixtures": {
+		{
+			test:   "edit project includes symlinked dir in fixtures",
 			input:  "e linked",
 			uid:    "ghe:testdata/projects/linked",
 			valid:  true,
@@ -683,41 +764,48 @@ func TestCompleteItems(t *testing.T) {
 			cmdMod: "term " + fixturePath + "/projects/linked",
 			altMod: "finder " + fixturePath + "/projects/linked",
 		},
-		"edit project does not include symlinked file in fixtures": {
+		{
+			test:    "edit project does not include symlinked file in fixtures",
 			input:   "e linked",
 			exclude: "ghe:testdata/projects/linked-file",
 		},
-		"edit project shows error for invalid directory": {
+		{
+			test:  "edit project shows error for invalid directory",
 			input: "e foo",
 			cfg:   invalidDir,
 			title: "Invalid project directory: testdata/nonexistent",
 		},
-		"edit project excludes files (listing only directories)": {
+		{
+			test:    "edit project excludes files (listing only directories)",
 			input:   "e ",
 			exclude: "ghe:testdata/work/ignored-file",
 		},
 
 		// edit/open/auto filtering
-		"edit project with input matches directories": {
+		{
+			test:  "edit project with input matches directories",
 			input: "e work-foo",
 			uid:   "ghe:testdata/work/work-foo",
 			valid: true,
 		},
-		"edit project with input excludes non-matches": {
+		{
+			test:    "edit project with input excludes non-matches",
 			input:   "e work-foo",
 			exclude: "ghe:testdata/projects/project-bar",
 		},
-		"edit project with input fuzzy-matches directories": {
+		{
+			test:  "edit project with input fuzzy-matches directories",
 			input: "e wf",
 			uid:   "ghe:testdata/work/work-foo",
 			valid: true,
 		},
-		"edit project with input excludes non-fuzzy matches": {
+		{
+			test:    "edit project with input excludes non-fuzzy matches",
 			input:   "e wf",
 			exclude: "ghe:testdata/projects/project-bar",
 		},
 	} {
-		t.Run(fmt.Sprintf("Complete(%#v): %s", tc.input, desc), tc.testItem)
+		t.Run(fmt.Sprintf("Complete(%#v): %s", tc.input, tc.test), tc.testItem)
 	}
 }
 
