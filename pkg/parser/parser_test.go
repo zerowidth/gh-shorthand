@@ -493,3 +493,48 @@ func TestUserCompletionParser(t *testing.T) {
 		})
 	}
 }
+
+var issueReferenceTests = []struct {
+	// input:
+	test  string // test name
+	input string // input
+
+	// assertions:
+	user  string
+	name  string
+	issue string
+}{
+	{
+		test:  "matches an issue reference",
+		input: "foo/bar#123",
+		user:  "foo",
+		name:  "bar",
+		issue: "123",
+	},
+	{
+		test:  "does not match just a repo",
+		input: "foo/bar",
+	},
+	{
+		test:  "does not match a path",
+		input: "foo/bar#1 /path",
+	},
+	{
+		test:  "does not match a query",
+		input: "foo/bar#1 query",
+	},
+}
+
+// TestIssueReferenceParser for testing the snippet parser
+func TestIssueReferenceParser(t *testing.T) {
+	for _, tc := range issueReferenceTests {
+		t.Run(tc.test, func(t *testing.T) {
+			parser := NewIssueReferenceParser()
+			result := parser.Parse(tc.input)
+
+			assert.Equal(t, tc.user, result.User, "result.User")
+			assert.Equal(t, tc.name, result.Name, "result.Name")
+			assert.Equal(t, tc.issue, result.Issue, "result.Issue")
+		})
+	}
+}

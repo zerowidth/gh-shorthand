@@ -93,6 +93,10 @@ func TestMarkdownLink(t *testing.T) {
 			input:  "https://github.com/orgs/gh/teams/foo/discussions/1",
 			output: "[@gh/foo#1](https://github.com/orgs/gh/teams/foo/discussions/1)",
 		},
+		"expanded issue reference": {
+			input:  "foo/bar#123",
+			output: "[foo/bar#123](https://github.com/foo/bar/issues/123)",
+		},
 	}
 
 	for desc, tc := range tests {
@@ -122,6 +126,13 @@ func TestMarkdownLinkWithDescription(t *testing.T) {
 		"pull request url": {
 			input:    "https://github.com/zw/df/pull/1",
 			output:   "[zw/df#1: a dotfiles patch](https://github.com/zw/df/pull/1)",
+			endpoint: "/issue",
+			query:    "zw/df#1",
+			issue:    rpc.Issue{Title: "a dotfiles patch"},
+		},
+		"expanded issue reference": {
+			input:    "zw/df#1",
+			output:   "[zw/df#1: a dotfiles patch](https://github.com/zw/df/issues/1)",
 			endpoint: "/issue",
 			query:    "zw/df#1",
 			issue:    rpc.Issue{Title: "a dotfiles patch"},
