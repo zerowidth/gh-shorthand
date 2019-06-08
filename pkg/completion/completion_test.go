@@ -47,17 +47,21 @@ var invalidDir = &config.Config{
 var emptyConfig = &config.Config{}
 
 type completeTestCase struct {
-	input   string         // input string
-	uid     string         // the results must contain an entry with this uid
-	valid   bool           // and with the valid flag set to this
-	title   string         // the expected title
-	arg     string         // expected argument
-	auto    string         // expected autocomplete arg
-	cfg     *config.Config // config to use instead of the default cfg
-	exclude string         // exclude any item with this UID or title
-	copy    string         // the clipboard copy string, if applicable
-	cmdMod  string         // cmd modifier action, if applicable
-	altMod  string         // alt modifier action, if applicable
+	test         string         // test name
+	input        string         // input string
+	uid          string         // the results must contain an entry with this uid
+	valid        bool           // and with the valid flag set to this
+	title        string         // the expected title
+	arg          string         // expected argument
+	action       string         // expected action
+	auto         string         // expected autocomplete arg
+	cfg          *config.Config // config to use instead of the default cfg
+	exclude      string         // exclude any item with this UID or title
+	copy         string         // the clipboard copy string, if applicable
+	cmdModArg    string         // cmd modifier argument, if applicable
+	cmdModAction string         // cmd modifier action, if applicable
+	altModArg    string         // alt modifier argument, if applicable
+	altModAction string         // alt modifier action, if applicable
 }
 
 func (tc *completeTestCase) testItem(t *testing.T) {
@@ -105,6 +109,10 @@ func (tc *completeTestCase) testItem(t *testing.T) {
 
 	if len(tc.arg) > 0 {
 		assert.Equal(t, tc.arg, item.Arg, "item.Arg in\n%+v", item)
+		if assert.NotNil(t, item.Variables, "item.Variables") &&
+			assert.Contains(t, item.Variables, "action", "item.Variables['action']") {
+			assert.Equal(t, tc.action, item.Variables["action"], "item.Variables['action']")
+		}
 	}
 
 	if len(tc.auto) > 0 {
@@ -117,20 +125,27 @@ func (tc *completeTestCase) testItem(t *testing.T) {
 		}
 	}
 
-	if len(tc.cmdMod) > 0 || len(tc.altMod) > 0 {
+	if len(tc.cmdModArg) > 0 || len(tc.altModArg) > 0 {
 		if assert.NotNil(t, item.Mods, "item.Mods in\n#%v", item) {
-			if len(tc.cmdMod) > 0 && assert.NotNil(t, item.Mods.Cmd, "item.Mods.Cmd") {
-				assert.Equal(t, tc.cmdMod, item.Mods.Cmd.Arg, "item.Mods.Cmd.Arg")
+			if len(tc.cmdModArg) > 0 && assert.NotNil(t, item.Mods.Cmd, "item.Mods.Cmd") {
+				assert.Equal(t, tc.cmdModArg, item.Mods.Cmd.Arg, "item.Mods.Cmd.Arg")
+				if assert.NotNil(t, item.Mods.Cmd.Variables, "item.Mods.Cmd.Variables") &&
+					assert.Contains(t, item.Mods.Cmd.Variables, "action", "item.Mods.Cmd.Variables['action']") {
+					assert.Equal(t, tc.cmdModAction, item.Mods.Cmd.Variables["action"], "item.Mods.Cmd.Variables['action']")
+				}
 			}
 
-			if len(tc.altMod) > 0 && assert.NotNil(t, item.Mods.Alt, "item.Mods.Alt") {
-				assert.Equal(t, tc.altMod, item.Mods.Alt.Arg, "items.Mods.Alt.Arg")
+			if len(tc.altModArg) > 0 && assert.NotNil(t, item.Mods.Alt, "item.Mods.Alt") {
+				assert.Equal(t, tc.altModArg, item.Mods.Alt.Arg, "items.Mods.Alt.Arg")
+				if assert.NotNil(t, item.Mods.Alt.Variables, "item.Mods.Alt.Variables") &&
+					assert.Contains(t, item.Mods.Alt.Variables, "action", "item.Mods.Alt.Variables['action']") {
+					assert.Equal(t, tc.altModAction, item.Mods.Alt.Variables["action"], "item.Mods.Alt.Variables['action']")
+				}
 			}
 		}
 	}
 
 	assert.NotContains(t, item.Subtitle, "rpc error")
-
 }
 
 func TestCompleteItems(t *testing.T) {
@@ -139,161 +154,199 @@ func TestCompleteItems(t *testing.T) {
 	// Based on input, the resulting items must include one that matches either
 	// the given UID or title. All items are also validated for correctness and
 	// uniqueness by UID.
-	for desc, tc := range map[string]completeTestCase{
+	for _, tc := range []completeTestCase{
 
 		// defaults
-		"empty input shows open repo/issue default": {
+		{
+			test:  "empty input shows open repo/issue default",
 			input: "",
 			title: "Open repositories and issues on GitHub",
 			auto:  " ",
 		},
-		"empty input shows issue list/search default": {
+		{
+			test:  "empty input shows issue list/search default",
 			input: "",
 			title: "List and search issues in a GitHub repository",
 			auto:  "i ",
 		},
-		"empty input shows project list/search default": {
+		{
+			test:  "empty input shows project list/search default",
 			input: "",
 			title: "List and open projects on GitHub repositories or organizations",
 			auto:  "p ",
 		},
-		"empty input shows new issue default": {
+		{
+			test:  "empty input shows new issue default",
 			input: "",
 			title: "New issue in a GitHub repository",
 			auto:  "n ",
 		},
-		"empty input shows edit project default": {
+		{
+			test:  "empty input shows edit project default",
 			input: "",
 			title: "Open a project",
 			auto:  "e ",
 		},
-		"empty input shows search issues default": {
+		{
+			test:  "empty input shows search issues default",
 			input: "",
 			title: "Search issues across GitHub",
 			auto:  "s ",
 		},
-		"a mode char by itself shows the default repo": {
+		{
+			test:  "a mode char by itself shows the default repo",
 			input: "i",
 			uid:   "ghi:zerowidth/default",
 			valid: true,
 		},
-		"a mode char followed by a space shows the default repo": {
+		{
+			test:  "a mode char followed by a space shows the default repo",
 			input: "i ",
 			uid:   "ghi:zerowidth/default",
 			valid: true,
 		},
-		"a mode char followed by a non-space shows nothing": {
+		{
+			test:    "a mode char followed by a non-space shows nothing",
 			input:   "ix",
 			exclude: "ghi:zerowidth/default",
 		},
 
 		// basic parsing tests
-		"open a shorthand repo": {
-			input:  " df",
-			uid:    "gh:zerowidth/dotfiles",
+		{
+			test:         "open a shorthand repo",
+			input:        " df",
+			uid:          "gh:zerowidth/dotfiles",
+			valid:        true,
+			title:        "Open zerowidth/dotfiles (df)",
+			action:       "open",
+			arg:          "https://github.com/zerowidth/dotfiles",
+			copy:         "https://github.com/zerowidth/dotfiles",
+			cmdModAction: "paste",
+			cmdModArg:    "[zerowidth/dotfiles](https://github.com/zerowidth/dotfiles)",
+		},
+		{
+			test:         "open a shorthand repo and issue",
+			input:        " df 123",
+			uid:          "gh:zerowidth/dotfiles#123",
+			valid:        true,
+			title:        "Open zerowidth/dotfiles#123 (df#123)",
+			action:       "open",
+			arg:          "https://github.com/zerowidth/dotfiles/issues/123",
+			copy:         "https://github.com/zerowidth/dotfiles/issues/123",
+			altModAction: "paste",
+			altModArg:    "zerowidth/dotfiles#123",
+			cmdModAction: "paste",
+			cmdModArg:    "[zerowidth/dotfiles#123](https://github.com/zerowidth/dotfiles/issues/123)",
+		},
+		{
+			test:   "open a fully qualified repo",
+			input:  " foo/bar",
+			uid:    "gh:foo/bar",
 			valid:  true,
-			title:  "Open zerowidth/dotfiles (df)",
-			arg:    "open https://github.com/zerowidth/dotfiles",
-			copy:   "https://github.com/zerowidth/dotfiles",
-			cmdMod: "paste [zerowidth/dotfiles](https://github.com/zerowidth/dotfiles)",
+			title:  "Open foo/bar",
+			action: "open",
+			arg:    "https://github.com/foo/bar",
+			copy:   "https://github.com/foo/bar",
 		},
-		"open a shorthand repo and issue": {
-			input:  " df 123",
-			uid:    "gh:zerowidth/dotfiles#123",
+		{
+			test:         "open a fully qualified repo and issue",
+			input:        " foo/bar 123",
+			uid:          "gh:foo/bar#123",
+			valid:        true,
+			title:        "Open foo/bar#123",
+			action:       "open",
+			arg:          "https://github.com/foo/bar/issues/123",
+			copy:         "https://github.com/foo/bar/issues/123",
+			altModAction: "paste",
+			altModArg:    "foo/bar#123",
+			cmdModAction: "paste",
+			cmdModArg:    "[foo/bar#123](https://github.com/foo/bar/issues/123)",
+		},
+		{
+			test:   "open a shorthand user with repo",
+			input:  " zw/foo",
+			uid:    "gh:zerowidth/foo",
 			valid:  true,
-			title:  "Open zerowidth/dotfiles#123 (df#123)",
-			arg:    "open https://github.com/zerowidth/dotfiles/issues/123",
-			copy:   "https://github.com/zerowidth/dotfiles/issues/123",
-			altMod: "paste zerowidth/dotfiles#123",
-			cmdMod: "paste [zerowidth/dotfiles#123](https://github.com/zerowidth/dotfiles/issues/123)",
+			title:  "Open zerowidth/foo (zw)",
+			action: "open",
+			arg:    "https://github.com/zerowidth/foo",
+			copy:   "https://github.com/zerowidth/foo",
 		},
-		"open a fully qualified repo": {
-			input: " foo/bar",
-			uid:   "gh:foo/bar",
-			valid: true,
-			title: "Open foo/bar",
-			arg:   "open https://github.com/foo/bar",
-			copy:  "https://github.com/foo/bar",
-		},
-		"open a fully qualified repo and issue": {
-			input:  " foo/bar 123",
-			uid:    "gh:foo/bar#123",
+		{
+			test:   "open a shorthand user with repo and issue",
+			input:  " zw/foo 123",
+			uid:    "gh:zerowidth/foo#123",
 			valid:  true,
-			title:  "Open foo/bar#123",
-			arg:    "open https://github.com/foo/bar/issues/123",
-			copy:   "https://github.com/foo/bar/issues/123",
-			altMod: "paste foo/bar#123",
-			cmdMod: "paste [foo/bar#123](https://github.com/foo/bar/issues/123)",
+			title:  "Open zerowidth/foo#123 (zw)",
+			action: "open",
+			arg:    "https://github.com/zerowidth/foo/issues/123",
+			copy:   "https://github.com/zerowidth/foo/issues/123",
 		},
-		"open a shorthand user with repo": {
-			input: " zw/foo",
-			uid:   "gh:zerowidth/foo",
-			valid: true,
-			title: "Open zerowidth/foo (zw)",
-			arg:   "open https://github.com/zerowidth/foo",
-			copy:  "https://github.com/zerowidth/foo",
-		},
-		"open a shorthand user with repo and issue": {
-			input: " zw/foo 123",
-			uid:   "gh:zerowidth/foo#123",
-			valid: true,
-			title: "Open zerowidth/foo#123 (zw)",
-			arg:   "open https://github.com/zerowidth/foo/issues/123",
-			copy:  "https://github.com/zerowidth/foo/issues/123",
-		},
-		"no match if any unparsed query remains after shorthand": {
+		{
+			test:    "no match if any unparsed query remains after shorthand",
 			input:   " df foo",
 			exclude: "gh:zerowidth/dotfiles",
 		},
-		"no match if any unparsed query remains after repo": {
+		{
+			test:    "no match if any unparsed query remains after repo",
 			input:   " foo/bar baz",
 			exclude: "gh:foo/bar",
 		},
-		"ignores trailing whitespace for shorthand": {
+		{
+			test:  "ignores trailing whitespace for shorthand",
 			input: " df ",
 			uid:   "gh:zerowidth/dotfiles",
 			valid: true,
 		},
-		"ignores trailing whitespace for repo": {
+		{
+			test:  "ignores trailing whitespace for repo",
 			input: " foo/bar ",
 			uid:   "gh:foo/bar",
 			valid: true,
 		},
-		"open path on matched shorthand repo": {
-			input: " df /foo",
-			uid:   "gh:zerowidth/dotfiles/foo",
-			valid: true,
-			title: "Open zerowidth/dotfiles/foo (df)",
-			arg:   "open https://github.com/zerowidth/dotfiles/foo",
-			copy:  "https://github.com/zerowidth/dotfiles/foo",
+		{
+			test:   "open path on matched shorthand repo",
+			input:  " df /foo",
+			uid:    "gh:zerowidth/dotfiles/foo",
+			valid:  true,
+			title:  "Open zerowidth/dotfiles/foo (df)",
+			action: "open",
+			arg:    "https://github.com/zerowidth/dotfiles/foo",
+			copy:   "https://github.com/zerowidth/dotfiles/foo",
 		},
-		"don't open direct path when not prefixed with repo": {
+		{
+			test:    "don't open direct path when not prefixed with repo",
 			input:   " /foo",
 			exclude: "gh:/foo",
 		},
-		"don't open direct path when matching user prefix": {
+		{
+			test:    "don't open direct path when matching user prefix",
 			input:   " zw/",
 			exclude: "gh:/",
 		},
-		"prefer colliding repo expansion with shorthand alone": {
+		{
+			test:  "prefer colliding repo expansion with shorthand alone",
 			input: " zw",
 			cfg:   userRepoCollision,
 			uid:   "gh:zerowidth/dotfiles",
 			valid: true,
 		},
-		"prefer colliding user expansion with trailing repo name": {
+		{
+			test:  "prefer colliding user expansion with trailing repo name",
 			input: " zw/foo",
 			cfg:   userRepoCollision,
 			uid:   "gh:zeedub/foo",
 			valid: true,
 		},
-		"requires exact prefix for repo shorthand": {
+		{
+			test:  "requires exact prefix for repo shorthand",
 			input: " dfx/foo",
 			uid:   "gh:dfx/foo",
 			valid: true,
 			title: "Open dfx/foo",
 		},
-		"requires exact prefix for user shorthand": {
+		{
+			test:  "requires exact prefix for user shorthand",
 			input: " zwx/foo",
 			uid:   "gh:zwx/foo",
 			valid: true,
@@ -301,39 +354,48 @@ func TestCompleteItems(t *testing.T) {
 		},
 
 		// issue index/search
-		"open issues index on a shorthand repo": {
-			input: "i df",
-			uid:   "ghi:zerowidth/dotfiles",
-			valid: true,
-			title: "List issues for zerowidth/dotfiles (df)",
-			arg:   "open https://github.com/zerowidth/dotfiles/issues",
-			copy:  "https://github.com/zerowidth/dotfiles/issues",
+		{
+			test:   "open issues index on a shorthand repo",
+			input:  "i df",
+			uid:    "ghi:zerowidth/dotfiles",
+			valid:  true,
+			title:  "List issues for zerowidth/dotfiles (df)",
+			action: "open",
+			arg:    "https://github.com/zerowidth/dotfiles/issues",
+			copy:   "https://github.com/zerowidth/dotfiles/issues",
 		},
-		"open issues index on a repo": {
-			input: "i foo/bar",
-			uid:   "ghi:foo/bar",
-			valid: true,
-			title: "List issues for foo/bar",
-			arg:   "open https://github.com/foo/bar/issues",
-			copy:  "https://github.com/foo/bar/issues",
+		{
+			test:   "open issues index on a repo",
+			input:  "i foo/bar",
+			uid:    "ghi:foo/bar",
+			valid:  true,
+			title:  "List issues for foo/bar",
+			action: "open",
+			arg:    "https://github.com/foo/bar/issues",
+			copy:   "https://github.com/foo/bar/issues",
 		},
-		"search issues on a repo": {
-			input: "i a/b foo bar",
-			uid:   "ghis:a/b",
-			valid: true,
-			title: "Search issues in a/b for foo bar",
-			arg:   "open https://github.com/a/b/search?utf8=✓&type=Issues&q=foo%20bar",
-			copy:  "https://github.com/a/b/search?utf8=✓&type=Issues&q=foo%20bar",
+		{
+			test:   "search issues on a repo",
+			input:  "i a/b foo bar",
+			uid:    "ghis:a/b",
+			valid:  true,
+			title:  "Search issues in a/b for foo bar",
+			action: "open",
+			arg:    "https://github.com/a/b/search?utf8=✓&type=Issues&q=foo%20bar",
+			copy:   "https://github.com/a/b/search?utf8=✓&type=Issues&q=foo%20bar",
 		},
-		"search issues on a shorhthand repo": {
-			input: "i df foo bar",
-			uid:   "ghis:zerowidth/dotfiles",
-			valid: true,
-			title: "Search issues in zerowidth/dotfiles (df) for foo bar",
-			arg:   "open https://github.com/zerowidth/dotfiles/search?utf8=✓&type=Issues&q=foo%20bar",
-			copy:  "https://github.com/zerowidth/dotfiles/search?utf8=✓&type=Issues&q=foo%20bar",
+		{
+			test:   "search issues on a shorhthand repo",
+			input:  "i df foo bar",
+			uid:    "ghis:zerowidth/dotfiles",
+			valid:  true,
+			title:  "Search issues in zerowidth/dotfiles (df) for foo bar",
+			action: "open",
+			arg:    "https://github.com/zerowidth/dotfiles/search?utf8=✓&type=Issues&q=foo%20bar",
+			copy:   "https://github.com/zerowidth/dotfiles/search?utf8=✓&type=Issues&q=foo%20bar",
 		},
-		"search issues for a numeric string on a repo": {
+		{
+			test:  "search issues for a numeric string on a repo",
 			input: "i a/b 12345",
 			uid:   "ghis:a/b",
 			valid: true,
@@ -341,85 +403,103 @@ func TestCompleteItems(t *testing.T) {
 		},
 
 		// new issue
-		"open a new issue in a shorthand repo": {
-			input: "n df",
-			uid:   "ghn:zerowidth/dotfiles",
-			valid: true,
-			title: "New issue in zerowidth/dotfiles (df)",
-			arg:   "open https://github.com/zerowidth/dotfiles/issues/new",
-			copy:  "https://github.com/zerowidth/dotfiles/issues/new",
+		{
+			test:   "open a new issue in a shorthand repo",
+			input:  "n df",
+			uid:    "ghn:zerowidth/dotfiles",
+			valid:  true,
+			title:  "New issue in zerowidth/dotfiles (df)",
+			action: "open",
+			arg:    "https://github.com/zerowidth/dotfiles/issues/new",
+			copy:   "https://github.com/zerowidth/dotfiles/issues/new",
 		},
-		"open a new issue in a repo": {
-			input: "n a/b",
-			uid:   "ghn:a/b",
-			valid: true,
-			title: "New issue in a/b",
-			arg:   "open https://github.com/a/b/issues/new",
-			copy:  "https://github.com/a/b/issues/new",
+		{
+			test:   "open a new issue in a repo",
+			input:  "n a/b",
+			uid:    "ghn:a/b",
+			valid:  true,
+			title:  "New issue in a/b",
+			action: "open",
+			arg:    "https://github.com/a/b/issues/new",
+			copy:   "https://github.com/a/b/issues/new",
 		},
-		"open a new issue with a query": {
-			input: "n df foo bar",
-			uid:   "ghn:zerowidth/dotfiles",
-			valid: true,
-			title: "New issue in zerowidth/dotfiles (df): foo bar",
-			arg:   "open https://github.com/zerowidth/dotfiles/issues/new?title=foo%20bar",
-			copy:  "https://github.com/zerowidth/dotfiles/issues/new?title=foo%20bar",
+		{
+			test:   "open a new issue with a query",
+			input:  "n df foo bar",
+			uid:    "ghn:zerowidth/dotfiles",
+			valid:  true,
+			title:  "New issue in zerowidth/dotfiles (df): foo bar",
+			action: "open",
+			arg:    "https://github.com/zerowidth/dotfiles/issues/new?title=foo%20bar",
+			copy:   "https://github.com/zerowidth/dotfiles/issues/new?title=foo%20bar",
 		},
-		"search issues globally with no query": {
+		{
+			test:  "search issues globally with no query",
 			input: "s ",
 			title: "Search issues for...",
 			valid: false,
 			auto:  "s ",
 		},
-		"search issues globally with a query": {
-			input: "s foo bar",
-			title: "Search issues for foo bar",
-			valid: true,
-			arg:   "open https://github.com/search?utf8=✓&type=Issues&q=foo%20bar",
-			copy:  "https://github.com/search?utf8=✓&type=Issues&q=foo%20bar",
+		{
+			test:   "search issues globally with a query",
+			input:  "s foo bar",
+			title:  "Search issues for foo bar",
+			valid:  true,
+			action: "open",
+			arg:    "https://github.com/search?utf8=✓&type=Issues&q=foo%20bar",
+			copy:   "https://github.com/search?utf8=✓&type=Issues&q=foo%20bar",
 		},
 
 		// default repo
-		"open an issue with the default repo": {
-			input: " 123",
-			uid:   "gh:zerowidth/default#123",
-			valid: true,
-			title: "Open zerowidth/default#123",
-			arg:   "open https://github.com/zerowidth/default/issues/123",
-			copy:  "https://github.com/zerowidth/default/issues/123",
+		{
+			test:   "open an issue with the default repo",
+			input:  " 123",
+			uid:    "gh:zerowidth/default#123",
+			valid:  true,
+			title:  "Open zerowidth/default#123",
+			action: "open",
+			arg:    "https://github.com/zerowidth/default/issues/123",
+			copy:   "https://github.com/zerowidth/default/issues/123",
 		},
-		"open the default repo when default is also in map": {
-			cfg:   defaultInMap,
-			input: " ",
-			uid:   "gh:zerowidth/dotfiles",
-			valid: true,
-			title: "Open zerowidth/dotfiles",
-			arg:   "open https://github.com/zerowidth/dotfiles",
-			copy:  "https://github.com/zerowidth/dotfiles",
+		{
+			test:   "open the default repo when default is also in map",
+			cfg:    defaultInMap,
+			input:  " ",
+			uid:    "gh:zerowidth/dotfiles",
+			valid:  true,
+			title:  "Open zerowidth/dotfiles",
+			action: "open",
+			arg:    "https://github.com/zerowidth/dotfiles",
+			copy:   "https://github.com/zerowidth/dotfiles",
 		},
-		"includes no default if remaining input isn't otherwise valid": {
+		{
+			test:    "includes no default if remaining input isn't otherwise valid",
 			input:   " foo",
 			exclude: "gh:zerowidth/default",
 		},
-		"show issues for a default repo": {
+		{
+			test:  "show issues for a default repo",
 			input: "i ",
 			uid:   "ghi:zerowidth/default",
 			valid: true,
 			title: "List issues for zerowidth/default",
 		},
-		"search issues with a query in the default repo": {
+		{
+			test:  "search issues with a query in the default repo",
 			input: "i foo",
 			uid:   "ghis:zerowidth/default",
 			valid: true,
 			title: "Search issues in zerowidth/default for foo",
 		},
-		"new issue in the default repo": {
+		{
+			test:  "new issue in the default repo",
 			input: "n ",
 			uid:   "ghn:zerowidth/default",
 			valid: true,
 			title: "New issue in zerowidth/default",
 		},
-		"new issue with a title in the default repo": {
+		{
+			test:  "new issue with a title in the default repo",
 			input: "n foo",
 			uid:   "ghn:zerowidth/default",
 			valid: true,
@@ -427,76 +507,94 @@ func TestCompleteItems(t *testing.T) {
 		},
 
 		// projects
-		"project listing with explicit repo": {
-			input: "p zerowidth/dotfiles",
-			uid:   "ghp:zerowidth/dotfiles",
-			title: "List projects in zerowidth/dotfiles",
-			valid: true,
-			arg:   "open https://github.com/zerowidth/dotfiles/projects",
-			copy:  "https://github.com/zerowidth/dotfiles/projects",
+		{
+			test:   "project listing with explicit repo",
+			input:  "p zerowidth/dotfiles",
+			uid:    "ghp:zerowidth/dotfiles",
+			title:  "List projects in zerowidth/dotfiles",
+			valid:  true,
+			action: "open",
+			arg:    "https://github.com/zerowidth/dotfiles/projects",
+			copy:   "https://github.com/zerowidth/dotfiles/projects",
 		},
-		"specific project with explicit repo": {
-			input: "p zerowidth/dotfiles 10",
-			uid:   "ghp:zerowidth/dotfiles/10",
-			title: "Open project #10 in zerowidth/dotfiles",
-			valid: true,
-			arg:   "open https://github.com/zerowidth/dotfiles/projects/10",
-			copy:  "https://github.com/zerowidth/dotfiles/projects/10",
+		{
+			test:   "specific project with explicit repo",
+			input:  "p zerowidth/dotfiles 10",
+			uid:    "ghp:zerowidth/dotfiles/10",
+			title:  "Open project #10 in zerowidth/dotfiles",
+			valid:  true,
+			action: "open",
+			arg:    "https://github.com/zerowidth/dotfiles/projects/10",
+			copy:   "https://github.com/zerowidth/dotfiles/projects/10",
 		},
-		"project listing with shorthand repo": {
-			input: "p df",
-			uid:   "ghp:zerowidth/dotfiles",
-			title: "List projects in zerowidth/dotfiles (df)",
-			valid: true,
-			arg:   "open https://github.com/zerowidth/dotfiles/projects",
-			copy:  "https://github.com/zerowidth/dotfiles/projects",
+		{
+			test:   "project listing with shorthand repo",
+			input:  "p df",
+			uid:    "ghp:zerowidth/dotfiles",
+			title:  "List projects in zerowidth/dotfiles (df)",
+			valid:  true,
+			action: "open",
+			arg:    "https://github.com/zerowidth/dotfiles/projects",
+			copy:   "https://github.com/zerowidth/dotfiles/projects",
 		},
-		"specific project with shorthand repo": {
-			input: "p df 10",
-			uid:   "ghp:zerowidth/dotfiles/10",
-			title: "Open project #10 in zerowidth/dotfiles (df#10)",
-			valid: true,
-			arg:   "open https://github.com/zerowidth/dotfiles/projects/10",
-			copy:  "https://github.com/zerowidth/dotfiles/projects/10",
+		{
+			test:   "specific project with shorthand repo",
+			input:  "p df 10",
+			uid:    "ghp:zerowidth/dotfiles/10",
+			title:  "Open project #10 in zerowidth/dotfiles (df#10)",
+			valid:  true,
+			action: "open",
+			arg:    "https://github.com/zerowidth/dotfiles/projects/10",
+			copy:   "https://github.com/zerowidth/dotfiles/projects/10",
 		},
-		"project listing with org": {
-			input: "p zerowidth",
-			uid:   "ghp:zerowidth",
-			title: "List projects for zerowidth",
-			valid: true,
-			arg:   "open https://github.com/orgs/zerowidth/projects",
-			copy:  "https://github.com/orgs/zerowidth/projects",
+		{
+			test:   "project listing with org",
+			input:  "p zerowidth",
+			uid:    "ghp:zerowidth",
+			title:  "List projects for zerowidth",
+			valid:  true,
+			action: "open",
+			arg:    "https://github.com/orgs/zerowidth/projects",
+			copy:   "https://github.com/orgs/zerowidth/projects",
 		},
-		"specific project with org": {
-			input: "p zerowidth 10",
-			uid:   "ghp:zerowidth/10",
-			title: "Open project #10 for zerowidth",
-			valid: true,
-			arg:   "open https://github.com/orgs/zerowidth/projects/10",
-			copy:  "https://github.com/orgs/zerowidth/projects/10",
+		{
+			test:   "specific project with org",
+			input:  "p zerowidth 10",
+			uid:    "ghp:zerowidth/10",
+			title:  "Open project #10 for zerowidth",
+			valid:  true,
+			action: "open",
+			arg:    "https://github.com/orgs/zerowidth/projects/10",
+			copy:   "https://github.com/orgs/zerowidth/projects/10",
 		},
-		"project listing with user shorthand": {
-			input: "p zw",
-			uid:   "ghp:zerowidth",
-			title: "List projects for zerowidth (zw)",
-			valid: true,
-			arg:   "open https://github.com/orgs/zerowidth/projects",
-			copy:  "https://github.com/orgs/zerowidth/projects",
+		{
+			test:   "project listing with user shorthand",
+			input:  "p zw",
+			uid:    "ghp:zerowidth",
+			title:  "List projects for zerowidth (zw)",
+			valid:  true,
+			action: "open",
+			arg:    "https://github.com/orgs/zerowidth/projects",
+			copy:   "https://github.com/orgs/zerowidth/projects",
 		},
-		"specific project with user shorthand": {
-			input: "p zw 10",
-			uid:   "ghp:zerowidth/10",
-			title: "Open project #10 for zerowidth (zw)",
-			valid: true,
-			arg:   "open https://github.com/orgs/zerowidth/projects/10",
-			copy:  "https://github.com/orgs/zerowidth/projects/10",
+		{
+			test:   "specific project with user shorthand",
+			input:  "p zw 10",
+			uid:    "ghp:zerowidth/10",
+			title:  "Open project #10 for zerowidth (zw)",
+			valid:  true,
+			action: "open",
+			arg:    "https://github.com/orgs/zerowidth/projects/10",
+			copy:   "https://github.com/orgs/zerowidth/projects/10",
 		},
-		"specific project with numeric username treated as project": {
+		{
+			test:  "specific project with numeric username treated as project",
 			input: "p 123",
 			uid:   "ghp:zerowidth/default/123",
 			valid: true,
 		},
-		"specific project with numeric username but default repo treated as user": {
+		{
+			test:  "specific project with numeric username but default repo treated as user",
 			input: "p 123",
 			cfg:   emptyConfig,
 			uid:   "ghp:123",
@@ -504,124 +602,147 @@ func TestCompleteItems(t *testing.T) {
 		},
 
 		// repo autocomplete
-		"no autocomplete for empty input": {
+		{
+			test:    "no autocomplete for empty input",
 			input:   " ",
 			exclude: "gh:zerowidth/dotfiles",
 		},
-		"autocomplete 'd', first match": {
-			input: " d",
-			uid:   "gh:zerowidth/dotfiles",
-			valid: true,
-			title: "Open zerowidth/dotfiles (df)",
-			arg:   "open https://github.com/zerowidth/dotfiles",
-			copy:  "https://github.com/zerowidth/dotfiles",
-			auto:  " df",
+		{
+			test:   "autocomplete 'd', first match",
+			input:  " d",
+			uid:    "gh:zerowidth/dotfiles",
+			valid:  true,
+			title:  "Open zerowidth/dotfiles (df)",
+			action: "open",
+			arg:    "https://github.com/zerowidth/dotfiles",
+			copy:   "https://github.com/zerowidth/dotfiles",
+			auto:   " df",
 		},
-		"autocomplete 'd', second match": {
-			input: " d",
-			uid:   "gh:zerowidth/df2",
-			valid: true,
-			title: "Open zerowidth/df2 (df2)",
-			arg:   "open https://github.com/zerowidth/df2",
-			copy:  "https://github.com/zerowidth/df2",
-			auto:  " df2",
+		{
+			test:   "autocomplete 'd', second match",
+			input:  " d",
+			uid:    "gh:zerowidth/df2",
+			valid:  true,
+			title:  "Open zerowidth/df2 (df2)",
+			action: "open",
+			arg:    "https://github.com/zerowidth/df2",
+			copy:   "https://github.com/zerowidth/df2",
+			auto:   " df2",
 		},
-		"autocomplete 'z', matching user shorthand": {
+		{
+			test:  "autocomplete 'z', matching user shorthand",
 			input: " z",
 			title: "Open zerowidth/... (zw)",
 			valid: false,
 			auto:  " zw/",
 		},
-		"autocomplete when user shorthand matches exactly": {
+		{
+			test:  "autocomplete when user shorthand matches exactly",
 			input: " zw",
 			title: "Open zerowidth/... (zw)",
 			valid: false,
 			auto:  " zw/",
 		},
-		"autocomplete when user shorthand has trailing slash": {
+		{
+			test:  "autocomplete when user shorthand has trailing slash",
 			input: " zw/",
 			title: "Open zerowidth/... (zw)",
 			valid: false,
 			auto:  " zw/",
 		},
-		"no autocomplete when user shorthand has text following the slash": {
+		{
+			test:    "no autocomplete when user shorthand has text following the slash",
 			input:   " zw/foo",
 			exclude: "Open zerowidth/... (zw)",
 		},
-		"autocomplete 'd', open-ended": {
+		{
+			test:  "autocomplete 'd', open-ended",
 			input: " d",
 			title: "Open d...",
 			valid: false,
 		},
-		"autocomplete open-ended when no default": {
+		{
+			test:  "autocomplete open-ended when no default",
 			cfg:   emptyConfig,
 			input: " ",
 			title: "Open ...",
 			valid: false,
 		},
-		"autocomplete unmatched user prefix": {
+		{
+			test:  "autocomplete unmatched user prefix",
 			input: " foo/",
 			title: "Open foo/...",
 			valid: false,
 		},
-		"does not autocomplete with fully-qualified repo": {
+		{
+			test:    "does not autocomplete with fully-qualified repo",
 			input:   " foo/bar",
 			exclude: "Open foo/bar...",
 		},
-		"no autocomplete when input has space": {
+		{
+			test:    "no autocomplete when input has space",
 			input:   " foo bar",
 			exclude: "Open foo bar...",
 		},
 
 		// issue index autocomplete
-		"autocompletes for issue index": {
-			input: "i d",
-			uid:   "ghi:zerowidth/dotfiles",
-			valid: true,
-			title: "List issues for zerowidth/dotfiles (df)",
-			arg:   "open https://github.com/zerowidth/dotfiles/issues",
-			copy:  "https://github.com/zerowidth/dotfiles/issues",
-			auto:  "i df",
+		{
+			test:   "autocompletes for issue index",
+			input:  "i d",
+			uid:    "ghi:zerowidth/dotfiles",
+			valid:  true,
+			title:  "List issues for zerowidth/dotfiles (df)",
+			action: "open",
+			arg:    "https://github.com/zerowidth/dotfiles/issues",
+			copy:   "https://github.com/zerowidth/dotfiles/issues",
+			auto:   "i df",
 		},
-		"autocompletes issue index with input so far": {
+		{
+			test:  "autocompletes issue index with input so far",
 			input: "i foo",
 			valid: false,
 			title: "List issues for foo...",
 			auto:  "i foo",
 		},
-		"autocomplete issues open-ended when no default": {
+		{
+			test:  "autocomplete issues open-ended when no default",
 			cfg:   emptyConfig,
 			input: "i ",
 			title: "List issues for ...",
 			valid: false,
 		},
-		"autocomplete user for issues": {
+		{
+			test:  "autocomplete user for issues",
 			input: "i z",
 			title: "List issues for zerowidth/... (zw)",
 			auto:  "i zw/",
 		},
 
 		// project autocomplete
-		"autocompletes for repo projects": {
+		{
+			test:  "autocompletes for repo projects",
 			input: "p d",
 			uid:   "ghp:zerowidth/dotfiles",
 			valid: true,
 			title: "List projects in zerowidth/dotfiles (df)",
 			auto:  "p df",
 		},
-		"autocompletes user projects": {
+		{
+			test:  "autocompletes user projects",
 			input: "p z",
 			uid:   "ghp:zerowidth",
 			valid: true,
 			title: "List projects for zerowidth (zw)",
 			auto:  "p zw",
 		},
-		"autocompletes projects with input so far": {
+		{
+			test:  "autocompletes projects with input so far",
 			input: "p foo",
 			title: "List projects for foo...",
 			valid: false,
 		},
-		"autocomplete open-ended projects when no default": {
+		{
+			test:  "autocomplete open-ended projects when no default",
 			input: "p ",
 			cfg:   emptyConfig,
 			title: "List projects for ...",
@@ -629,95 +750,119 @@ func TestCompleteItems(t *testing.T) {
 		},
 
 		// new issue autocomplete
-		"autocompletes for new issue": {
-			input: "n d",
-			uid:   "ghn:zerowidth/dotfiles",
-			valid: true,
-			title: "New issue in zerowidth/dotfiles (df)",
-			arg:   "open https://github.com/zerowidth/dotfiles/issues/new",
-			copy:  "https://github.com/zerowidth/dotfiles/issues/new",
-			auto:  "n df",
+		{
+			test:   "autocompletes for new issue",
+			input:  "n d",
+			uid:    "ghn:zerowidth/dotfiles",
+			valid:  true,
+			title:  "New issue in zerowidth/dotfiles (df)",
+			action: "open",
+			arg:    "https://github.com/zerowidth/dotfiles/issues/new",
+			copy:   "https://github.com/zerowidth/dotfiles/issues/new",
+			auto:   "n df",
 		},
-		"autocomplete user for new issue": {
+		{
+			test:  "autocomplete user for new issue",
 			input: "n z",
 			title: "New issue in zerowidth/... (zw)",
 			auto:  "n zw/",
 		},
-		"autocompletes new issue with input so far": {
+		{
+			test:  "autocompletes new issue with input so far",
 			input: "n foo",
 			valid: false,
 			title: "New issue in foo...",
 			auto:  "n foo",
 		},
-		"autocomplete new issue open-ended when no default": {
+		{
+			test:  "autocomplete new issue open-ended when no default",
 			cfg:   emptyConfig,
 			input: "n ",
 			title: "New issue in ...",
 			valid: false,
 		},
 
-		"edit project includes fixtures/work/work-foo": {
-			input:  "e ",
-			uid:    "ghe:testdata/work/work-foo",
-			valid:  true,
-			title:  "testdata/work/work-foo",
-			arg:    "edit " + fixturePath + "/work/work-foo",
-			copy:   fixturePath + "/work/work-foo",
-			cmdMod: "term " + fixturePath + "/work/work-foo",
-			altMod: "finder " + fixturePath + "/work/work-foo",
+		{
+			test:         "edit project includes fixtures/work/work-foo",
+			input:        "e ",
+			uid:          "ghe:testdata/work/work-foo",
+			valid:        true,
+			title:        "testdata/work/work-foo",
+			action:       "edit",
+			arg:          fixturePath + "/work/work-foo",
+			copy:         fixturePath + "/work/work-foo",
+			cmdModAction: "term",
+			cmdModArg:    fixturePath + "/work/work-foo",
+			altModAction: "finder",
+			altModArg:    fixturePath + "/work/work-foo",
 		},
-		"edit project includes fixtures/projects/project-bar": {
-			input:  "e ",
-			uid:    "ghe:testdata/projects/project-bar",
-			valid:  true,
-			title:  "testdata/projects/project-bar",
-			arg:    "edit " + fixturePath + "/projects/project-bar",
-			cmdMod: "term " + fixturePath + "/projects/project-bar",
-			altMod: "finder " + fixturePath + "/projects/project-bar",
+		{
+			test:         "edit project includes fixtures/projects/project-bar",
+			input:        "e ",
+			uid:          "ghe:testdata/projects/project-bar",
+			valid:        true,
+			title:        "testdata/projects/project-bar",
+			action:       "edit",
+			arg:          fixturePath + "/projects/project-bar",
+			cmdModAction: "term",
+			cmdModArg:    fixturePath + "/projects/project-bar",
+			altModAction: "finder",
+			altModArg:    fixturePath + "/projects/project-bar",
 		},
-		"edit project includes symlinked dir in fixtures": {
-			input:  "e linked",
-			uid:    "ghe:testdata/projects/linked",
-			valid:  true,
-			arg:    "edit " + fixturePath + "/projects/linked",
-			cmdMod: "term " + fixturePath + "/projects/linked",
-			altMod: "finder " + fixturePath + "/projects/linked",
+		{
+			test:         "edit project includes symlinked dir in fixtures",
+			input:        "e linked",
+			uid:          "ghe:testdata/projects/linked",
+			valid:        true,
+			action:       "edit",
+			arg:          fixturePath + "/projects/linked",
+			cmdModAction: "term",
+			cmdModArg:    fixturePath + "/projects/linked",
+			altModAction: "finder",
+			altModArg:    fixturePath + "/projects/linked",
 		},
-		"edit project does not include symlinked file in fixtures": {
+		{
+			test:    "edit project does not include symlinked file in fixtures",
 			input:   "e linked",
 			exclude: "ghe:testdata/projects/linked-file",
 		},
-		"edit project shows error for invalid directory": {
+		{
+			test:  "edit project shows error for invalid directory",
 			input: "e foo",
 			cfg:   invalidDir,
 			title: "Invalid project directory: testdata/nonexistent",
 		},
-		"edit project excludes files (listing only directories)": {
+		{
+			test:    "edit project excludes files (listing only directories)",
 			input:   "e ",
 			exclude: "ghe:testdata/work/ignored-file",
 		},
 
 		// edit/open/auto filtering
-		"edit project with input matches directories": {
+		{
+			test:  "edit project with input matches directories",
 			input: "e work-foo",
 			uid:   "ghe:testdata/work/work-foo",
 			valid: true,
 		},
-		"edit project with input excludes non-matches": {
+		{
+			test:    "edit project with input excludes non-matches",
 			input:   "e work-foo",
 			exclude: "ghe:testdata/projects/project-bar",
 		},
-		"edit project with input fuzzy-matches directories": {
+		{
+			test:  "edit project with input fuzzy-matches directories",
 			input: "e wf",
 			uid:   "ghe:testdata/work/work-foo",
 			valid: true,
 		},
-		"edit project with input excludes non-fuzzy matches": {
+		{
+			test:    "edit project with input excludes non-fuzzy matches",
 			input:   "e wf",
 			exclude: "ghe:testdata/projects/project-bar",
 		},
 	} {
-		t.Run(fmt.Sprintf("Complete(%#v): %s", tc.input, desc), tc.testItem)
+		t.Run(fmt.Sprintf("Complete(%#v): %s", tc.input, tc.test), tc.testItem)
 	}
 }
 
