@@ -42,16 +42,16 @@ func NewHandler(cfg config.Config, lg service.Logger) *Handler {
 
 // Mount routes the RPC handlers on a mux
 func (h *Handler) Mount(mux *chi.Mux) {
-	mux.Get("/repo", h.rpcHandler(h.github.GetRepo))
-	mux.Get("/issue", h.rpcHandler(h.github.GetIssue))
-	mux.Get("/issues", h.rpcHandler(h.github.GetIssues))
-	mux.Get("/project", h.rpcHandler(h.github.GetProject))
-	mux.Get("/projects", h.rpcHandler(h.github.GetProjects))
+	mux.Get("/repo", h.rpcHandler("repo", h.github.GetRepo))
+	mux.Get("/issue", h.rpcHandler("issue", h.github.GetIssue))
+	mux.Get("/issues", h.rpcHandler("issues", h.github.GetIssues))
+	mux.Get("/project", h.rpcHandler("project", h.github.GetProject))
+	mux.Get("/projects", h.rpcHandler("projects", h.github.GetProjects))
 }
 
 // rpcHandler creates an http handler func to wrap a GitHub API call with
 // asynchronous execution and caching of its result.
-func (h *Handler) rpcHandler(rpc rpcCall) http.HandlerFunc {
+func (h *Handler) rpcHandler(action string, rpc rpcCall) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if err := r.ParseForm(); err != nil {
 			http.Error(w, http.StatusText(400), 400)
@@ -69,12 +69,13 @@ func (h *Handler) rpcHandler(rpc rpcCall) http.HandlerFunc {
 		defer h.m.Unlock()
 		var res Result
 
-		if _, pending := h.pending[query]; !pending {
-			if cr, ok := h.cache.Get(query); ok {
+		key := action + ":" + query
+		if _, pending := h.pending[key]; !pending {
+			if cr, ok := h.cache.Get(key); ok {
 				res = cr.(Result)
 			} else {
 				// this will wait on the mutex immediately, but we're returning soon anyway
-				go h.makeRequest(rpc, query)
+				go h.makeRequest(rpc, query, key)
 			}
 		}
 
@@ -84,25 +85,25 @@ func (h *Handler) rpcHandler(rpc rpcCall) http.HandlerFunc {
 	}
 }
 
-func (h *Handler) makeRequest(rpc rpcCall, query string) {
+func (h *Handler) makeRequest(rpc rpcCall, query, key string) {
 	h.m.Lock()
-	h.pending[query] = struct{}{}
+	h.pending[key] = struct{}{}
 	h.m.Unlock()
 
 	var res Result
 	ttl := resultTTL
 
-	_ = h.logger.Infof("RPC request: %s", query)
+	_ = h.logger.Infof("RPC request: %s", key)
 	err := rpc(&res, query)
 	if err != nil {
 		res.Error = err.Error()
 		ttl = errorTTL
 	}
 	res.Complete = true
-	_ = h.logger.Infof("RPC result: %+v\n", res)
+	_ = h.logger.Infof("RPC result: %s %+v\n", key, res)
 
 	h.m.Lock()
-	delete(h.pending, query)
-	h.cache.Set(query, res, ttl)
+	delete(h.pending, key)
+	h.cache.Set(key, res, ttl)
 	h.m.Unlock()
 }
