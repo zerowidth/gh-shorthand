@@ -1,6 +1,9 @@
 package completion
 
 import (
+	"io/ioutil"
+	"os"
+	"path"
 	"path/filepath"
 
 	"github.com/sahilm/fuzzy"
@@ -32,9 +35,9 @@ func projectDirItems(dirs map[string]string, search string, mode projectDirMode)
 	}
 
 	if len(search) > 0 {
-		sorted := fuzzy.Find(search, projectNames)
+		filtered := fuzzy.Find(search, projectNames)
 		projectNames = []string{}
-		for _, result := range sorted {
+		for _, result := range filtered {
 			projectNames = append(projectNames, result.Str)
 		}
 	}
@@ -87,4 +90,35 @@ func projectDirItems(dirs map[string]string, search string, mode projectDirMode)
 	}
 
 	return
+}
+
+func findProjectDirs(root string) (dirs []string, err error) {
+	if entries, err := ioutil.ReadDir(root); err == nil {
+		for _, entry := range entries {
+			if entry.IsDir() {
+				dirs = append(dirs, entry.Name())
+			} else if entry.Mode()&os.ModeSymlink != 0 {
+				full := path.Join(root, entry.Name())
+				if link, err := os.Readlink(full); err != nil {
+					continue
+				} else {
+					if !path.IsAbs(link) {
+						if link, err = filepath.Abs(path.Join(root, link)); err != nil {
+							continue
+						}
+					}
+					if linkInfo, err := os.Stat(link); err != nil {
+						continue
+					} else {
+						if linkInfo.IsDir() {
+							dirs = append(dirs, entry.Name())
+						}
+					}
+				}
+			}
+		}
+	} else {
+		return dirs, err
+	}
+	return dirs, nil
 }

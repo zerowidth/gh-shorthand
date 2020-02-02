@@ -918,18 +918,3 @@ func TestFinalizeResult(t *testing.T) {
 	c.finalizeResult()
 	assert.Equal(t, rerunAfter, c.result.Rerun, "c.result.Rerun in result\n%#v", c.result)
 }
-
-func TestFindProjectDirs(t *testing.T) {
-	fixturePath, _ := filepath.Abs("testdata/projects")
-	dirList, err := findProjectDirs(fixturePath)
-	dirs := make(map[string]struct{}, len(dirList))
-	if err != nil {
-		t.Errorf("expected no error, got %+v", err)
-	}
-	for _, d := range dirList {
-		dirs[d] = struct{}{}
-	}
-	assert.Contains(t, dirs, "project-bar", "normal directory in\n%v", dirList)
-	assert.Contains(t, dirs, "linked", "symlinked directory in\n%v", dirList)
-	assert.NotContains(t, dirs, "linked-file", "symlinked file in\n%v", dirList)
-}
