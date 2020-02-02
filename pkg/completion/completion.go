@@ -117,7 +117,7 @@ func (c *completion) appendParsedItems(mode string) {
 		}
 
 		c.result.AppendItems(
-			autocompleteItems(c.cfg, c.input, result,
+			autocompleteItems(c.cfg, c.input,
 				autocompleteOpenItem, autocompleteUserOpenItem, openEndedOpenItem)...)
 
 	case "i":
@@ -142,7 +142,7 @@ func (c *completion) appendParsedItems(mode string) {
 		}
 
 		c.result.AppendItems(
-			autocompleteItems(c.cfg, c.input, result,
+			autocompleteItems(c.cfg, c.input,
 				autocompleteIssueItem, autocompleteUserIssueItem, openEndedIssueItem)...)
 
 	case "p":
@@ -191,7 +191,7 @@ func (c *completion) appendParsedItems(mode string) {
 		}
 
 		c.result.AppendItems(
-			autocompleteItems(c.cfg, c.input, result,
+			autocompleteItems(c.cfg, c.input,
 				autocompleteNewIssueItem, autocompleteUserNewIssueItem, openEndedNewIssueItem)...)
 
 	case "e":
@@ -506,7 +506,7 @@ func openEndedNewIssueItem(input string) alfred.Item {
 	}
 }
 
-func autocompleteItems(cfg config.Config, input string, parsed *parser.Result,
+func autocompleteItems(cfg config.Config, input string,
 	repoItem func(string, string) alfred.Item,
 	userItem func(string, string) alfred.Item,
 	openEndedItem func(string) alfred.Item) (items alfred.Items) {
