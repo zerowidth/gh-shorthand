@@ -12,4 +12,5 @@ if [ ! -f go.mod ]; then
     go mod init tools
 fi
 
-go get github.com/golangci/golangci-lint/cmd/golangci-lint@v1.16.0
+go get github.com/golangci/golangci-lint/cmd/golangci-lint@v1.23.1
+go get -u github.com/rakyll/gotest
