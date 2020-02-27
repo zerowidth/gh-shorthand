@@ -192,11 +192,11 @@ func (c *completion) appendParsedItems(mode string) {
 
 	case "e":
 		c.result.AppendItems(
-			projectDirItems(c.cfg.ProjectDirMap(), c.input, modeEdit)...)
+			projectDirItems(c.cfg.ProjectDirs, c.input, modeEdit)...)
 
 	case "t":
 		c.result.AppendItems(
-			projectDirItems(c.cfg.ProjectDirMap(), c.input, modeTerm)...)
+			projectDirItems(c.cfg.ProjectDirs, c.input, modeTerm)...)
 
 	case "s":
 		searchItem := globalIssueSearchItem(c.input)

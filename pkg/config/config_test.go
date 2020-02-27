@@ -1,11 +1,9 @@
 package config
 
 import (
-	"path/filepath"
 	"reflect"
 	"testing"
 
-	homedir "github.com/mitchellh/go-homedir"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -73,40 +71,6 @@ func TestLoadInvalidDefault(t *testing.T) {
 	_, err := Load(invalidDefaultRepo)
 	if assert.Error(t, err) {
 		assert.Equal(t, "default repo \"foo\" not in owner/name format", err.Error())
-	}
-}
-
-func TestProjectDirMap(t *testing.T) {
-	config, _ := Load(configYaml)
-	dirs := config.ProjectDirMap()
-	if len(dirs) != 3 {
-		t.Errorf("expected ProjectDirs() to have three entries in %#v", dirs)
-	} else {
-
-		dir, ok := dirs["/foo/foo"]
-		if !ok {
-			t.Errorf("expected /foo/foo in %#v", dirs)
-		} else if !filepath.IsAbs(dir) {
-			t.Errorf("expected expanded /foo/foo %s to be an absolute path", dir)
-		}
-
-		barPath, err := homedir.Expand("~/bar")
-		if err != nil {
-			t.Errorf("error expanding ~/bar: %#v", err.Error())
-		} else {
-			dir, ok := dirs["~/bar"]
-			if !ok {
-			} else if dir != barPath {
-				t.Errorf("expected ~/bar to be expanded to %s, got %s", barPath, dir)
-			}
-		}
-
-		dir, ok = dirs["relative"]
-		if !ok {
-			t.Errorf("expected relative dir in %#v", dirs)
-		} else if !filepath.IsAbs(dir) {
-			t.Errorf("expected relative path to be expanded to absolute path, got %s", dir)
-		}
 	}
 }
 

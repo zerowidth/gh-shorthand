@@ -6,6 +6,7 @@ import (
 	"path"
 	"path/filepath"
 
+	"github.com/mitchellh/go-homedir"
 	"github.com/sahilm/fuzzy"
 	"github.com/zerowidth/gh-shorthand/pkg/alfred"
 )
@@ -17,7 +18,20 @@ const (
 	modeTerm
 )
 
-func projectDirItems(dirs map[string]string, search string, mode projectDirMode) (items alfred.Items) {
+func projectDirItems(searchPaths []string, search string, mode projectDirMode) (items alfred.Items) {
+	dirs := map[string]string{}
+	for _, path := range searchPaths {
+		expanded, err := homedir.Expand(path)
+		if err != nil {
+			continue
+		}
+		absolute, err := filepath.Abs(expanded)
+		if err != nil {
+			continue
+		}
+		dirs[path] = absolute
+	}
+
 	projects := map[string]string{}
 	projectNames := []string{}
 
