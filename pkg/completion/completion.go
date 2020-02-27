@@ -2,11 +2,7 @@ package completion
 
 import (
 	"fmt"
-	"io/ioutil"
 	"net/url"
-	"os"
-	"path"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -117,7 +113,7 @@ func (c *completion) appendParsedItems(mode string) {
 		}
 
 		c.result.AppendItems(
-			autocompleteItems(c.cfg, c.input, result,
+			autocompleteItems(c.cfg, c.input,
 				autocompleteOpenItem, autocompleteUserOpenItem, openEndedOpenItem)...)
 
 	case "i":
@@ -142,7 +138,7 @@ func (c *completion) appendParsedItems(mode string) {
 		}
 
 		c.result.AppendItems(
-			autocompleteItems(c.cfg, c.input, result,
+			autocompleteItems(c.cfg, c.input,
 				autocompleteIssueItem, autocompleteUserIssueItem, openEndedIssueItem)...)
 
 	case "p":
@@ -191,16 +187,16 @@ func (c *completion) appendParsedItems(mode string) {
 		}
 
 		c.result.AppendItems(
-			autocompleteItems(c.cfg, c.input, result,
+			autocompleteItems(c.cfg, c.input,
 				autocompleteNewIssueItem, autocompleteUserNewIssueItem, openEndedNewIssueItem)...)
 
 	case "e":
 		c.result.AppendItems(
-			projectDirItems(c.cfg.ProjectDirMap(), c.input, modeEdit)...)
+			projectDirItems(c.cfg.ProjectDirs, c.input, modeEdit)...)
 
 	case "t":
 		c.result.AppendItems(
-			projectDirItems(c.cfg.ProjectDirMap(), c.input, modeTerm)...)
+			projectDirItems(c.cfg.ProjectDirs, c.input, modeTerm)...)
 
 	case "s":
 		searchItem := globalIssueSearchItem(c.input)
@@ -506,7 +502,7 @@ func openEndedNewIssueItem(input string) alfred.Item {
 	}
 }
 
-func autocompleteItems(cfg config.Config, input string, parsed *parser.Result,
+func autocompleteItems(cfg config.Config, input string,
 	repoItem func(string, string) alfred.Item,
 	userItem func(string, string) alfred.Item,
 	openEndedItem func(string) alfred.Item) (items alfred.Items) {
@@ -554,37 +550,6 @@ func autocompleteUserItems(cfg config.Config, input string,
 		}
 	}
 	return
-}
-
-func findProjectDirs(root string) (dirs []string, err error) {
-	if entries, err := ioutil.ReadDir(root); err == nil {
-		for _, entry := range entries {
-			if entry.IsDir() {
-				dirs = append(dirs, entry.Name())
-			} else if entry.Mode()&os.ModeSymlink != 0 {
-				full := path.Join(root, entry.Name())
-				if link, err := os.Readlink(full); err != nil {
-					continue
-				} else {
-					if !path.IsAbs(link) {
-						if link, err = filepath.Abs(path.Join(root, link)); err != nil {
-							continue
-						}
-					}
-					if linkInfo, err := os.Stat(link); err != nil {
-						continue
-					} else {
-						if linkInfo.IsDir() {
-							dirs = append(dirs, entry.Name())
-						}
-					}
-				}
-			}
-		}
-	} else {
-		return dirs, err
-	}
-	return dirs, nil
 }
 
 func (c *completion) rpcRequest(path, query string, delay float64) rpc.Result {

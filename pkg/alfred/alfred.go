@@ -22,7 +22,7 @@ type Items []Item
 func (is Items) String() string {
 	s := "[\n"
 	for _, i := range is {
-		s += fmt.Sprintf("%#v\n", i)
+		s += fmt.Sprintf("%+v\n", i)
 	}
 	s += "]\n"
 	return s
@@ -91,13 +91,13 @@ type Mods struct {
 }
 
 func (t *Text) String() string {
-	return fmt.Sprintf("%#v", *t)
+	return fmt.Sprintf("%+v", *t)
 }
 
 func (m *Mods) String() string {
-	return fmt.Sprintf("%#v", *m)
+	return fmt.Sprintf("%+v", *m)
 }
 
 func (m *ModItem) String() string {
-	return fmt.Sprintf("%#v", *m)
+	return fmt.Sprintf("%+v", *m)
 }

@@ -14,7 +14,7 @@ func TestSetRepo(t *testing.T) {
 }
 
 func TestSetRepoWithMissingRepo(t *testing.T) {
-	result := *&Result{}
+	result := Result{}
 	result.SetRepo("foo/")
 	assert.False(t, result.HasRepo())
 	assert.True(t, result.HasUser())

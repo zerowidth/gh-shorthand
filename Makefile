@@ -2,6 +2,7 @@ TOOLS  = _tools/bin
 APP    = bin/gh-shorthand
 GOSRC  = $(shell find . -type f -name '*.go')
 GOLINT = $(TOOLS)/golangci-lint
+GOTEST = $(TOOLS)/gotest
 
 # V=1 for verbose
 V = 0
@@ -23,14 +24,15 @@ lint: | $(GOLINT); $(info -> running linters...)
 		--enable interfacer
 
 $(GOLINT): $(TOOLS)
+$(GOTEST): $(TOOLS)
 
 $(TOOLS): ; $(info -> installing tools...)
 	$Q script/bootstrap
 
 TESTSUITE = ./...
 .PHONY: test
-test: ; $(info -> running tests...)
-	$Q go test $(TESTFLAGS) $(TESTSUITE)
+test: | $(GOTEST); $(info -> running tests...)
+	$Q $(GOTEST) $(TESTFLAGS) $(TESTSUITE)
 
 .PHONY: clean
 clean:

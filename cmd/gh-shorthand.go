@@ -76,7 +76,7 @@ description from the issue or PR's title.
 		}
 		rpcClient := rpc.NewClient(cfg.SocketPath)
 		link := snippets.MarkdownLink(rpcClient, input, markdownDescription)
-		fmt.Fprintf(os.Stdout, link)
+		fmt.Fprint(os.Stdout, link)
 	},
 }
 
@@ -84,7 +84,7 @@ var issueReferenceCommand = &cobra.Command{
 	Use: "issue-reference",
 	Run: func(cmd *cobra.Command, args []string) {
 		ref := snippets.IssueReference(strings.Join(args, " "))
-		fmt.Fprintf(os.Stdout, ref)
+		fmt.Fprint(os.Stdout, ref)
 	},
 }
 
