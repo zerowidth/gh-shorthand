@@ -169,6 +169,20 @@ var serverRestart = &cobra.Command{
 	},
 }
 
+var editorScriptCommand = &cobra.Command{
+	Use:   "editor",
+	Short: "Emits an editor script for opening a $path",
+	Run: func(cmd *cobra.Command, args []string) {
+		cfg := config.MustLoadFromDefault()
+		script, err := cfg.OpenPathScript()
+		if err != nil {
+			fmt.Println(err.Error())
+			os.Exit(1)
+		}
+		fmt.Println(script)
+	},
+}
+
 func init() {
 	markdownCommand.PersistentFlags().BoolVarP(
 		&markdownDescription,
@@ -184,6 +198,7 @@ func init() {
 	rootCmd.AddCommand(serverCommand)
 	rootCmd.AddCommand(markdownCommand)
 	rootCmd.AddCommand(issueReferenceCommand)
+	rootCmd.AddCommand(editorScriptCommand)
 
 	serverCommand.AddCommand(serverRun)
 	serverCommand.AddCommand(serverInstall)

@@ -90,3 +90,11 @@ func TestLoadFromFile(t *testing.T) {
 		t.Error("expected missing yaml file to error, but no error occurred")
 	}
 }
+
+func TestNoEditor(t *testing.T) {
+	config, err := LoadFromFile("testdata/config.yml")
+	assert.NoError(t, err)
+
+	_, err = config.OpenPathScript()
+	assert.Error(t, err)
+}

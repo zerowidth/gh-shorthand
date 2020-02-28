@@ -16,12 +16,32 @@ var Filename = "~/.gh-shorthand.yml"
 
 // Config is a shorthand configuration, read from a yaml file
 type Config struct {
+	// shorthand configs
 	RepoMap     map[string]string `yaml:"repos"`
 	UserMap     map[string]string `yaml:"users"`
 	DefaultRepo string            `yaml:"default_repo"`
-	ProjectDirs []string          `yaml:"project_dirs"`
-	APIToken    string            `yaml:"api_token"`
-	SocketPath  string            `yaml:"socket_path"`
+
+	// RPC configs
+	APIToken   string `yaml:"api_token"`
+	SocketPath string `yaml:"socket_path"`
+
+	// project configs
+	ProjectDirs  []string `yaml:"project_dirs"`
+	Editor       string   `yaml:"editor"`
+	EditorScript string   `yaml:"editor_script"`
+}
+
+func (c Config) OpenPathScript() (string, error) {
+	if c.Editor == "" {
+		return "", fmt.Errorf("no 'editor' key set in configuration file")
+	}
+	s := fmt.Sprintf("EDITOR=\"%s\"\n", c.Editor)
+	if c.EditorScript == "" {
+		s += `$EDITOR "$path"`
+	} else {
+		s += c.EditorScript
+	}
+	return s, nil
 }
 
 // Load a Config from a yaml string.
