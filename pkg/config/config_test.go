@@ -92,9 +92,35 @@ func TestLoadFromFile(t *testing.T) {
 }
 
 func TestNoEditor(t *testing.T) {
-	config, err := LoadFromFile("testdata/config.yml")
-	assert.NoError(t, err)
-
-	_, err = config.OpenPathScript()
+	config := Config{}
+	_, err := config.OpenEditorScript()
 	assert.Error(t, err)
+}
+
+func TestEditor(t *testing.T) {
+	cfg := Config{
+		Editor: "/usr/local/bin/code -n",
+	}
+	s, err := cfg.OpenEditorScript()
+	assert.NoError(t, err)
+	assert.Equal(t, `/usr/local/bin/code -n "$path"`, s)
+}
+
+func TestEditorScript(t *testing.T) {
+	cfg := Config{
+		EditorScript: `exec /usr/local/bin/zsh -c '/usr/local/mvim "$path"'`,
+	}
+	s, err := cfg.OpenEditorScript()
+	assert.NoError(t, err)
+	assert.Equal(t, `exec /usr/local/bin/zsh -c '/usr/local/mvim "$path"'`, s)
+}
+
+func TestEditorScriptTakesPrecedence(t *testing.T) {
+	cfg := Config{
+		Editor:       "/usr/local/bin/code -n",
+		EditorScript: `exec /usr/local/bin/zsh -c '/usr/local/mvim "$path"'`,
+	}
+	s, err := cfg.OpenEditorScript()
+	assert.NoError(t, err)
+	assert.Equal(t, `exec /usr/local/bin/zsh -c '/usr/local/mvim "$path"'`, s)
 }

@@ -31,15 +31,15 @@ type Config struct {
 	EditorScript string   `yaml:"editor_script"`
 }
 
-func (c Config) OpenPathScript() (string, error) {
-	if c.Editor == "" {
+func (c Config) OpenEditorScript() (string, error) {
+	if c.Editor == "" && c.EditorScript == "" {
 		return "", fmt.Errorf("no 'editor' key set in configuration file")
 	}
-	s := fmt.Sprintf("EDITOR=\"%s\"\n", c.Editor)
+	var s string
 	if c.EditorScript == "" {
-		s += `$EDITOR "$path"`
+		s = fmt.Sprintf("%s \"$path\"", c.Editor)
 	} else {
-		s += c.EditorScript
+		s = c.EditorScript
 	}
 	return s, nil
 }

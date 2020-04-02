@@ -174,7 +174,7 @@ var editorScriptCommand = &cobra.Command{
 	Short: "Emits an editor script for opening a $path",
 	Run: func(cmd *cobra.Command, args []string) {
 		cfg := config.MustLoadFromDefault()
-		script, err := cfg.OpenPathScript()
+		script, err := cfg.OpenEditorScript()
 		if err != nil {
 			fmt.Println(err.Error())
 			os.Exit(1)
