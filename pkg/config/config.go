@@ -44,10 +44,16 @@ func (c Config) OpenEditorScript() (string, error) {
 	return s, nil
 }
 
+func (c Config) RPCEnabled() bool {
+	return len(c.APIToken) > 0
+}
+
 // Load a Config from a yaml string.
 // Returns an empty config if an error occurs.
 func Load(yml string) (Config, error) {
-	var config Config
+	config := Config{
+		SocketPath: "/tmp/gh-shorthand.sock",
+	}
 
 	if err := yaml.Unmarshal([]byte(yml), &config); err != nil {
 		return Config{}, err

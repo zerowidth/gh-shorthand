@@ -553,7 +553,7 @@ func autocompleteUserItems(cfg config.Config, input string,
 }
 
 func (c *completion) rpcRequest(path, query string, delay float64) rpc.Result {
-	if len(c.cfg.SocketPath) == 0 {
+	if !c.cfg.RPCEnabled() {
 		panic("rpc not enabled") // should be exercised by tests only, FIXME remove
 	}
 	if c.env.Duration().Seconds() < delay {
@@ -577,7 +577,7 @@ func ellipsis(prefix string, duration time.Duration) string {
 // retrieveRepo adds a repo's description to an "open repo" item
 // using an RPC call.
 func (c *completion) retrieveRepo(repo string, item *alfred.Item) {
-	if len(c.cfg.SocketPath) == 0 {
+	if !c.cfg.RPCEnabled() {
 		return
 	}
 	res := c.rpcRequest("/repo", repo, delay)
@@ -611,7 +611,7 @@ func (c *completion) retrieveRepo(repo string, item *alfred.Item) {
 
 // retrieveIssue adds the title and state to an "open issue" item
 func (c *completion) retrieveIssue(repo, issuenum string, item *alfred.Item) {
-	if len(c.cfg.SocketPath) == 0 {
+	if !c.cfg.RPCEnabled() {
 		return
 	}
 	res := c.rpcRequest("/issue", repo+"#"+issuenum, delay)
@@ -652,7 +652,7 @@ func (c *completion) retrieveOrgProject(user, issuenum string, item *alfred.Item
 }
 
 func (c *completion) retrieveProject(item *alfred.Item, query string) {
-	if len(c.cfg.SocketPath) == 0 {
+	if !c.cfg.RPCEnabled() {
 		return
 	}
 	res := c.rpcRequest("/project", query, delay)
@@ -731,7 +731,7 @@ func (c *completion) searchIssues(item *alfred.Item, query string, includeRepo b
 
 	var items alfred.Items
 
-	if !item.Valid || len(c.cfg.SocketPath) == 0 {
+	if !item.Valid || !c.cfg.RPCEnabled() {
 		return items
 	}
 

@@ -1,10 +1,10 @@
 package config
 
 import (
-	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var (
@@ -31,6 +31,8 @@ repos:
 default_repo: foo
 `
 
+	rpcEnabled = "---\napi_token: abcdefg"
+
 	repoMap = map[string]string{
 		"df": "zerowidth/dotfiles",
 	}
@@ -42,29 +44,29 @@ default_repo: foo
 
 func TestLoad(t *testing.T) {
 	config, err := Load(configYaml)
-	if err != nil {
-		t.Errorf("could not load config yaml: %q", err.Error())
-	} else {
-		if !reflect.DeepEqual(config.RepoMap, repoMap) {
-			t.Errorf("expected RepoMap to be %#v, got %#v", repoMap, config.RepoMap)
-		}
+	require.NoError(t, err)
+	assert.Equal(t, repoMap, config.RepoMap)
+	assert.Equal(t, userMap, config.UserMap)
+	assert.Equal(t, "zerowidth/default", config.DefaultRepo)
 
-		if !reflect.DeepEqual(config.UserMap, userMap) {
-			t.Errorf("expected UserMap to be %#v, got %#v", userMap, config.UserMap)
-		}
+	_, err = Load(invalidYaml)
+	assert.Error(t, err)
 
-		if config.DefaultRepo != "zerowidth/default" {
-			t.Errorf("expected DefaultRepo to be %q, got %q", "zerowidth/default", config.DefaultRepo)
-		}
+	_, err = Load(invalidRepo)
+	assert.Error(t, err)
+}
 
-		if _, err := Load(invalidYaml); err == nil {
-			t.Error("expected invalid YML to error, but no error occurred")
-		}
+func TestRPCConfig(t *testing.T) {
+	config, err := Load(configYaml)
+	assert.NoError(t, err)
+	assert.False(t, config.RPCEnabled())
 
-		if _, err := Load(invalidRepo); err == nil {
-			t.Error("expected invalid repos to result in an error, but no error occurred")
-		}
-	}
+	config, err = Load(rpcEnabled)
+	assert.NoError(t, err)
+
+	assert.True(t, config.RPCEnabled())
+	assert.Equal(t, "abcdefg", config.APIToken)
+	assert.Equal(t, "/tmp/gh-shorthand.sock", config.SocketPath, "should have a default value")
 }
 
 func TestLoadInvalidDefault(t *testing.T) {
@@ -78,17 +80,11 @@ func TestLoadFromFile(t *testing.T) {
 	config, err := LoadFromFile("testdata/config.yml")
 	assert.NoError(t, err)
 
-	if !reflect.DeepEqual(config.RepoMap, repoMap) {
-		t.Errorf("expected repo map to be %#v, got %#v", repoMap, config.RepoMap)
-	}
+	assert.Equal(t, repoMap, config.RepoMap)
+	assert.Equal(t, "zerowidth/default", config.DefaultRepo)
 
-	if config.DefaultRepo != "zerowidth/default" {
-		t.Errorf("expected DefaultRepo to be %q, got %q", "zerowidth/default", config.DefaultRepo)
-	}
-
-	if _, err := LoadFromFile("testdata/nonexistent.yml"); err == nil {
-		t.Error("expected missing yaml file to error, but no error occurred")
-	}
+	_, err = LoadFromFile("testdata/nonexistent.yml")
+	assert.Error(t, err)
 }
 
 func TestNoEditor(t *testing.T) {

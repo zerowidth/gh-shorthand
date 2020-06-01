@@ -62,10 +62,6 @@ func Service(cfg config.Config) service.Service {
 }
 
 func (s *server) Start(svc service.Service) error {
-	if len(s.cfg.SocketPath) == 0 {
-		return fmt.Errorf("no socket_path configured in %s", config.Filename)
-	}
-
 	if len(s.cfg.APIToken) == 0 {
 		return fmt.Errorf("no api_token configured in %s", config.Filename)
 	}
