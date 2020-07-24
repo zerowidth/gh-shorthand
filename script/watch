@@ -1,0 +1,10 @@
+#!/bin/bash
+
+path=pkg
+
+if [ $# -gt 0 ]; then
+  path=$1
+  shift
+fi
+
+fswatch -o -l 3 "$path" | xargs -n1 -I{} sh -c "clear; date; script/test $@;"

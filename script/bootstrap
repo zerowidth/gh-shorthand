@@ -1,9 +1,16 @@
-#!/bin/sh
+#!/bin/bash
+
 set -e
 
-which -s trash || {
-  echo 'go get -u github.com/rancher/trash'
-  exit 1
-}
+TOOLS=$(pwd)/_tools
+export GOBIN=$TOOLS/bin
 
-trash
+mkdir -p _tools/bin
+cd $TOOLS
+
+if [ ! -f go.mod ]; then
+    go mod init tools
+fi
+
+go get github.com/golangci/golangci-lint/cmd/golangci-lint@v1.23.1
+go get -u github.com/rakyll/gotest
