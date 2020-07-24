@@ -137,6 +137,48 @@ func TestMarkdownLinkWithDescription(t *testing.T) {
 			query:    "zw/df#1",
 			issue:    rpc.Issue{Title: "a dotfiles patch"},
 		},
+		"replaces [] with () in repo description": { // this breaks markdown in Bear.app
+			input:    "https://github.com/zw/df",
+			output:   "[zw/df: brackets ()](https://github.com/zw/df)",
+			endpoint: "/repo",
+			query:    "zw/df",
+			repo:     rpc.Repo{Description: "brackets []"},
+		},
+		"replaces repeated :: with | in repo description": { // more weirdness in Bear.app with two sets of :: ::
+			input:    "https://github.com/zw/df",
+			output:   "[zw/df: A|Ruby|Constant](https://github.com/zw/df)",
+			endpoint: "/repo",
+			query:    "zw/df",
+			repo:     rpc.Repo{Description: "A::Ruby::Constant"},
+		},
+		"does not replace single :: in repo description": { // but one :: is fine in Bear.app
+			input:    "https://github.com/zw/df",
+			output:   "[zw/df: Ruby::Constant](https://github.com/zw/df)",
+			endpoint: "/repo",
+			query:    "zw/df",
+			repo:     rpc.Repo{Description: "Ruby::Constant"},
+		},
+		"replaces [] with () in issue title": { // this breaks markdown in Bear.app
+			input:    "https://github.com/zw/df/issues/1",
+			output:   "[zw/df#1: brackets ()](https://github.com/zw/df/issues/1)",
+			endpoint: "/issue",
+			query:    "zw/df#1",
+			issue:    rpc.Issue{Title: "brackets []"},
+		},
+		"replaces repeated :: with | in issue title": { // more weirdness in Bear.app with two sets of :: ::
+			input:    "https://github.com/zw/df/issues/1",
+			output:   "[zw/df#1: A|Ruby|Constant](https://github.com/zw/df/issues/1)",
+			endpoint: "/issue",
+			query:    "zw/df#1",
+			issue:    rpc.Issue{Title: "A::Ruby::Constant"},
+		},
+		"does not replace single :: in issue title": { // but one :: is fine in Bear.app
+			input:    "https://github.com/zw/df/issues/1",
+			output:   "[zw/df#1: Ruby::Constant](https://github.com/zw/df/issues/1)",
+			endpoint: "/issue",
+			query:    "zw/df#1",
+			issue:    rpc.Issue{Title: "Ruby::Constant"},
+		},
 	}
 
 	for desc, tc := range tests {

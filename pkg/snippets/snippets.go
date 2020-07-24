@@ -3,6 +3,7 @@ package snippets
 import (
 	"fmt"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/zerowidth/gh-shorthand/pkg/parser"
@@ -92,7 +93,8 @@ func formatIssue(rpcClient rpc.Client, url, repo, issue string, includeDesc bool
 			if len(res.Error) > 0 {
 				mdLink = fmt.Sprintf("%s (rpc error: %s)", mdLink, res.Error)
 			} else if len(res.Issues) > 0 {
-				mdLink = fmt.Sprintf("[%s#%s: %s](%s)", repo, issue, res.Issues[0].Title, url)
+				desc := friendlierMarkdown(res.Issues[0].Title)
+				mdLink = fmt.Sprintf("[%s#%s: %s](%s)", repo, issue, desc, url)
 			} else {
 				mdLink += " (rpc error: no data returned)"
 			}
@@ -126,7 +128,8 @@ func formatRepo(rpcClient rpc.Client, url, repo string, includeDesc bool) string
 			if len(res.Error) > 0 {
 				mdLink = fmt.Sprintf("%s (rpc error: %s)", mdLink, res.Error)
 			} else if len(res.Repos) > 0 {
-				mdLink = fmt.Sprintf("[%s: %s](%s)", repo, res.Repos[0].Description, url)
+				desc := friendlierMarkdown(res.Repos[0].Description)
+				mdLink = fmt.Sprintf("[%s: %s](%s)", repo, desc, url)
 			} else {
 				mdLink += " (rpc error: no data returned)"
 			}
@@ -136,4 +139,14 @@ func formatRepo(rpcClient rpc.Client, url, repo string, includeDesc bool) string
 	}
 
 	return mdLink
+}
+
+// make markdown more parse-able and look better in apps like Bear.app
+func friendlierMarkdown(s string) string {
+	s = strings.ReplaceAll(s, "[", "(")
+	s = strings.ReplaceAll(s, "]", ")")
+	if strings.Count(s, "::") > 1 {
+		s = strings.ReplaceAll(s, "::", "|")
+	}
+	return s
 }
