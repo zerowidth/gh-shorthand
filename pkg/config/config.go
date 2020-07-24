@@ -33,7 +33,7 @@ type Config struct {
 
 func (c Config) OpenEditorScript() (string, error) {
 	if c.Editor == "" && c.EditorScript == "" {
-		return "", fmt.Errorf("no 'editor' key set in configuration file")
+		return "", fmt.Errorf("no 'editor' or 'editor_script' key set in configuration file")
 	}
 	var s string
 	if c.EditorScript == "" {
