@@ -4,9 +4,15 @@ A golang server and CLI utility to generate autocomplete items from shorthand in
 
 ## Installation
 
-`go get github.com/zerowidth/gh-shorthand` to install to `$GOPATH/bin` (default: `~/go/bin`).
+By default, the Alfred workflow invokes the executable `~/go/bin/gh-shorthand`.
 
-You can run `gh-shorthand --help` to make sure it's working.
+```sh
+mkdir -p ~/go/bin
+GOBIN="$TMPDIR" go get github.com/zerowidth/gh-shorthand/cmd
+mv "$TMPDIR"/cmd ~/go/bin/gh-shorthand
+```
+
+Run `gh-shorthand --help` to make sure that it's working.
 
 ### RPC server installation
 
