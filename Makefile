@@ -12,7 +12,7 @@ default: build
 all: build test lint
 
 $(APP): $(GOSRC) go.mod go.sum; $(info -> building gh-shorthand...)
-	$Q go build -o $(APP) ./cmd
+	$Q go build -o $(APP) .
 
 build: $(APP)
 
