@@ -4,7 +4,7 @@ A golang server and CLI utility to generate autocomplete items from shorthand in
 
 ## Installation
 
-`go get github.com/zerowidth/gh-shorthand` to install to `$GOPATH/bin` (default: `~/go/bin`).
+`go install github.com/zerowidth/gh-shorthand@latest` to install to `$GOPATH/bin` (default: `~/go/bin`).
 
 You can run `gh-shorthand --help` to make sure it's working.
 
