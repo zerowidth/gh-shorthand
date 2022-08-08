@@ -28,7 +28,7 @@ func NewClient(socketPath string) SocketClient {
 }
 
 // How long to wait before giving up on the backend
-const socketTimeout = 100 * time.Millisecond
+const socketTimeout = 250 * time.Millisecond
 
 // Query executes a query against the RPC server.
 //
