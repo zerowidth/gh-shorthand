@@ -3,7 +3,7 @@ package rpc
 import (
 	"context"
 	"encoding/json"
-	"io/ioutil"
+	"io"
 	"net"
 	"net/http"
 	"net/url"
@@ -74,7 +74,7 @@ func (sc SocketClient) Query(endpoint, query string) Result {
 	}
 	defer resp.Body.Close()
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		res.Error = "RPC response error: " + err.Error()
 		res.Complete = true

@@ -2,8 +2,8 @@ package config
 
 import (
 	"fmt"
-	"io/ioutil"
 	"log"
+	"os"
 	"strings"
 
 	homedir "github.com/mitchellh/go-homedir"
@@ -82,7 +82,7 @@ func LoadFromFile(path string) (Config, error) {
 		return Config{}, err
 	}
 
-	yml, err := ioutil.ReadFile(realpath)
+	yml, err := os.ReadFile(realpath)
 	if err != nil {
 		return Config{}, err
 	}

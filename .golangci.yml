@@ -1,6 +1,15 @@
 linters:
   enable:
-    - goimports
-    - unparam
     - dupl
-    - interfacer
+    - durationcheck
+    - errname
+    - gocritic
+    - goimports
+    - gosec
+    - nakedret
+    - nilerr
+    - nilnil
+    - revive
+    - stylecheck
+    - unconvert
+    - unparam

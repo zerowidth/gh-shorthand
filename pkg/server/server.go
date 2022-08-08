@@ -110,9 +110,10 @@ func (s *server) run(logger service.Logger) error {
 	h.Mount(r)
 
 	server := &http.Server{
-		Handler:      r,
-		ReadTimeout:  time.Second,
-		WriteTimeout: time.Second,
+		Handler:           r,
+		ReadTimeout:       time.Second,
+		ReadHeaderTimeout: time.Second,
+		WriteTimeout:      time.Second,
 	}
 
 	sock, err := net.Listen("unix", s.cfg.SocketPath)
