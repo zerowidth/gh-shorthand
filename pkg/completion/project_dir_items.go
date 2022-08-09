@@ -1,7 +1,6 @@
 package completion
 
 import (
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -19,7 +18,8 @@ const (
 	modeTerm
 )
 
-func projectDirItems(searchPaths []string, search string, mode projectDirMode) (items alfred.Items) {
+func projectDirItems(searchPaths []string, search string, mode projectDirMode) alfred.Items {
+	items := alfred.Items{}
 	// shortened path names of projects found
 	projects := []string{}
 	// map to the full expanded/absolute path for projects
@@ -113,7 +113,7 @@ func projectDirItems(searchPaths []string, search string, mode projectDirMode) (
 		items = append(items, item)
 	}
 
-	return
+	return items
 }
 
 func findProjectDirs(root string) ([]string, error) {
@@ -125,7 +125,7 @@ func findProjectDirs(root string) ([]string, error) {
 	// if the glob didn't find anything, make sure it's targeting a valid existing
 	// directory:
 	if len(entries) == 0 {
-		if _, err = ioutil.ReadDir(root); err != nil {
+		if _, err = os.ReadDir(root); err != nil {
 			return []string{}, err
 		}
 	}

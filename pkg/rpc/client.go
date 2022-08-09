@@ -3,7 +3,7 @@ package rpc
 import (
 	"context"
 	"encoding/json"
-	"io/ioutil"
+	"io"
 	"net"
 	"net/http"
 	"net/url"
@@ -28,7 +28,7 @@ func NewClient(socketPath string) SocketClient {
 }
 
 // How long to wait before giving up on the backend
-const socketTimeout = 100 * time.Millisecond
+const socketTimeout = 250 * time.Millisecond
 
 // Query executes a query against the RPC server.
 //
@@ -74,7 +74,7 @@ func (sc SocketClient) Query(endpoint, query string) Result {
 	}
 	defer resp.Body.Close()
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		res.Error = "RPC response error: " + err.Error()
 		res.Complete = true

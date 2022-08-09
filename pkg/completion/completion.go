@@ -615,13 +615,15 @@ func (c *completion) retrieveIssue(repo, issuenum string, item *alfred.Item) {
 		return
 	}
 	res := c.rpcRequest("/issue", repo+"#"+issuenum, delay)
-	if len(res.Error) > 0 {
+	switch {
+	case len(res.Error) > 0:
 		item.Subtitle = res.Error
 		return
-	} else if c.retry {
+	case c.retry:
 		item.Subtitle = ellipsis("Retrieving issue title", c.env.Duration())
 		return
-	} else if len(res.Issues) == 0 {
+
+	case len(res.Issues) == 0:
 		item.Subtitle = "rpc error: missing issue in result"
 		return
 	}
@@ -656,13 +658,14 @@ func (c *completion) retrieveProject(item *alfred.Item, query string) {
 		return
 	}
 	res := c.rpcRequest("/project", query, delay)
-	if len(res.Error) > 0 {
+	switch {
+	case len(res.Error) > 0:
 		item.Subtitle = res.Error
 		return
-	} else if c.retry {
+	case c.retry:
 		item.Subtitle = ellipsis("Retrieving project name", c.env.Duration())
 		return
-	} else if len(res.Projects) == 0 {
+	case len(res.Projects) == 0:
 		item.Subtitle = "rpc error: missing project in result"
 		return
 	}
@@ -686,13 +689,14 @@ func (c *completion) retrieveProjects(item *alfred.Item, query string) (projects
 		return
 	}
 	res := c.rpcRequest("/projects", query, delay)
-	if len(res.Error) > 0 {
+	switch {
+	case len(res.Error) > 0:
 		item.Subtitle = res.Error
 		return
-	} else if c.retry {
+	case c.retry:
 		item.Subtitle = ellipsis("Retrieving projects", c.env.Duration())
 		return
-	} else if len(res.Projects) == 0 {
+	case len(res.Projects) == 0:
 		item.Subtitle = "No projects found"
 		return
 	}
@@ -736,13 +740,14 @@ func (c *completion) searchIssues(item *alfred.Item, query string, includeRepo b
 	}
 
 	res := c.rpcRequest("/issues", query, delay)
-	if len(res.Error) > 0 {
+	switch {
+	case len(res.Error) > 0:
 		item.Subtitle = res.Error
 		return items
-	} else if c.retry {
+	case c.retry:
 		item.Subtitle = ellipsis("Searching issues", c.env.Duration())
 		return items
-	} else if len(res.Issues) == 0 {
+	case len(res.Issues) == 0:
 		item.Subtitle = "No issues found"
 		return items
 	}

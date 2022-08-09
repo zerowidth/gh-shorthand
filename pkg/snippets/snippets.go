@@ -90,12 +90,13 @@ func formatIssue(rpcClient rpc.Client, url, repo, issue string, includeDesc bool
 
 		select {
 		case res := <-resultChan:
-			if len(res.Error) > 0 {
+			switch {
+			case len(res.Error) > 0:
 				mdLink = fmt.Sprintf("%s (rpc error: %s)", mdLink, res.Error)
-			} else if len(res.Issues) > 0 {
+			case len(res.Issues) > 0:
 				desc := friendlierMarkdown(res.Issues[0].Title)
 				mdLink = fmt.Sprintf("[%s#%s: %s](%s)", repo, issue, desc, url)
-			} else {
+			default:
 				mdLink += " (rpc error: no data returned)"
 			}
 		case <-time.After(5 * time.Second):
@@ -125,12 +126,13 @@ func formatRepo(rpcClient rpc.Client, url, repo string, includeDesc bool) string
 
 		select {
 		case res := <-resultChan:
-			if len(res.Error) > 0 {
+			switch {
+			case len(res.Error) > 0:
 				mdLink = fmt.Sprintf("%s (rpc error: %s)", mdLink, res.Error)
-			} else if len(res.Repos) > 0 {
+			case len(res.Repos) > 0:
 				desc := friendlierMarkdown(res.Repos[0].Description)
 				mdLink = fmt.Sprintf("[%s: %s](%s)", repo, desc, url)
-			} else {
+			default:
 				mdLink += " (rpc error: no data returned)"
 			}
 		case <-time.After(5 * time.Second):
